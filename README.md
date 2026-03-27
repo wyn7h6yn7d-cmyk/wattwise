@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EnergiaTasuvus
 
-## Getting Started
+Futuristlik ühe-leheline päikese + aku tasuvuskalkulaator (Next.js App Router + Tailwind CSS), kogu nähtav kasutajaliides eesti keeles.
 
-First, run the development server:
+## Kiire käivitus
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ava brauseris `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Skriptid
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - arendusreziim
+- `npm run build` - tootmisbuild
+- `npm run start` - käivita tootmisbuild
+- `npm run lint` - koodikvaliteedi kontroll
 
-## Learn More
+## Struktuur
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app/page.tsx` - avaleht
+- `src/components/solar-calculator-page.tsx` - kogu UI + vorm + tulemuste visualiseerimine
+- `src/lib/calculator.ts` - tasuvusloogika ja stsenaariumite võrdlus
+- `src/app/api/nordpool/route.ts` - Nord Pool hinnaloogika (live + fallback)
+- `src/types/calculator.ts` - sisendite/tulemite tüübid
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Nord Pool ühenduse laiendamine
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Praegu:
+- `manual` reziim töötab alati käsitsi sisestatud hinnaga.
+- `nordpool` reziim proovib võtta Eesti keskmist hinda API kaudu.
+- Kui päring ebaõnnestub, kasutatakse fallback-hinda ning kuvatakse kasutajale selge eestikeelne teade.
 
-## Deploy on Vercel
+Hiljem saad:
+1. Asendada `/api/nordpool/route.ts` sees andmeallika enda teenusega.
+2. Lisada autentimisega API (nt partneri teenus) server-route kaudu.
+3. Muuta arvestus tunnipõhiseks, kui sul on detailne tarbimisprofiil.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Arvutuse eeldused (dummy, kuid realistlikud)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Tootmisparandused: suund, varjutus, süsteemi kasutegur, hooajaline kordaja.
+- Omakasutuse mudel: tarbimisprofiil + aku olemasolu + aku kasutatav maht.
+- Rahavoog: elektrihinna kasv, süsteemi degradatsioon, diskontomäär, hoolduskulu.
+- CO2 mõju: ligikaudne hinnang välditud võrgutarbimisest.
+
+## Deploy
+
+Projekt sobib otse Vercelisse:
+1. impordi repo Vercelisse
+2. build command: `npm run build`
+3. output: Next.js vaikimisi
+
+Soovi korral saab hiljem lisada ka staatilise ekspordi eraldi vajadustele.
