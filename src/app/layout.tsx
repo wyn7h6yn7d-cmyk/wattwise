@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "WattWise - päikesekalkulaator",
   description:
     "Arvuta päikesepargi ja aku investeeringu tasuvus Eesti tingimustes. Võrdle akuga ja akuta stsenaariume, kasuta Nord Pool hinnaloogikat ning saa selge ülevaade säästust.",
+  icons: {
+    icon: [{ url: "/icon", type: "image/png" }],
+    shortcut: "/icon",
+    apple: "/icon",
+  },
 };
 
 export default function RootLayout({
