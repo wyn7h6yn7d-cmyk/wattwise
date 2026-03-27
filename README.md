@@ -53,3 +53,4 @@ Projekt sobib otse Vercelisse:
 3. output: Next.js vaikimisi
 
 Soovi korral saab hiljem lisada ka staatilise ekspordi eraldi vajadustele.
+# wattwise
