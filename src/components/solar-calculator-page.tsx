@@ -5,41 +5,40 @@ import { calculateComparison } from "@/lib/calculator";
 import { copy, getStoredLocale, persistLocale, type Locale } from "@/lib/i18n";
 import { CalculatorInput } from "@/types/calculator";
 
-const STORAGE_KEY = "energiatasuvus-v1";
-
+/** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
-  pvPowerKw: 15,
-  annualProductionKwh: 13500,
-  inverterPowerKw: 12,
+  pvPowerKw: 0,
+  annualProductionKwh: 0,
+  inverterPowerKw: 0,
   panelDirection: "louna",
   tiltDeg: 35,
-  shadingPercent: 8,
+  shadingPercent: 0,
   systemEfficiencyPercent: 92,
-  hasBattery: true,
-  batteryCapacityKwh: 12,
+  hasBattery: false,
+  batteryCapacityKwh: 0,
   batteryUsablePercent: 90,
-  batteryPowerKw: 6,
+  batteryPowerKw: 0,
   batteryRoundTripPercent: 92,
-  batteryInvestmentEur: 7200,
-  batteryCostEur: 7200,
-  annualConsumptionKwh: 12000,
-  dailyConsumptionKwh: 32.9,
+  batteryInvestmentEur: 0,
+  batteryCostEur: 0,
+  annualConsumptionKwh: 0,
+  dailyConsumptionKwh: 0,
   consumptionProfile: "tool-ohtul",
   seasonalMultiplierPercent: 100,
   priceSource: "manual",
-  manualSpotPrice: 0.11,
-  nordPoolAveragePrice: 0.098,
-  gridFeePrice: 0.048,
-  sellBackPrice: 0.065,
-  marginPrice: 0.012,
+  manualSpotPrice: 0,
+  nordPoolAveragePrice: 0,
+  gridFeePrice: 0,
+  sellBackPrice: 0,
+  marginPrice: 0,
   annualPriceGrowthPercent: 3,
   discountRatePercent: 4,
-  pvCostEur: 14500,
-  extraInstallCostEur: 1700,
-  supportEur: 1200,
-  annualMaintenanceEur: 220,
-  selfConsumptionWithoutBatteryPercent: 42,
-  selfConsumptionBoostWithBatteryPercent: 18,
+  pvCostEur: 0,
+  extraInstallCostEur: 0,
+  supportEur: 0,
+  annualMaintenanceEur: 0,
+  selfConsumptionWithoutBatteryPercent: 40,
+  selfConsumptionBoostWithBatteryPercent: 15,
   degradationPercent: 0.6,
   periodYears: 20,
 };
@@ -107,7 +106,7 @@ function Field({
 
 export function SolarCalculatorPage() {
   const calculatorRef = useRef<HTMLElement | null>(null);
-  // Alusta alati sama vaikimisi kui server — localStorage laetakse pärast mount’i (vähendab hydration vigu).
+  // Vormi ei salvestata brauserisse — iga külastus/uuendus on puhas sessioon (teised ei näe sinu numbreid kunagi serveri poolelt).
   const [lang, setLang] = useState<Locale>("et");
   const [input, setInput] = useState<CalculatorInput>(defaults);
   const [errors, setErrors] = useState<string[]>([]);
@@ -119,26 +118,17 @@ export function SolarCalculatorPage() {
     source: "none",
   });
   const [result, setResult] = useState(() => calculateComparison(defaults));
-  const [storageReady, setStorageReady] = useState(false);
 
   const t = copy[lang];
 
-  // Üks kord pärast mount’i: loe keel + salvestatud vorm (server vs klient sama esialgse HTML-iga).
   useEffect(() => {
-    setLang(getStoredLocale());
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<CalculatorInput>;
-        const next = { ...defaults, ...parsed };
-        setInput(next);
-        setResult(calculateComparison(next));
-      }
+      // Eemalda vana vormi võti (varem salvestatud lokaalselt) — et ei tekiks muljet „jagatud andmetest“.
+      localStorage.removeItem("energiatasuvus-v1");
     } catch {
       /* ignore */
-    } finally {
-      setStorageReady(true);
     }
+    queueMicrotask(() => setLang(getStoredLocale()));
   }, []);
 
   useEffect(() => {
@@ -148,11 +138,6 @@ export function SolarCalculatorPage() {
       document.title = t.htmlTitle;
     }
   }, [lang, t.htmlTitle]);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(input));
-  }, [input, storageReady]);
 
   const draftResult = useMemo(() => calculateComparison(input), [input]);
 
@@ -187,7 +172,6 @@ export function SolarCalculatorPage() {
 
   // Kui valitud on Nord Pool, lae börsihind automaatselt (leiab + uuendab välja); nupp "Uuenda" teeb sama uuesti.
   useEffect(() => {
-    if (!storageReady) return;
     if (input.priceSource !== "nordpool") return;
     let cancelled = false;
     const run = async () => {
@@ -215,7 +199,7 @@ export function SolarCalculatorPage() {
     return () => {
       cancelled = true;
     };
-  }, [storageReady, input.priceSource, lang]);
+  }, [input.priceSource, lang]);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
