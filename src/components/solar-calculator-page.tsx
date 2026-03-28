@@ -107,19 +107,9 @@ function Field({
 
 export function SolarCalculatorPage() {
   const calculatorRef = useRef<HTMLElement | null>(null);
-  const [lang, setLang] = useState<Locale>(() => getStoredLocale());
-
-  const [input, setInput] = useState<CalculatorInput>(() => {
-    if (typeof window === "undefined") return defaults;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaults;
-      const parsed = JSON.parse(raw) as Partial<CalculatorInput>;
-      return { ...defaults, ...parsed };
-    } catch {
-      return defaults;
-    }
-  });
+  // Alusta alati sama vaikimisi kui server — localStorage laetakse pärast mount’i (vähendab hydration vigu).
+  const [lang, setLang] = useState<Locale>("et");
+  const [input, setInput] = useState<CalculatorInput>(defaults);
   const [errors, setErrors] = useState<string[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [highlightCalculator, setHighlightCalculator] = useState(false);
@@ -128,8 +118,28 @@ export function SolarCalculatorPage() {
     message: "",
     source: "none",
   });
+  const [result, setResult] = useState(() => calculateComparison(defaults));
+  const [storageReady, setStorageReady] = useState(false);
 
   const t = copy[lang];
+
+  // Üks kord pärast mount’i: loe keel + salvestatud vorm (server vs klient sama esialgse HTML-iga).
+  useEffect(() => {
+    setLang(getStoredLocale());
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<CalculatorInput>;
+        const next = { ...defaults, ...parsed };
+        setInput(next);
+        setResult(calculateComparison(next));
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setStorageReady(true);
+    }
+  }, []);
 
   useEffect(() => {
     persistLocale(lang);
@@ -140,11 +150,11 @@ export function SolarCalculatorPage() {
   }, [lang, t.htmlTitle]);
 
   useEffect(() => {
+    if (!storageReady) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(input));
-  }, [input]);
+  }, [input, storageReady]);
 
   const draftResult = useMemo(() => calculateComparison(input), [input]);
-  const [result, setResult] = useState(() => calculateComparison(input));
 
   const validationErrors = useMemo(() => {
     const list: string[] = [];
@@ -192,6 +202,7 @@ export function SolarCalculatorPage() {
     window.setTimeout(() => setHighlightCalculator(false), 900);
   };
 
+  const chartTrackPx = 176; // ~h-44 — fikseeritud kõrgus, et tulba pikslikõrgus oleks alati arvutatav
   const bestYear = result.selected.cashflowByYear.reduce(
     (max, value) => Math.max(max, Math.abs(value)),
     1,
@@ -457,21 +468,25 @@ export function SolarCalculatorPage() {
                 <p className="mt-2 px-0 text-xs text-zinc-500 md:hidden">{t.chartScrollHint}</p>
                 <div className="relative mt-3 w-full">
                   <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0 md:overflow-visible">
-                    <div className="flex h-52 min-w-max items-end gap-1.5 sm:gap-2 md:min-w-0 md:w-full md:justify-between md:gap-2">
-                      {result.selected.cashflowByYear.map((value, index) => (
+                    <div className="flex min-h-[13.5rem] min-w-max items-end gap-1.5 pb-1 sm:gap-2 md:min-h-0 md:min-w-0 md:w-full md:justify-between md:gap-2">
+                      {result.selected.cashflowByYear.map((value, index) => {
+                        const abs = Math.abs(value);
+                        const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 6);
+                        return (
                         <div
                           key={`${value}-${index}`}
-                          className="group relative flex w-7 shrink-0 flex-col gap-1 md:min-w-0 md:flex-1"
+                          className="group relative flex w-7 shrink-0 flex-col items-stretch gap-1 md:min-w-0 md:flex-1"
                         >
                           <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-cyan-300/30 bg-zinc-950/95 px-2 py-1 text-[11px] font-medium text-cyan-200 opacity-0 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-opacity duration-150 group-hover:opacity-100 sm:block">
                             {formatNum(value, 0, lang)} €
                           </div>
-                          <div className="flex min-h-[11rem] flex-1 flex-col justify-end rounded-md bg-white/[0.03] px-0.5 pt-1">
+                          <div
+                            className="box-border flex w-full flex-col justify-end rounded-md bg-white/[0.06] px-0.5 pt-1"
+                            style={{ height: chartTrackPx }}
+                          >
                             <div
-                              className="w-full min-h-[4px] rounded bg-gradient-to-t from-cyan-500/80 to-blue-400/90"
-                              style={{
-                                height: `${Math.max((Math.abs(value) / bestYear) * 100, 8)}%`,
-                              }}
+                              className="w-full shrink-0 rounded bg-gradient-to-t from-cyan-500/80 to-blue-400/90"
+                              style={{ height: barPx }}
                               aria-label={`${t.yearAria} ${index + 1}`}
                               title={`${formatNum(value, 0, lang)} €`}
                             />
@@ -480,7 +495,8 @@ export function SolarCalculatorPage() {
                             {index + 1}
                           </span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -542,9 +558,9 @@ export function SolarCalculatorPage() {
           <h2 className="text-2xl font-semibold">{t.faqTitle}</h2>
           <div className="mt-4 grid gap-3">
             {t.faq.map(({ q, a }) => (
-              <details key={q} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                <summary className="cursor-pointer font-medium">{q}</summary>
-                <p className="mt-2 text-zinc-300">{a}</p>
+              <details key={q} className="faq-details rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <summary className="faq-summary font-medium text-zinc-100">{q}</summary>
+                <p className="mt-2 pl-8 text-sm leading-relaxed text-zinc-300 md:text-base">{a}</p>
               </details>
             ))}
           </div>

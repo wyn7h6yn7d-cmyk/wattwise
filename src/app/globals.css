@@ -163,3 +163,40 @@ body {
     transform: translateX(330%);
   }
 }
+
+/* KKK: ühtne nooleke — peidab OS/brauseri vaikimisi kolmnurga (eriti erinev iOS-is) */
+.faq-details summary.faq-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.faq-details summary.faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-details summary.faq-summary::marker {
+  content: "";
+  display: none;
+}
+
+.faq-details summary.faq-summary::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  margin-top: 0.3rem;
+  border-style: solid;
+  border-width: 0.32rem 0 0.32rem 0.5rem;
+  border-color: transparent transparent transparent rgb(244 244 245);
+  opacity: 0.9;
+  transform-origin: 40% 50%;
+  transition: transform 0.2s ease;
+}
+
+.faq-details[open] summary.faq-summary::before {
+  transform: rotate(90deg);
+}
