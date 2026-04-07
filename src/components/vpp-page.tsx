@@ -115,8 +115,8 @@ export function VppPageClient() {
       <section className="glass-panel rounded-3xl p-6 sm:p-8">
         <h2 className="text-2xl font-semibold text-zinc-50">VPP tasuvusmudel</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          Hinnang aku osalemisele VPP / paindlikkuse teenustes. Sisesta lihtsad eeldused ja saa esimene
-          tasuvusvaade.
+          Lihtne hinnang aku osalemisele paindlikkuse teenustes. Sisesta eeldused ja vaata, mis suurusjärgus
+          võiks tulemus olla.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -183,11 +183,11 @@ export function VppPageClient() {
         </div>
 
         <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-zinc-200">
-          <strong className="block text-zinc-50">Täisanalüüs</strong>
+          <strong className="block text-zinc-50">Märkus</strong>
           <p className="mt-1 text-zinc-300">
             {FEATURES.paywallEnabled
-              ? "Detailne VPP simulatsioon (turuplokid, stsenaariumid, risk, cashflow tabel, eksport) avaneb täisanalüüsis."
-              : "Tasuta beetaversioonis on detailsem analüüs nähtav. Täida väljad ja vaata ka tundlikkust."}
+              ? "Detailsem VPP simulatsioon (stsenaariumid, risk ja rahavoog) on arenduses."
+              : "Beetaversioon: mudel on lihtsustatud ja tugineb sinu sisestatud tulueeldustele."}
           </p>
         </div>
       </section>

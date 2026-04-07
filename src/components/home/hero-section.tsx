@@ -15,7 +15,7 @@ export function HeroSection() {
             Energiakalkulaator
           </p>
           <h1 className="mt-4 text-balance text-[2.05rem] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-5xl">
-            Arvuta energiaotsuste tasuvus targemalt
+            Arvuta energiaotsuste tasuvus selgemalt
           </h1>
           <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-300 sm:mt-4 sm:text-lg">
             Päikesejaama, VPP, elektripaketi, laadimise ja ettevõtte energiakulude kalkulaatorid ühes kohas.
@@ -34,9 +34,9 @@ export function HeroSection() {
 
           <div className="mt-5 grid gap-2 text-xs text-zinc-400 sm:grid-cols-3">
             {[
-              "Tasuta ülevaade mõne minutiga",
-              "Ühtne premium UI kõigis moodulites",
-              FEATURES.paywallEnabled ? "PDF raport lisana (2,99 €)" : "Raporti allalaadimine",
+              "Selge ülevaade mõne minutiga",
+              "Kalkulaatorid ühes kohas",
+              FEATURES.paywallEnabled ? "Raport ja lisavaated" : "Tasuta beetaversioon",
             ].map((t) => (
               <div key={t} className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
                 {t}
@@ -55,7 +55,7 @@ export function HeroSection() {
                   <div className="mt-1 text-xs text-zinc-400">Päikesejaama tasuvus (tasuta vaade)</div>
                 </div>
                 <div className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] text-emerald-200">
-                  Live preview
+                  Näidis
                 </div>
               </div>
 

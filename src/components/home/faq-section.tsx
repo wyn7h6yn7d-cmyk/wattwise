@@ -15,20 +15,20 @@ export function FAQSection() {
           [
             "Kas tulemused on täpsed?",
             FEATURES.paywallEnabled
-              ? "Tulemused on informatiivsed ja sõltuvad sisenditest ning eeldustest. Täisanalüüs aitab näha rahavoogu ja riske detailsemalt."
-              : "Tulemused on informatiivsed ja sõltuvad sisenditest ning eeldustest. Vaata eri stsenaariume ja võrdle, milline sisend mõjutab tulemust enim.",
+              ? "Tulemused on hinnangulised ja sõltuvad sisenditest ning eeldustest. Kui kasutad tulemust otsuse aluseks, tasub teha mitu stsenaariumi ja kontrollida sisendandmed üle."
+              : "Tulemused on hinnangulised ja sõltuvad sisenditest ning eeldustest. Kui kasutad tulemust otsuse aluseks, tasub teha mitu stsenaariumi ja kontrollida sisendandmed üle.",
           ],
           [
             "Mida ma tasuta vaates näen?",
             FEATURES.paywallEnabled
-              ? "Põhitulemused ja kiire hinnangu. Detailne analüüs, lisagraafikud ja võrdlused avanevad pärast ostu."
-              : "Põhitulemused ja detailsema ülevaate kohe. Kui tahad, laadi raport alla või jaga kokkuvõtet.",
+              ? "Põhitulemused ja ülevaate. Tasulised lisavaated võivad tulevikus lisanduda."
+              : "Hetkel on kõik kalkulaatorid beetaversioonina tasuta kasutamiseks.",
           ],
           [
             "Milleks PDF raport?",
             FEATURES.paywallEnabled
-              ? "PDF on professionaalne kokkuvõte, mida saad salvestada või partnerile saata. PDF on projekti-põhine lisatoode (2,99 €)."
-              : "PDF on professionaalne kokkuvõte, mida saad salvestada või partnerile saata.",
+              ? "PDF on kokkuvõte, mida saad salvestada või jagada."
+              : "PDF on kokkuvõte, mida saad salvestada või jagada (kui raporti funktsioon on konkreetses kalkulaatoris olemas).",
           ],
           [
             "Kellele see sobib?",

@@ -6,16 +6,16 @@ export function ValuePropsSection() {
       <header className="section-head">
         <h2 className="section-h2">Miks valida Energiakalkulaator</h2>
         <p className="section-sub">
-          Premium, lihtne ja usaldusväärne ülevaade — nii kodu kui ettevõtte energiaotsuste toetamiseks.
+          Selge ülevaade nii kodu kui ettevõtte energiaotsuste jaoks.
         </p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-4">
         {[
-          ["Kiire tasuta hinnang", "Sisesta põhiandmed ja saa kohe arusaadav tulemus."],
+          ["Kiire ülevaade", "Sisesta põhiandmed ja saa kohe arusaadav tulemus."],
           ["Mitu kalkulaatorit ühes kohas", "Päikesejaam, VPP, paketid, EV laadimine ja peak shaving."],
-          ["Selgemad energiaotsused", "Näed suurusjärke, võrdlusi ja peamisi mõjutegureid."],
-          ["Detailne analüüs lisatasuga", "Täisanalüüs avab rahavoo ja lisablokid, PDF lisab raporti."],
+          ["Mis mõjutab tulemust", "Näed suurusjärke, võrdlusi ja peamisi mõjutegureid."],
+          ["Beetaversioon", "Arendame kalkulaatoreid edasi ja täpsustame mudeleid."],
         ].map(([t, d]) => (
           <article key={t} className="feature-card">
             <div className="feature-icon" />

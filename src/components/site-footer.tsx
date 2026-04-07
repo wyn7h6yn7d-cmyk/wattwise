@@ -40,14 +40,12 @@ export function SiteFooter() {
             </div>
             <div>
               <div className="text-sm font-semibold text-zinc-50">Energiakalkulaator</div>
-              <div className="text-xs text-zinc-400">
-                Arvuta energiaotsuste tasuvus targemalt.
-              </div>
+              <div className="text-xs text-zinc-400">Energiaotsuste tasuvuse kalkulaator.</div>
             </div>
           </div>
           <p className="mt-4 max-w-sm text-sm text-zinc-400">
             Päikesejaama, VPP, elektripaketi, EV laadimise ja ettevõtte energiakulude kalkulaatorid
-            ühes kohas. Tulemused on informatiivsed ja sõltuvad sisenditest.
+            ühes kohas. Tulemused on hinnangulised ja sõltuvad sisenditest ning eeldustest.
           </p>
           <p className="mt-4 text-sm text-zinc-400">
             Teenust osutab hetkel eraisik <span className="font-medium text-zinc-200">Kenneth Alto</span>.
@@ -109,7 +107,7 @@ export function SiteFooter() {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div>© {year} Kenneth Alto</div>
           <div className="text-zinc-500">
-            Registrikood: lisatakse pärast ettevõtlusvormi valikut · KMKR: lisatakse vajadusel
+            Registrikood lisatakse pärast ettevõtlusvormi valikut · KMKR lisatakse vajadusel
           </div>
         </div>
       </div>

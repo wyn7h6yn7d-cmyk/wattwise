@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Energiakalkulaator",
   description:
-    "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas. Arvuta tasuvus, sääst ja rahavoog Eesti tingimustes.",
+    "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas. Hinnangud Eesti tingimustes.",
   metadataBase: new URL("https://energiakalkulaator.ee"),
   alternates: {
     canonical: "https://energiakalkulaator.ee",
@@ -33,11 +33,16 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Energiakalkulaator",
     description:
-      "Arvuta energiaotsuste tasuvus targemalt. Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas.",
+      "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas.",
     url: "https://energiakalkulaator.ee",
     siteName: "Energiakalkulaator",
     locale: "et_EE",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Energiakalkulaator",
+    description: "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas.",
   },
 };
 

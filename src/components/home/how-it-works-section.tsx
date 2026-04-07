@@ -6,7 +6,7 @@ export function HowItWorksSection() {
       <header className="section-head">
         <h2 className="section-h2">Kuidas see töötab</h2>
         <p className="section-sub">
-          Sisesta andmed, näe tasuta ülevaadet ja ava vajadusel detailne analüüs või PDF raport.
+          Vali kalkulaator, sisesta andmed ja vaata tulemust. Tööriist on hetkel beetaversioonina tasuta.
         </p>
       </header>
 
@@ -14,7 +14,7 @@ export function HowItWorksSection() {
         {[
           ["1) Sisesta andmed", "Vali kalkulaator ja sisesta põhiandmed, et saada hinnang."],
           ["2) Vaata tasuta ülevaadet", "Näed põhitulemused ja lihtsa visuaalse ülevaate kohe."],
-          ["3) Ava detailne analüüs või PDF", "Täisanalüüs avab rahavoo ja võrdlused, PDF lisab raporti jagamiseks."],
+          ["3) Täpsusta eeldusi", "Muuda sisendeid ja võrdle stsenaariume, et näha, mis tulemust enim mõjutab."],
         ].map(([t, d]) => (
           <article key={t} className="feature-card">
             <div className="feature-icon" />

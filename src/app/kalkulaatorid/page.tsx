@@ -34,9 +34,9 @@ export default function KalkulaatoridHubPage() {
     <section className="glass-panel rounded-3xl p-6 sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-zinc-50">Kalkulaatorid</h2>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">Kalkulaatorid</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Vali tööriist ja alusta. Tasuta vaates näed põhitulemust, detailne analüüs avaneb lisatasuga.
+            Vali tööriist ja alusta. Hetkel on kõik kalkulaatorid beetaversioonina tasuta kasutamiseks.
           </p>
         </div>
         {FEATURES.paywallEnabled ? (
