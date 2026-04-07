@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { canDownloadPdf, canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
+import { FEATURES } from "@/lib/features";
 
 function num(v: string): number {
   const n = Number(v.replace(",", "."));
@@ -231,27 +232,29 @@ export function VppPageClient() {
           </ul>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-          <p className="text-sm text-zinc-200">
-            PDF raport (2,99 €) on saadaval pärast Täisanalüüsi avamist ning avab konkreetse projekti raporti allalaadimise.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {!unlock.pdfUnlocked ? (
-              <button
-                type="button"
-                className="btn-glow"
-                onClick={() => startCheckout("pdf_report")}
-                disabled={purchaseBusy === "pdf_report"}
-              >
-                {purchaseBusy === "pdf_report" ? "Suunamine..." : "Lisa PDF raport 2,99 €"}
-              </button>
-            ) : (
-              <button type="button" className="btn-glow" onClick={downloadPdf} disabled={!canDownloadPdf(unlock)}>
-                Laadi PDF alla
-              </button>
-            )}
+        {FEATURES.paywallEnabled ? (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <p className="text-sm text-zinc-200">
+              PDF raport (2,99 €) on saadaval pärast Täisanalüüsi avamist ning avab konkreetse projekti raporti allalaadimise.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {!unlock.pdfUnlocked ? (
+                <button
+                  type="button"
+                  className="btn-glow"
+                  onClick={() => startCheckout("pdf_report")}
+                  disabled={purchaseBusy === "pdf_report"}
+                >
+                  {purchaseBusy === "pdf_report" ? "Suunamine..." : "Lisa PDF raport 2,99 €"}
+                </button>
+              ) : (
+                <button type="button" className="btn-glow" onClick={downloadPdf} disabled={!canDownloadPdf(unlock)}>
+                  Laadi PDF alla
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
       </PaywallCard>
     </div>
   );

@@ -6,6 +6,7 @@ import { CalculatorInput } from "@/types/calculator";
 import { canDownloadPdf, canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
+import { FEATURES } from "@/lib/features";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
@@ -617,7 +618,7 @@ export function SolarCalculatorPage() {
                 hinnanguline aastane CO2 vähenemine{" "}
                 <strong>{formatNum(result.selected.co2ReductionKgYear, 0)} kg</strong>.
               </p>
-              {!canViewFullAnalysis(unlock) ? (
+              {FEATURES.paywallEnabled && !canViewFullAnalysis(unlock) ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                   <p className="text-sm text-zinc-300">
                     Täisanalüüs avab detailse rahavoo, tundlikkuse, lisagraafikud ja võrdlused.
@@ -636,7 +637,7 @@ export function SolarCalculatorPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : FEATURES.paywallEnabled && canViewFullAnalysis(unlock) ? (
                 <div className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                   <p className="text-sm text-zinc-100">
                     Täisanalüüs on selle projekti jaoks avatud.
@@ -661,7 +662,7 @@ export function SolarCalculatorPage() {
                     Projekt: <span className="font-medium text-zinc-100">{projectId}</span>
                   </p>
                 </div>
-              )}
+              ) : null}
             </article>
 
             <article className="card">

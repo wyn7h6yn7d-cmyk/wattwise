@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FEATURES } from "@/lib/features";
 
 const cards = [
   {
@@ -38,9 +39,11 @@ export default function KalkulaatoridHubPage() {
             Vali tööriist ja alusta. Tasuta vaates näed põhitulemust, detailne analüüs avaneb lisatasuga.
           </p>
         </div>
-        <Link href="/pricing" className="btn-ghost inline-flex">
-          Vaata hindu
-        </Link>
+        {FEATURES.paywallEnabled ? (
+          <Link href="/pricing" className="btn-ghost inline-flex">
+            Vaata hindu
+          </Link>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

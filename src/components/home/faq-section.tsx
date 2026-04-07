@@ -1,5 +1,7 @@
 "use client";
 
+import { FEATURES } from "@/lib/features";
+
 export function FAQSection() {
   return (
     <section className="section">
@@ -12,15 +14,21 @@ export function FAQSection() {
         {[
           [
             "Kas tulemused on täpsed?",
-            "Tulemused on informatiivsed ja sõltuvad sisenditest ning eeldustest. Täisanalüüs aitab näha rahavoogu ja riske detailsemalt.",
+            FEATURES.paywallEnabled
+              ? "Tulemused on informatiivsed ja sõltuvad sisenditest ning eeldustest. Täisanalüüs aitab näha rahavoogu ja riske detailsemalt."
+              : "Tulemused on informatiivsed ja sõltuvad sisenditest ning eeldustest. Vaata eri stsenaariume ja võrdle, milline sisend mõjutab tulemust enim.",
           ],
           [
             "Mida ma tasuta vaates näen?",
-            "Põhitulemused ja kiire hinnangu. Detailne analüüs, lisagraafikud ja võrdlused avanevad pärast ostu.",
+            FEATURES.paywallEnabled
+              ? "Põhitulemused ja kiire hinnangu. Detailne analüüs, lisagraafikud ja võrdlused avanevad pärast ostu."
+              : "Põhitulemused ja detailsema ülevaate kohe. Kui tahad, laadi raport alla või jaga kokkuvõtet.",
           ],
           [
             "Milleks PDF raport?",
-            "PDF on professionaalne kokkuvõte, mida saad salvestada või partnerile saata. PDF on projekti-põhine lisatoode (2,99 €).",
+            FEATURES.paywallEnabled
+              ? "PDF on professionaalne kokkuvõte, mida saad salvestada või partnerile saata. PDF on projekti-põhine lisatoode (2,99 €)."
+              : "PDF on professionaalne kokkuvõte, mida saad salvestada või partnerile saata.",
           ],
           [
             "Kellele see sobib?",

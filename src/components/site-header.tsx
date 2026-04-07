@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { FEATURES } from "@/lib/features";
 
 const nav = [
   { href: "/", label: "Avaleht" },
   { href: "/kalkulaatorid", label: "Kalkulaatorid" },
-  { href: "/pricing", label: "Hinnad" },
+  ...(FEATURES.paywallEnabled ? ([{ href: "/pricing", label: "Hinnad" }] as const) : ([] as const)),
   { href: "/kontakt", label: "Kontakt" },
 ];
 
@@ -85,8 +86,11 @@ export function SiteHeader() {
               <path d="M5 17h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Link href="/kalkulaatorid/paikesejaam" className="btn-glow inline-flex whitespace-nowrap px-4 py-2.5 sm:px-[1.1rem] sm:py-[0.7rem]">
-            Täisanalüüs
+          <Link
+            href="/kalkulaatorid"
+            className="btn-glow inline-flex whitespace-nowrap px-4 py-2.5 sm:px-[1.1rem] sm:py-[0.7rem]"
+          >
+            Proovi
           </Link>
         </div>
       </div>
@@ -147,8 +151,8 @@ function MobileMenu({
           </div>
 
           <div className="mt-2 border-t border-white/10 p-2">
-            <Link href="/kalkulaatorid/paikesejaam" onClick={onClose} className="btn-glow w-full justify-center">
-              Ava Täisanalüüs
+            <Link href="/kalkulaatorid" onClick={onClose} className="btn-glow w-full justify-center">
+              Proovi kalkulaatorit
             </Link>
           </div>
         </div>

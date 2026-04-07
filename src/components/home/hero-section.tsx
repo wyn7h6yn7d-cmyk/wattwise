@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
+import { FEATURES } from "@/lib/features";
 
 export function HeroSection() {
   return (
@@ -24,16 +25,18 @@ export function HeroSection() {
             <Link href="/kalkulaatorid" className="btn-glow w-full justify-center sm:w-auto">
               Proovi kalkulaatorit
             </Link>
-            <Link href="/kalkulaatorid/paikesejaam" className="btn-ghost w-full justify-center sm:w-auto">
-              Ava Täisanalüüs
-            </Link>
+            {FEATURES.paywallEnabled ? (
+              <Link href="/kalkulaatorid/paikesejaam" className="btn-ghost w-full justify-center sm:w-auto">
+                Ava Täisanalüüs
+              </Link>
+            ) : null}
           </div>
 
           <div className="mt-5 grid gap-2 text-xs text-zinc-400 sm:grid-cols-3">
             {[
               "Tasuta ülevaade mõne minutiga",
               "Ühtne premium UI kõigis moodulites",
-              "PDF raport lisana (2,99 €)",
+              FEATURES.paywallEnabled ? "PDF raport lisana (2,99 €)" : "Raporti allalaadimine",
             ].map((t) => (
               <div key={t} className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
                 {t}

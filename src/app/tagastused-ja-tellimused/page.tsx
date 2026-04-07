@@ -14,10 +14,10 @@ export default function RefundsPage() {
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         <li>
-          <strong>Täisanalüüs</strong> – 9,99 € (detailsem tulemuste vaade ja analüüs ühe projekti kohta).
+          <strong>Täisanalüüs</strong> – detailsem tulemuste vaade ja analüüs ühe projekti kohta.
         </li>
         <li>
-          <strong>PDF raport</strong> – 2,99 € (kokkuvõtte eksport ühele projektile).
+          <strong>PDF raport</strong> – kokkuvõtte eksport ühele projektile.
         </li>
       </ul>
 

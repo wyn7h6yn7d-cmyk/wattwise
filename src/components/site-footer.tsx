@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { FEATURES } from "@/lib/features";
 
 const calcLinks = [
   { href: "/kalkulaatorid/paikesejaam", label: "Päikesejaama tasuvus" },
@@ -75,11 +76,13 @@ export function SiteFooter() {
         <div className="lg:col-span-2">
           <div className="text-sm font-semibold text-zinc-100">Toode</div>
           <ul className="mt-4 grid gap-2 text-sm">
-            <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/pricing">
-                Hinnad
-              </Link>
-            </li>
+            {FEATURES.paywallEnabled ? (
+              <li>
+                <Link className="text-zinc-400 hover:text-zinc-100" href="/pricing">
+                  Hinnad
+                </Link>
+              </li>
+            ) : null}
             <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/kontakt">
                 Kontakt
