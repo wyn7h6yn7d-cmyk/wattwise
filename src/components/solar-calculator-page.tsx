@@ -3,6 +3,9 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { calculateComparison } from "@/lib/calculator";
 import { CalculatorInput } from "@/types/calculator";
+import { canDownloadPdf, canViewFullAnalysis } from "@/lib/unlock";
+import { useProjectUnlock } from "@/lib/useProjectUnlock";
+import { PaywallCard } from "@/components/paywall-card";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
@@ -99,6 +102,9 @@ export function SolarCalculatorPage() {
   });
   const [result, setResult] = useState(() => calculateComparison(defaults));
 
+  const { projectId, unlock, message, setMessage, purchaseBusy, startCheckout, checkPaymentStatus } =
+    useProjectUnlock();
+
   useEffect(() => {
     try {
       // Eemalda vana vormi võti (varem salvestatud lokaalselt) — et ei tekiks muljet „jagatud andmetest“.
@@ -188,6 +194,88 @@ export function SolarCalculatorPage() {
     window.setTimeout(() => setHighlightCalculator(false), 900);
   };
 
+  const downloadPdf = async () => {
+    if (!projectId || !unlock.fullAnalysisSessionId || !unlock.pdfSessionId) return;
+    try {
+      const res = await fetch("/api/pdf/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          fullAnalysisSessionId: unlock.fullAnalysisSessionId,
+          pdfSessionId: unlock.pdfSessionId,
+          payload: {
+            calculatorType: "paikesejaam",
+            inputs: [
+              {
+                group: "Süsteem",
+                items: [
+                  { label: "Päikesepargi võimsus", value: `${input.pvPowerKw || "—"} kW` },
+                  { label: "Aastane tootmine", value: `${input.annualProductionKwh || "—"} kWh` },
+                  { label: "Aku", value: input.hasBattery ? "Jah" : "Ei" },
+                  { label: "Aku maht", value: input.hasBattery ? `${input.batteryCapacityKwh || "—"} kWh` : "—" },
+                ],
+              },
+              {
+                group: "Tarbimine ja hind",
+                items: [
+                  { label: "Aastane tarbimine", value: `${input.annualConsumptionKwh || "—"} kWh` },
+                  { label: "Efektiivne elektrihind", value: `${formatNum(result.effectiveEnergyPrice, 3)} €/kWh` },
+                  { label: "Võrku müügi hind", value: `${input.sellBackPrice || "—"} €/kWh` },
+                ],
+              },
+              {
+                group: "Investeering",
+                items: [
+                  { label: "PV maksumus", value: `${formatNum(input.pvCostEur, 0)} €` },
+                  { label: "Aku maksumus", value: `${formatNum(input.batteryCostEur, 0)} €` },
+                  { label: "Toetus", value: `${formatNum(input.supportEur, 0)} €` },
+                  { label: "Periood", value: `${input.periodYears} a` },
+                ],
+              },
+            ],
+            assumptions: [
+              { label: "Hinnakasv", value: `${formatNum(input.annualPriceGrowthPercent, 1)}% / a` },
+              { label: "Diskontomäär", value: `${formatNum(input.discountRatePercent, 1)}%` },
+              { label: "Degradatsioon", value: `${formatNum(input.degradationPercent, 1)}% / a` },
+            ],
+            metrics: [
+              { label: "Hinnanguline aastane sääst", value: `${formatNum(result.selected.annualSavingsEur, 0)} €` },
+              {
+                label: "Lihtne tasuvusaeg",
+                value: Number.isFinite(result.paybackYears) ? `${result.paybackYears.toFixed(1)} a` : "—",
+              },
+              { label: "Omakasutus", value: `${formatNum(result.selected.selfConsumptionRatePercent, 1)}%` },
+              { label: "Võrku müük", value: `${formatNum(result.selected.exportedKwh, 0)} kWh` },
+              { label: "Kogutulu perioodis", value: `${formatNum(result.selected.totalNetBenefitPeriodEur, 0)} €` },
+              { label: "Aku lisaväärtus", value: `${formatNum(result.batteryAddedValuePeriodEur, 0)} €` },
+              { label: "CO2 vähenemine", value: `${formatNum(result.selected.co2ReductionKgYear, 0)} kg/a` },
+              { label: "Tasuvuse hinnang", value: String(result.interpretationKind) },
+            ],
+            charts: {
+              cashflowByYear: result.selected.cashflowByYear,
+            },
+          },
+        }),
+      });
+      if (!res.ok) {
+        setMessage("PDF genereerimine ebaõnnestus.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "energiakalkulaator-paikesejaama-analuus.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setMessage("PDF allalaadimine ebaõnnestus.");
+    }
+  };
+
   const chartTrackPx = 176; // ~h-44 — fikseeritud kõrgus, et tulba pikslikõrgus oleks alati arvutatav
   const bestYear = result.selected.cashflowByYear.reduce(
     (max, value) => Math.max(max, Math.abs(value)),
@@ -212,6 +300,22 @@ export function SolarCalculatorPage() {
           Kerige sisendite juurde
         </button>
       </div>
+
+      {message ? (
+        <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-200">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p>{message}</p>
+            <button type="button" className="btn-ghost" onClick={() => setMessage(null)}>
+              Peida
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
+              Kontrolli makse staatust
+            </button>
+          </div>
+        </div>
+      ) : null}
 
         <section
           id="kalkulaator"
@@ -507,128 +611,189 @@ export function SolarCalculatorPage() {
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <article className="card">
-              <h4 className="section-title">Ilma akuta vs akuga</h4>
-              <div className="grid gap-3 text-sm">
-                <div className="compare-row">
-                  <span className="compare-label">Ilma akuta aastane netokasu</span>
-                  <strong>{fmtEur(result.withoutBattery.annualNetBenefitEur)}</strong>
+              <h4 className="section-title">Kas see investeering tundub mõistlik?</h4>
+              <p className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4 text-zinc-100">
+                Tasuvuse hinnang: <strong>{result.interpretationKind}</strong>. Sinu valitud stsenaariumis on
+                hinnanguline aastane CO2 vähenemine{" "}
+                <strong>{formatNum(result.selected.co2ReductionKgYear, 0)} kg</strong>.
+              </p>
+              {!canViewFullAnalysis(unlock) ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <p className="text-sm text-zinc-300">
+                    Täisanalüüs avab detailse rahavoo, tundlikkuse, lisagraafikud ja võrdlused.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-glow"
+                      onClick={() => startCheckout("full_analysis")}
+                      disabled={purchaseBusy === "full_analysis"}
+                    >
+                      {purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
+                      Kontrolli makse staatust
+                    </button>
+                  </div>
                 </div>
-                <div className="compare-row">
-                  <span className="compare-label">Akuga aastane netokasu</span>
-                  <strong>{fmtEur(result.withBattery.annualNetBenefitEur)}</strong>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
+                  <p className="text-sm text-zinc-100">
+                    Täisanalüüs on selle projekti jaoks avatud.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {!unlock.pdfUnlocked ? (
+                      <button
+                        type="button"
+                        className="btn-glow"
+                        onClick={() => startCheckout("pdf_report")}
+                        disabled={purchaseBusy === "pdf_report"}
+                      >
+                        {purchaseBusy === "pdf_report" ? "Suunamine..." : "Lisa PDF raport 2,99 €"}
+                      </button>
+                    ) : (
+                      <button type="button" className="btn-glow" onClick={downloadPdf} disabled={!canDownloadPdf(unlock)}>
+                        Laadi PDF alla
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-zinc-300">
+                    Projekt: <span className="font-medium text-zinc-100">{projectId}</span>
+                  </p>
                 </div>
-                <div className="compare-row">
-                  <span className="compare-label">Võrgu sõltuvuse vähenemine (akuga)</span>
-                  <strong>{formatNum(result.withBattery.gridDependenceReductionPercent, 1)}%</strong>
-                </div>
-              </div>
+              )}
             </article>
 
             <article className="card">
-              <h4 className="section-title">Kas see investeering tundub mõistlik?</h4>
-              <p className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4 text-zinc-100">
-                Tasuvuse hinnang: <strong>{result.interpretationKind}</strong>. Sinu valitud stsenaariumis
-                on hinnanguline aastane CO2 vähenemine{" "}
-                <strong>{formatNum(result.selected.co2ReductionKgYear, 0)} kg</strong>.
-              </p>
+              <h4 className="section-title">Energiavood</h4>
+              <div className="mt-3 grid gap-2 text-sm">
+                <div>
+                  <p className="mb-1 text-zinc-300">Omakasutatud energia</p>
+                  <div className="h-3 rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-cyan-400"
+                      style={{
+                        width: `${isEmptyInputs ? 0 : Math.min(result.selected.selfConsumptionRatePercent, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-zinc-300">Võrku müüdud energia</p>
+                  <div className="h-3 rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-violet-400"
+                      style={{
+                        width: `${
+                          isEmptyInputs
+                            ? 0
+                            : Math.min(
+                                (result.selected.exportedKwh / Math.max(result.selected.annualProductionKwh, 1)) * 100,
+                                100,
+                              )
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </article>
           </div>
 
-          <article className="card mt-6 overflow-hidden">
-            <h4 className="section-title">Rahavoo prognoos aastate lõikes</h4>
-            {result.selected.cashflowByYear.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-400">
-                Rahavoogu ei saanud arvutada. Kontrolli sisestatud andmeid.
-              </p>
-            ) : (
+          <PaywallCard
+            locked={!canViewFullAnalysis(unlock)}
+            title="Täisanalüüs"
+            description="avab detailse rahavoo, lisagraafikud ja võrdlused selle projekti jaoks."
+            ctaLabel={purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
+            secondaryLabel="Kontrolli makse staatust"
+            onCta={() => startCheckout("full_analysis")}
+            onSecondary={checkPaymentStatus}
+            footer={
               <>
-                <p className="mt-2 px-0 text-xs text-zinc-500 md:hidden">
-                  Mobiilis: libista horisontaalselt, et näha kõiki aastaid.
-                </p>
-                <div className="relative mt-3 w-full">
-                  <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0 md:overflow-visible">
-                    <div className="flex min-h-[13.5rem] min-w-max items-end gap-1.5 pb-1 sm:gap-2 md:min-h-0 md:min-w-0 md:w-full md:justify-between md:gap-2">
-                      {result.selected.cashflowByYear.map((value, index) => {
-                        const abs = Math.abs(value);
-                        const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 6);
-                        return (
-                        <div
-                          key={`${value}-${index}`}
-                          className="group relative flex w-7 shrink-0 flex-col items-stretch gap-1 md:min-w-0 md:flex-1"
-                        >
-                          <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-cyan-300/30 bg-zinc-950/95 px-2 py-1 text-[11px] font-medium text-cyan-200 opacity-0 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-opacity duration-150 group-hover:opacity-100 sm:block">
-                            {formatNum(value, 0)} €
-                          </div>
-                          <div
-                            className="box-border flex w-full flex-col justify-end rounded-md bg-white/[0.06] px-0.5 pt-1"
-                            style={{ height: chartTrackPx }}
-                          >
-                            <div
-                              className="w-full shrink-0 rounded bg-gradient-to-t from-cyan-500/80 to-blue-400/90"
-                              style={{ height: barPx }}
-                              aria-label={`Aasta ${index + 1}`}
-                              title={`${formatNum(value, 0)} €`}
-                            />
-                          </div>
-                          <span className="text-center text-[10px] leading-none text-zinc-400 sm:text-[11px]">
-                            {index + 1}
-                          </span>
-                        </div>
-                        );
-                      })}
-                    </div>
+                Projekt: <span className="font-medium text-zinc-200">{projectId}</span>
+              </>
+            }
+          >
+            <div className="grid gap-4 lg:grid-cols-2">
+              <article className="card">
+                <h4 className="section-title">Ilma akuta vs akuga</h4>
+                <div className="grid gap-3 text-sm">
+                  <div className="compare-row">
+                    <span className="compare-label">Ilma akuta aastane netokasu</span>
+                    <strong>{fmtEur(result.withoutBattery.annualNetBenefitEur)}</strong>
+                  </div>
+                  <div className="compare-row">
+                    <span className="compare-label">Akuga aastane netokasu</span>
+                    <strong>{fmtEur(result.withBattery.annualNetBenefitEur)}</strong>
+                  </div>
+                  <div className="compare-row">
+                    <span className="compare-label">Võrgu sõltuvuse vähenemine (akuga)</span>
+                    <strong>{formatNum(result.withBattery.gridDependenceReductionPercent, 1)}%</strong>
                   </div>
                 </div>
-              </>
-            )}
-          </article>
+              </article>
 
-          <article className="card mt-6">
-            <h4 className="section-title">Energiavood</h4>
-            <div className="mt-3 grid gap-2 text-sm">
-              <div>
-                <p className="mb-1 text-zinc-300">Omakasutatud energia</p>
-                <div className="h-3 rounded-full bg-zinc-800">
-                  <div
-                    className="h-full rounded-full bg-cyan-400"
-                    style={{
-                      width: `${
-                        isEmptyInputs ? 0 : Math.min(result.selected.selfConsumptionRatePercent, 100)
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <p className="mb-1 text-zinc-300">Võrku müüdud energia</p>
-                <div className="h-3 rounded-full bg-zinc-800">
-                  <div
-                    className="h-full rounded-full bg-violet-400"
-                    style={{
-                      width: `${
-                        isEmptyInputs
-                          ? 0
-                          : Math.min(
-                              (result.selected.exportedKwh / Math.max(result.selected.annualProductionKwh, 1)) * 100,
-                              100,
-                            )
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
+              <article className="card">
+                <h4 className="section-title">Rahavoo prognoos aastate lõikes</h4>
+                {result.selected.cashflowByYear.length === 0 ? (
+                  <p className="mt-3 text-sm text-zinc-400">
+                    Rahavoogu ei saanud arvutada. Kontrolli sisestatud andmeid.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-2 px-0 text-xs text-zinc-500 md:hidden">
+                      Mobiilis: libista horisontaalselt, et näha kõiki aastaid.
+                    </p>
+                    <div className="relative mt-3 w-full">
+                      <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0 md:overflow-visible">
+                        <div className="flex min-h-[13.5rem] min-w-max items-end gap-1.5 pb-1 sm:gap-2 md:min-h-0 md:min-w-0 md:w-full md:justify-between md:gap-2">
+                          {result.selected.cashflowByYear.map((value, index) => {
+                            const abs = Math.abs(value);
+                            const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 6);
+                            return (
+                              <div
+                                key={`${value}-${index}`}
+                                className="group relative flex w-7 shrink-0 flex-col items-stretch gap-1 md:min-w-0 md:flex-1"
+                              >
+                                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-cyan-300/30 bg-zinc-950/95 px-2 py-1 text-[11px] font-medium text-cyan-200 opacity-0 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-opacity duration-150 group-hover:opacity-100 sm:block">
+                                  {formatNum(value, 0)} €
+                                </div>
+                                <div
+                                  className="box-border flex w-full flex-col justify-end rounded-md bg-white/[0.06] px-0.5 pt-1"
+                                  style={{ height: chartTrackPx }}
+                                >
+                                  <div
+                                    className="w-full shrink-0 rounded bg-gradient-to-t from-cyan-500/80 to-blue-400/90"
+                                    style={{ height: barPx }}
+                                    aria-label={`Aasta ${index + 1}`}
+                                    title={`${formatNum(value, 0)} €`}
+                                  />
+                                </div>
+                                <span className="text-center text-[10px] leading-none text-zinc-400 sm:text-[11px]">
+                                  {index + 1}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </article>
             </div>
-          </article>
 
-          <article className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
-            <h4 className="mb-2 font-medium text-zinc-100">Arvutuse alused</h4>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>Tootmist korrigeeritakse suuna, varjutuse, kasuteguri ja hooajalisuse teguriga.</li>
-              <li>Akuga stsenaariumis kasvab omakasutus aku kasutatava mahuga.</li>
-              <li>Rahavoog arvestab elektrihinna kasvu, süsteemi degradatsiooni ja diskontomäära.</li>
-              <li>Nord Pool tõrke korral kasutatakse varuandmeid ning saad alati käsitsi hinda muuta.</li>
-            </ul>
-          </article>
+            <article className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+              <h4 className="mb-2 font-medium text-zinc-100">Arvutuse alused</h4>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Tootmist korrigeeritakse suuna, varjutuse, kasuteguri ja hooajalisuse teguriga.</li>
+                <li>Akuga stsenaariumis kasvab omakasutus aku kasutatava mahuga.</li>
+                <li>Rahavoog arvestab elektrihinna kasvu, süsteemi degradatsiooni ja diskontomäära.</li>
+                <li>Nord Pool tõrke korral kasutatakse varuandmeid ning saad alati käsitsi hinda muuta.</li>
+              </ul>
+            </article>
+          </PaywallCard>
+
         </section>
     </div>
   );

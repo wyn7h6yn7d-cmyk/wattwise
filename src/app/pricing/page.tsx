@@ -19,14 +19,14 @@ const plans = [
       "Võrdlus (akuga vs akuta)",
       "Arvutusperioodi mõju (rahavoo vaade)",
     ],
-    cta: { label: "Ava Täisanalüüs", href: "/kontakt", variant: "glow" as const },
+    cta: { label: "Ava Täisanalüüs", href: "/kalkulaatorid/paikesejaam", variant: "glow" as const },
   },
   {
     name: "PDF raport",
     price: "2,99 €",
     desc: "Kokkuvõtte eksport ühe projekti kohta.",
     features: ["1 projekti kokkuvõte", "PDF raport", "Sobib jagamiseks"],
-    cta: { label: "Lisa PDF raport", href: "/kontakt", variant: "ghost" as const },
+    cta: { label: "Lisa PDF raport", href: "/kalkulaatorid/paikesejaam", variant: "ghost" as const },
   },
 ];
 
@@ -47,8 +47,8 @@ export default function PricingPage() {
             Vali tase, mis sobib sinu otsustega
           </h1>
           <p className="mt-4 max-w-2xl text-zinc-300">
-            Tasuta annab kiire ülevaate. Täisanalüüs avab detailsema vaate ja PDF raport lisab
-            mugava kokkuvõtte.
+            Tasuta annab kiire ülevaate. Täisanalüüs avab detailsema vaate ja PDF raport lisab mugava
+            kokkuvõtte ühe projekti kohta.
           </p>
         </header>
 
