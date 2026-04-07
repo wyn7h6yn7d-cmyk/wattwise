@@ -34,13 +34,13 @@ export function SiteHeader() {
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-emerald-300/55 shadow-[0_0_26px_rgba(16,185,129,0.22)] sm:h-11 sm:w-11">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-emerald-300/55 shadow-[0_0_26px_rgba(16,185,129,0.22)] sm:h-16 sm:w-16">
             <Image
               src="/logo.png"
               alt="Energiakalkulaator"
-              width={44}
-              height={44}
-              sizes="44px"
+              width={66}
+              height={66}
+              sizes="(min-width: 640px) 64px, 56px"
               quality={100}
               unoptimized
               className="h-[92%] w-[92%] object-contain"
