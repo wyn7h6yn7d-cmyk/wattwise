@@ -242,6 +242,8 @@ export function SolarCalculatorPage() {
 
   const fmtEur = (value: number) => `${formatNum(value, 0, lang)} €`;
   const fmtKwh = (value: number) => `${formatNum(value, 0, lang)} kWh`;
+  const isEmptyInputs =
+    input.annualConsumptionKwh <= 0 || (input.annualProductionKwh <= 0 && input.pvPowerKw <= 0);
 
   return (
     <div className="relative overflow-hidden pb-28 text-zinc-100">
@@ -660,7 +662,11 @@ export function SolarCalculatorPage() {
                 <div className="h-3 rounded-full bg-zinc-800">
                   <div
                     className="h-full rounded-full bg-cyan-400"
-                    style={{ width: `${Math.min(result.selected.selfConsumptionRatePercent, 100)}%` }}
+                    style={{
+                      width: `${
+                        isEmptyInputs ? 0 : Math.min(result.selected.selfConsumptionRatePercent, 100)
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
@@ -670,10 +676,14 @@ export function SolarCalculatorPage() {
                   <div
                     className="h-full rounded-full bg-violet-400"
                     style={{
-                      width: `${Math.min(
-                        (result.selected.exportedKwh / Math.max(result.selected.annualProductionKwh, 1)) * 100,
-                        100,
-                      )}%`,
+                      width: `${
+                        isEmptyInputs
+                          ? 0
+                          : Math.min(
+                              (result.selected.exportedKwh / Math.max(result.selected.annualProductionKwh, 1)) * 100,
+                              100,
+                            )
+                      }%`,
                     }}
                   />
                 </div>
