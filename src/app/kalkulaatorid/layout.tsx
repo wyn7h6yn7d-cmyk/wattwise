@@ -1,12 +1,10 @@
 import { CalculatorTabs } from "@/components/calculator-tabs";
+import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
 
 export default function KalkulaatoridLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative page-bg">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="aurora" />
-        <div className="grid-glow" />
-      </div>
+      <AnimatedEnergyBackground intensity="page" />
       <main className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">Kalkulaatorid</h1>
