@@ -11,7 +11,7 @@ export default function Home() {
     <div className="relative page-bg">
       <AnimatedEnergyBackground intensity="page" />
 
-      <main className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+      <main className="relative mx-auto w-full max-w-7xl px-5 pb-16 pt-10 sm:px-8 lg:px-10">
         <div className="stack">
           <HeroSection />
           <HowItWorksSection />
