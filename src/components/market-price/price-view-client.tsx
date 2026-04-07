@@ -24,6 +24,9 @@ function fmtSnt(eurPerKwh: number, vat: boolean) {
   return new Intl.NumberFormat("et-EE", { maximumFractionDigits: 1 }).format(rounded);
 }
 
+type ViewInterval = 15 | 60;
+type ViewPeriod = "today" | "today_tomorrow" | "tomorrow";
+
 function computeNow(points: MarketPricePoint[], intervalMinutes: 15 | 60) {
   const sorted = points.slice().sort((a, b) => a.ts - b.ts);
   const nowTs = Math.floor(Date.now() / 1000);
@@ -72,6 +75,46 @@ function splitByLocalDay(points: MarketPricePoint[], day: Date) {
   return points.filter((p) => p.ts >= s && p.ts <= e);
 }
 
+function resampleToHourly(points: MarketPricePoint[], sourceInterval: 15 | 60): MarketPricePoint[] {
+  if (sourceInterval === 60) return points;
+  const sorted = points.slice().sort((a, b) => a.ts - b.ts);
+  const out: MarketPricePoint[] = [];
+  // group by local hour key
+  const groups = new Map<number, MarketPricePoint[]>();
+  for (const p of sorted) {
+    const d = new Date(p.ts * 1000);
+    d.setMinutes(0, 0, 0);
+    const key = Math.floor(d.getTime() / 1000);
+    const g = groups.get(key) ?? [];
+    g.push(p);
+    groups.set(key, g);
+  }
+  for (const [hourTs, g] of Array.from(groups.entries()).sort((a, b) => a[0] - b[0])) {
+    const mean = g.reduce((s, p) => s + p.price_eur_per_kwh, 0) / g.length;
+    out.push({ ts: hourTs, price_eur_per_kwh: mean });
+  }
+  return out;
+}
+
+function volatilityIndex(points: MarketPricePoint[]) {
+  const v = points.map((p) => p.price_eur_per_kwh).filter((x) => Number.isFinite(x));
+  if (v.length < 2) return null;
+  const mean = v.reduce((s, x) => s + x, 0) / v.length;
+  const variance = v.reduce((s, x) => s + (x - mean) ** 2, 0) / (v.length - 1);
+  const std = Math.sqrt(Math.max(variance, 0));
+  const cv = mean !== 0 ? std / Math.abs(mean) : null;
+  return { mean, std, cv };
+}
+
+function priceClass(p: number, mean: number, std: number) {
+  // Cheap/avg/expensive/peak based on z-score.
+  const z = std > 0 ? (p - mean) / std : 0;
+  if (z <= -0.6) return { label: "odav", pill: "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/20" };
+  if (z >= 1.2) return { label: "tipp", pill: "bg-rose-400/15 text-rose-100 ring-1 ring-rose-300/20" };
+  if (z >= 0.6) return { label: "kallis", pill: "bg-amber-400/15 text-amber-100 ring-1 ring-amber-300/20" };
+  return { label: "keskmine", pill: "bg-white/[0.04] text-zinc-200 ring-1 ring-white/10" };
+}
+
 function cardTitle(label: string) {
   return <div className="text-xs text-zinc-400">{label}</div>;
 }
@@ -111,7 +154,15 @@ function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) 
   );
 }
 
-function AreaChart({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) {
+function AreaChart({
+  points,
+  vat,
+  nowTs,
+}: {
+  points: MarketPricePoint[];
+  vat: boolean;
+  nowTs: number;
+}) {
   const values = points.map((p) => (vat ? addVat(p.price_eur_per_kwh) : p.price_eur_per_kwh));
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -119,6 +170,8 @@ function AreaChart({ points, vat }: { points: MarketPricePoint[]; vat: boolean }
   const w = 520;
   const h = 160;
   const pad = 10;
+
+  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
 
   const d = values
     .map((v, i) => {
@@ -128,6 +181,20 @@ function AreaChart({ points, vat }: { points: MarketPricePoint[]; vat: boolean }
     })
     .join(" ");
 
+  const nowIndex = (() => {
+    // closest point by timestamp
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < points.length; i += 1) {
+      const dist = Math.abs(points[i].ts - nowTs);
+      if (dist < bestDist) {
+        best = i;
+        bestDist = dist;
+      }
+    }
+    return best;
+  })();
+
   return (
     <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
       <div className="flex items-center justify-between text-xs text-zinc-400">
@@ -136,7 +203,33 @@ function AreaChart({ points, vat }: { points: MarketPricePoint[]; vat: boolean }
           min {fmtSnt(min, vat)} · max {fmtSnt(max, vat)} snt/kWh
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-[160px] w-full">
+      <div className="relative mt-3">
+        {hover ? (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-2 text-xs text-zinc-200 shadow-[0_0_30px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+            style={{ left: `${(hover.x / w) * 100}%`, top: 0 }}
+          >
+            <div className="text-zinc-400">{fmtTimeEt(points[hover.i]?.ts ?? 0)}</div>
+            <div className="font-semibold text-zinc-50">
+              {fmtSnt(points[hover.i]?.price_eur_per_kwh ?? 0, vat)} snt/kWh
+            </div>
+          </div>
+        ) : null}
+        <svg
+          viewBox={`0 0 ${w} ${h}`}
+          className="h-[160px] w-full"
+          onMouseLeave={() => setHover(null)}
+          onMouseMove={(e) => {
+            const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+            const px = ((e.clientX - rect.left) / rect.width) * w;
+            const i = Math.round(((px - pad) / (w - pad * 2)) * (points.length - 1));
+            const ii = Math.min(Math.max(i, 0), points.length - 1);
+            const v = values[ii] ?? min;
+            const x = pad + (ii * (w - pad * 2)) / Math.max(values.length - 1, 1);
+            const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+            setHover({ i: ii, x, y });
+          }}
+        >
         <defs>
           <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(16,185,129,0.30)" />
@@ -145,7 +238,29 @@ function AreaChart({ points, vat }: { points: MarketPricePoint[]; vat: boolean }
         </defs>
         <path d={d} fill="none" stroke="rgba(110,231,183,0.92)" strokeWidth="2" />
         <path d={`${d} L${w - pad},${h - pad} L${pad},${h - pad} Z`} fill="url(#area)" />
-      </svg>
+        {/* now marker */}
+        {points.length > 1 ? (
+          (() => {
+            const x = pad + (nowIndex * (w - pad * 2)) / Math.max(points.length - 1, 1);
+            const v = values[nowIndex] ?? min;
+            const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+            return (
+              <g>
+                <line x1={x} x2={x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.18)" strokeDasharray="3 4" />
+                <circle cx={x} cy={y} r="4" fill="rgba(16,185,129,0.95)" />
+              </g>
+            );
+          })()
+        ) : null}
+        {/* hover marker */}
+        {hover ? (
+          <g>
+            <line x1={hover.x} x2={hover.x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.20)" />
+            <circle cx={hover.x} cy={hover.y} r="4" fill="rgba(110,231,183,0.95)" />
+          </g>
+        ) : null}
+        </svg>
+      </div>
     </div>
   );
 }
@@ -250,13 +365,56 @@ export function PriceViewClient({
   intervalMinutes: 15 | 60;
 }) {
   const [vat, setVat] = useState(true);
+  const [viewInterval, setViewInterval] = useState<ViewInterval>(intervalMinutes);
+  const [period, setPeriod] = useState<ViewPeriod>("today_tomorrow");
 
-  const nowCard = useMemo(() => computeNow(points, intervalMinutes), [points, intervalMinutes]);
+  const nowTs = Math.floor(Date.now() / 1000);
+  const sourceInterval = intervalMinutes;
+  const effectiveInterval: ViewInterval =
+    sourceInterval === 15 ? viewInterval : 60; // if only hourly data, force 60
 
-  const todayPoints = useMemo(() => splitByLocalDay(points, new Date()), [points]);
-  const tomorrowPoints = useMemo(() => splitByLocalDay(points, new Date(Date.now() + 24 * 60 * 60 * 1000)), [points]);
+  const normalizedPoints = useMemo(() => {
+    const base = points.slice().sort((a, b) => a.ts - b.ts);
+    return effectiveInterval === 60 ? resampleToHourly(base, sourceInterval) : base;
+  }, [effectiveInterval, points, sourceInterval]);
 
-  const stats = useMemo(() => summarizeDay(todayPoints), [todayPoints]);
+  const nowCard = useMemo(() => computeNow(normalizedPoints, effectiveInterval), [normalizedPoints, effectiveInterval]);
+
+  const todayPoints = useMemo(() => splitByLocalDay(normalizedPoints, new Date()), [normalizedPoints]);
+  const tomorrowPoints = useMemo(
+    () => splitByLocalDay(normalizedPoints, new Date(Date.now() + 24 * 60 * 60 * 1000)),
+    [normalizedPoints],
+  );
+  const yesterdayPoints = useMemo(
+    () => splitByLocalDay(normalizedPoints, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+    [normalizedPoints],
+  );
+
+  const visiblePoints = useMemo(() => {
+    if (period === "today") return todayPoints;
+    if (period === "tomorrow") return tomorrowPoints;
+    return todayPoints.concat(tomorrowPoints).sort((a, b) => a.ts - b.ts);
+  }, [period, todayPoints, tomorrowPoints]);
+
+  const statsToday = useMemo(() => summarizeDay(todayPoints), [todayPoints]);
+  const statsTomorrow = useMemo(() => summarizeDay(tomorrowPoints), [tomorrowPoints]);
+  const statsYesterday = useMemo(() => summarizeDay(yesterdayPoints), [yesterdayPoints]);
+  const vol = useMemo(() => volatilityIndex(todayPoints), [todayPoints]);
+
+  const marketOverview = useMemo(() => {
+    if (!statsToday) return null;
+    const yMean = statsYesterday?.mean ?? null;
+    const tMean = statsToday.mean;
+    let compared: "odavam" | "sarnane" | "kallim" = "sarnane";
+    if (yMean && tMean < yMean * 0.9) compared = "odavam";
+    if (yMean && tMean > yMean * 1.1) compared = "kallim";
+    const range = statsToday.max - statsToday.min;
+    const v = vol?.cv ?? null;
+    let volatilityText = "tavapärane";
+    if (v !== null && v > 0.55) volatilityText = "kõikuvam";
+    if (v !== null && v < 0.25) volatilityText = "stabiilsem";
+    return { compared, range, volatilityText };
+  }, [statsToday, statsYesterday, vol]);
 
   const windowPicks = useMemo(() => {
     const cheapest: Record<string, { startTs: number; endTs: number; avgEurPerKwh: number } | null> = {};
@@ -264,81 +422,140 @@ export function PriceViewClient({
     ([
       1, 2, 3, 4,
     ] as const).forEach((h) => {
-      const r = pickBestWindows({ points: todayPoints, intervalMinutes, windowHours: h, topN: 1 });
+      const r = pickBestWindows({ points: todayPoints, intervalMinutes: effectiveInterval, windowHours: h, topN: 1 });
       cheapest[String(h)] = r.cheapest[0] ?? null;
       priciest[String(h)] = r.priciest[0] ?? null;
     });
     return { cheapest, priciest };
-  }, [todayPoints, intervalMinutes]);
+  }, [todayPoints, effectiveInterval]);
 
   const topSlots = useMemo(() => pickTopSlots(todayPoints, 3), [todayPoints]);
 
-  const intervalSec = intervalMinutes * 60;
+  const intervalSec = effectiveInterval * 60;
 
   return (
     <section className="mt-8 grid gap-6">
       <div className="glass-panel rounded-3xl p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold text-zinc-50">Hetkehinnang</h2>
+            <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna dashboard</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Näitame Eesti börsihinda Eleringi andmetel. Saad valida, kas kuvada hind käibemaksuga (24%) või ilma.
+              Eesti (EE) turuhind Eleringi andmetel. Vaikimisi näitame hinna käibemaksuga (24%).
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1">
-            <button
-              type="button"
-              className={`rounded-xl px-3 py-2 text-sm ${!vat ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-              onClick={() => setVat(false)}
-            >
-              Ilma KM-ta
-            </button>
-            <button
-              type="button"
-              className={`rounded-xl px-3 py-2 text-sm ${vat ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-              onClick={() => setVat(true)}
-            >
-              KM-ga (24%)
-            </button>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1">
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${!vat ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setVat(false)}
+              >
+                Ilma KM-ta
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${vat ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setVat(true)}
+              >
+                KM-ga
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1">
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${effectiveInterval === 15 ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setViewInterval(15)}
+                disabled={sourceInterval !== 15}
+                title={sourceInterval === 15 ? "15 min vaade" : "15 min andmeid ei ole saadaval"}
+              >
+                15 min
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${effectiveInterval === 60 ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setViewInterval(60)}
+              >
+                1h
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1">
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${period === "today" ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setPeriod("today")}
+              >
+                Täna
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${period === "today_tomorrow" ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setPeriod("today_tomorrow")}
+              >
+                Täna + homme
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-sm ${period === "tomorrow" ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+                onClick={() => setPeriod("tomorrow")}
+              >
+                Homme
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-5 card rounded-3xl p-6">
-            {cardTitle(nowCard?.label ?? "Praegu")}
-            <div className="mt-2 text-4xl font-semibold tracking-tight text-zinc-50">
-              {nowCard ? `${fmtSnt(nowCard.eurPerKwh, vat)} ` : "— "}
-              <span className="text-base font-semibold text-zinc-300">snt/kWh</span>
+        {/* A) Summary ribbon */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="text-xs text-zinc-400">{nowCard?.label ?? "Praegune hind"}</div>
+            <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              {nowCard ? fmtSnt(nowCard.eurPerKwh, vat) : "—"} <span className="text-sm font-semibold text-zinc-300">snt/kWh</span>
             </div>
-            <div className="mt-2 text-sm text-zinc-400">
-              {nowCard ? `${fmtRangeEt(nowCard.startTs, nowCard.endTs)} · ajavahemik` : "Hinna ajavahemikku ei leitud."}
-            </div>
-            {stats ? (
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="text-xs text-zinc-400">Päeva miinimum</div>
-                  <div className="mt-1 text-lg font-semibold text-zinc-50">{fmtSnt(stats.min, vat)} snt</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="text-xs text-zinc-400">Päeva keskmine</div>
-                  <div className="mt-1 text-lg font-semibold text-zinc-50">{fmtSnt(stats.mean, vat)} snt</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="text-xs text-zinc-400">Päeva maksimum</div>
-                  <div className="mt-1 text-lg font-semibold text-zinc-50">{fmtSnt(stats.max, vat)} snt</div>
-                </div>
-              </div>
-            ) : null}
           </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="text-xs text-zinc-400">Päeva madalaim</div>
+            <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              {statsToday ? fmtSnt(statsToday.min, vat) : "—"} <span className="text-sm font-semibold text-zinc-300">snt</span>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="text-xs text-zinc-400">Päeva kõrgeim</div>
+            <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              {statsToday ? fmtSnt(statsToday.max, vat) : "—"} <span className="text-sm font-semibold text-zinc-300">snt</span>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="text-xs text-zinc-400">Päeva keskmine</div>
+            <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              {statsToday ? fmtSnt(statsToday.mean, vat) : "—"} <span className="text-sm font-semibold text-zinc-300">snt</span>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="text-xs text-zinc-400">Homme (keskmine)</div>
+            <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              {statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"} <span className="text-sm font-semibold text-zinc-300">snt</span>
+            </div>
+          </div>
+        </div>
 
-          <div className="lg:col-span-7 card rounded-3xl p-6">
-            <div className="text-sm font-semibold text-zinc-50">Päeva ülevaade</div>
-            <p className="mt-2 text-sm text-zinc-400">
-              Kuumuserida näitab hinnataset ajas. Hoia hiirt või puuduta, et näha täpset hinda.
-            </p>
-            <HeatRow points={todayPoints} vat={vat} />
-            <AreaChart points={todayPoints} vat={vat} />
+        {/* B) Main chart */}
+        <div className="mt-6 card rounded-3xl p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-zinc-50">Hinnagraafik</div>
+              <div className="mt-1 text-xs text-zinc-400">
+                Hover: näed täpset hinda. Marker näitab “praegu” lähimat punkti.
+              </div>
+            </div>
+            <div className="text-xs text-zinc-400">
+              Vaade: {effectiveInterval === 15 ? "15 min" : "1h"} · Periood:{" "}
+              {period === "today" ? "täna" : period === "tomorrow" ? "homme" : "täna + homme"}
+            </div>
           </div>
+          <HeatRow points={visiblePoints} vat={vat} />
+          <AreaChart points={visiblePoints} vat={vat} nowTs={nowTs} />
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-12">
@@ -358,48 +575,84 @@ export function PriceViewClient({
         <AdviceCards
           cheapestWindow={windowPicks.cheapest["2"] ? { startTs: windowPicks.cheapest["2"]!.startTs, endTs: windowPicks.cheapest["2"]!.endTs } : null}
           priciestWindow={windowPicks.priciest["2"] ? { startTs: windowPicks.priciest["2"]!.startTs, endTs: windowPicks.priciest["2"]!.endTs } : null}
-          intervalMinutes={intervalMinutes}
+          intervalMinutes={effectiveInterval}
         />
       </div>
 
+      {/* C) Price table + market overview */}
       <div className="glass-panel rounded-3xl p-6 sm:p-8">
-        <h2 className="text-2xl font-semibold text-zinc-50">Hinnad homme</h2>
-        <p className="mt-2 text-sm text-zinc-400">
-          Kui homsed hinnad on avaldatud, kuvatakse need siin. Kui tabel on tühi, ei ole Elering veel andmeid väljastanud.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold text-zinc-50">Hinnatabel</h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              Hind ilma KM-ta ja KM-ga, koos lihtsa märgistusega (odav/keskmine/kallis/tipp).
+            </p>
+          </div>
+          {marketOverview ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+              <div className="text-xs text-zinc-400">Turu ülevaade</div>
+              <div className="mt-1 text-zinc-100">
+                Täna on keskmise hinna järgi <strong>{marketOverview.compared}</strong> kui eile.
+              </div>
+              <div className="mt-1 text-xs text-zinc-400">
+                Vahemik: {statsToday ? fmtSnt(statsToday.min, vat) : "—"}–{statsToday ? fmtSnt(statsToday.max, vat) : "—"} snt ·
+                Kõikumine: {marketOverview.volatilityText}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
-        {tomorrowPoints.length === 0 ? (
+        {visiblePoints.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
-            Homseid hindu ei ole praegu saadaval.
+            Andmeid ei ole saadaval.
           </div>
         ) : (
-          <>
-            <HeatRow points={tomorrowPoints} vat={vat} />
-            <AreaChart points={tomorrowPoints} vat={vat} />
-            <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
-              <table className="w-full text-sm">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="min-w-[720px] w-full text-sm">
                 <thead className="bg-white/[0.03] text-zinc-300">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Aeg</th>
-                    <th className="px-4 py-3 text-right font-medium">Hind (snt/kWh)</th>
+                    <th className="px-4 py-3 text-right font-medium">Ilma KM-ta (snt/kWh)</th>
+                    <th className="px-4 py-3 text-right font-medium">KM-ga (snt/kWh)</th>
+                    <th className="px-4 py-3 text-left font-medium">Staatus</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {tomorrowPoints
-                    .slice()
-                    .sort((a, b) => a.ts - b.ts)
-                    .map((p) => (
-                      <tr key={p.ts} className="bg-zinc-950/20">
-                        <td className="px-4 py-3 text-zinc-200">{fmtRangeEt(p.ts, p.ts + intervalSec)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-zinc-50">
-                          {fmtSnt(p.price_eur_per_kwh, vat)}
-                        </td>
-                      </tr>
-                    ))}
+                  {(() => {
+                    const dayStats = summarizeDay(visiblePoints);
+                    const mean = dayStats?.mean ?? 0;
+                    const vi = volatilityIndex(visiblePoints);
+                    const std = vi?.std ?? 0;
+                    return visiblePoints
+                      .slice()
+                      .sort((a, b) => a.ts - b.ts)
+                      .map((p) => {
+                        const cls = priceClass(p.price_eur_per_kwh, mean, std);
+                        const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
+                        return (
+                          <tr key={p.ts} className={isNow ? "bg-emerald-400/5" : "bg-zinc-950/20"}>
+                            <td className="px-4 py-3 text-zinc-200">{fmtRangeEt(p.ts, p.ts + intervalSec)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-zinc-50">
+                              {fmtSnt(p.price_eur_per_kwh, false)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-zinc-50">
+                              {fmtSnt(p.price_eur_per_kwh, true)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${cls.pill}`}>
+                                {cls.label}
+                              </span>
+                              {isNow ? <span className="ml-2 text-xs text-emerald-200/80">praegu</span> : null}
+                            </td>
+                          </tr>
+                        );
+                      });
+                  })()}
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>

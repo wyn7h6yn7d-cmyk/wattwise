@@ -16,9 +16,10 @@ export default async function BorsihindPage() {
   const now = new Date();
   const today = startOfDayLocal(now);
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
   // Fetch a wide range to cover both days robustly.
-  const startIso = new Date(today.getTime() - 3 * 60 * 60 * 1000).toISOString();
+  const startIso = new Date(yesterday.getTime() - 3 * 60 * 60 * 1000).toISOString();
   const endIso = new Date(tomorrow.getTime() + 27 * 60 * 60 * 1000).toISOString();
 
   let series: Awaited<ReturnType<typeof fetchEleringNpsSeries>> | null = null;
