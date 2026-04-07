@@ -6,9 +6,25 @@ type Intensity = "hero" | "page";
 
 export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: Intensity }) {
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const update = () => setIsMobile(window.matchMedia("(max-width: 640px)").matches);
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
 
-  const k = intensity === "hero" ? 1 : 0.65;
+  const kBase = intensity === "hero" ? 1 : 0.65;
+  const k = reducedMotion ? 0.25 : isMobile ? kBase * 0.55 : kBase;
   const seed = useMemo(() => (mounted ? Math.floor(Math.random() * 1_000_000) : 1), [mounted]);
 
   // SVG “energy flow” jooned: väga peen, aeglane liikumine + aurora glow (CSS)
@@ -16,6 +32,23 @@ export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: I
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="absolute inset-0 energy-aurora" style={{ opacity: 0.9 * k }} />
       <div className="absolute inset-0 energy-grid" style={{ opacity: 0.55 * k }} />
+
+      {/* Floating light points (desktop rohkem, mobile vähem) */}
+      {!reducedMotion ? (
+        <div className="absolute inset-0" style={{ opacity: 0.55 * k }}>
+          {Array.from({ length: isMobile ? 6 : intensity === "hero" ? 16 : 10 }).map((_, i) => (
+            <span
+              // eslint-disable-next-line react/no-array-index-key
+              key={i}
+              className={`energy-dot energy-dot-${(i % 6) + 1}`}
+              style={{
+                left: `${(i * 7 + 13) % 92}%`,
+                top: `${(i * 11 + 17) % 78}%`,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <svg
         className="absolute inset-0 h-full w-full"
@@ -50,13 +83,15 @@ export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: I
             strokeWidth={1.8}
             fill="none"
           />
-          <path
-            className="energy-line energy-line-3"
-            d="M-80,410 C130,340 220,520 390,430 C560,340 710,450 880,380 C1040,315 1120,390 1270,330"
-            stroke={`url(#g_${seed})`}
-            strokeWidth={1.6}
-            fill="none"
-          />
+          {!isMobile ? (
+            <path
+              className="energy-line energy-line-3"
+              d="M-80,410 C130,340 220,520 390,430 C560,340 710,450 880,380 C1040,315 1120,390 1270,330"
+              stroke={`url(#g_${seed})`}
+              strokeWidth={1.6}
+              fill="none"
+            />
+          ) : null}
         </g>
       </svg>
     </div>

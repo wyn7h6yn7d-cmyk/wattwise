@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const nav = [
   { href: "/", label: "Avaleht" },
@@ -74,37 +74,68 @@ export function SiteHeader() {
       </div>
 
       {mobileOpen ? (
-        <div className="md:hidden">
-          <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-2 backdrop-blur-xl">
-              {items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block rounded-xl px-3 py-2 text-sm transition-colors ${
-                    item.active
-                      ? "bg-white/10 text-zinc-50"
-                      : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <div className="mt-2 border-t border-white/10 pt-2">
-                <Link
-                  href="/kalkulaatorid/paikesejaam"
-                  onClick={() => setMobileOpen(false)}
-                  className="btn-glow w-full justify-center"
-                >
-                  Ava Täisanalüüs
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
+        <MobileMenu items={items} onClose={() => setMobileOpen(false)} />
       ) : null}
     </header>
+  );
+}
+
+function MobileMenu({
+  items,
+  onClose,
+}: {
+  items: Array<{ href: string; label: string; active: boolean }>;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div className="md:hidden">
+      <div
+        className="fixed inset-0 z-40 bg-zinc-950/60 backdrop-blur-xl"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-50 mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-white/10 bg-zinc-950/82 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="text-sm font-semibold text-zinc-50">Menüü</div>
+            <button type="button" className="btn-ghost" onClick={onClose} aria-label="Sulge menüü">
+              Sulge
+            </button>
+          </div>
+
+          <div className="grid gap-1 p-2">
+            {items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`block rounded-xl px-3 py-3 text-sm transition-colors ${
+                  item.active
+                    ? "bg-white/10 text-zinc-50"
+                    : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-2 border-t border-white/10 p-2">
+            <Link href="/kalkulaatorid/paikesejaam" onClick={onClose} className="btn-glow w-full justify-center">
+              Ava Täisanalüüs
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
