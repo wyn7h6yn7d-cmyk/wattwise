@@ -25,6 +25,24 @@ function computeScenario(input: CalculatorInput, withBattery: boolean): Scenario
   const baseProduction = Math.max(input.annualProductionKwh, input.pvPowerKw * 900);
   const annualProductionKwh = baseProduction * directionFactor * shadingFactor * efficiencyFactor * seasonalFactor;
 
+  // Kui puudub tootmine või tarbimine, ära “sunni” protsente miinimumile — näita 0 ja tühja seisu.
+  if (annualProductionKwh <= 0 || input.annualConsumptionKwh <= 0) {
+    return {
+      annualProductionKwh: Math.max(annualProductionKwh, 0),
+      selfConsumedKwh: 0,
+      exportedKwh: 0,
+      avoidedGridPurchaseKwh: 0,
+      selfConsumptionRatePercent: 0,
+      annualSavingsEur: 0,
+      annualExportRevenueEur: 0,
+      annualNetBenefitEur: 0,
+      totalNetBenefitPeriodEur: 0,
+      cashflowByYear: Array.from({ length: input.periodYears }, () => 0),
+      gridDependenceReductionPercent: 0,
+      co2ReductionKgYear: 0,
+    };
+  }
+
   const baseSelfConsumptionRate = clamp(
     input.selfConsumptionWithoutBatteryPercent / 100 * profileFactor,
     0.08,
@@ -68,7 +86,7 @@ function computeScenario(input: CalculatorInput, withBattery: boolean): Scenario
   }
 
   const selfConsumptionRatePercent = selfConsumptionRate * 100;
-  const gridDependenceReductionPercent = clamp((avoidedGridPurchaseKwh / input.annualConsumptionKwh) * 100, 0, 100);
+  const gridDependenceReductionPercent = clamp((avoidedGridPurchaseKwh / Math.max(input.annualConsumptionKwh, 1)) * 100, 0, 100);
   const co2ReductionKgYear = avoidedGridPurchaseKwh * 0.23;
 
   return {
