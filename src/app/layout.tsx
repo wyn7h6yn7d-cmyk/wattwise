@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Energiakalkulaator - rohelise energia tasuvus",
+  title: "Energiakalkulaator",
   description:
     "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas. Arvuta tasuvus, sääst ja rahavoog Eesti tingimustes.",
   metadataBase: new URL("https://energiakalkulaator.ee"),

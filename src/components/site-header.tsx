@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 const nav = [
   { href: "/", label: "Avaleht" },
@@ -32,12 +33,21 @@ export function SiteHeader() {
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-400 shadow-[0_0_18px_rgba(16,185,129,0.22)]" />
+          <div className="relative h-9 w-9 overflow-hidden rounded-xl bg-zinc-950/20 ring-1 ring-emerald-300/15 shadow-[0_0_18px_rgba(16,185,129,0.18)]">
+            <Image
+              src="/logo.png"
+              alt="Energiakalkulaator"
+              fill
+              sizes="36px"
+              className="object-cover"
+              priority
+            />
+          </div>
           <div className="min-w-0 leading-tight">
             <div className="text-[13px] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-sm">
               Energiakalkulaator
             </div>
-            <div className="hidden truncate text-xs text-zinc-400 sm:block">Rohelise energia otsused</div>
+            {/* Tagline eemaldatud (nõue: ainult Energiakalkulaator) */}
           </div>
         </Link>
 
