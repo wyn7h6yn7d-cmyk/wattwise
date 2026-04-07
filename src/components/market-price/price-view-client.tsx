@@ -131,7 +131,7 @@ function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) 
         <span>Odavam</span>
         <span>Kallim</span>
       </div>
-      <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(6px,1fr))] gap-1">
+      <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(5px,1fr))] gap-1 sm:grid-cols-[repeat(auto-fit,minmax(6px,1fr))]">
         {points.map((p) => {
           const v = vat ? addVat(p.price_eur_per_kwh) : p.price_eur_per_kwh;
           const t = (v - min) / span;
@@ -144,7 +144,7 @@ function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) 
           return (
             <div
               key={p.ts}
-              className={`h-4 rounded-sm ${bg} ring-1 ring-white/10`}
+              className={`h-3.5 rounded-sm ${bg} ring-1 ring-white/10 sm:h-4`}
               title={`${fmtTimeEt(p.ts)} · ${fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh`}
             />
           );
@@ -217,7 +217,7 @@ function AreaChart({
         ) : null}
         <svg
           viewBox={`0 0 ${w} ${h}`}
-          className="h-[160px] w-full"
+          className="h-[200px] w-full sm:h-[160px]"
           onMouseLeave={() => setHover(null)}
           onMouseMove={(e) => {
             const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
@@ -436,7 +436,7 @@ export function PriceViewClient({
   return (
     <section className="mt-8 grid gap-6">
       <div className="glass-panel rounded-3xl p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna dashboard</h2>
             <p className="mt-2 text-sm text-zinc-400">
@@ -480,7 +480,7 @@ export function PriceViewClient({
               </button>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1">
+            <div className="-mx-1 flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02] p-1 px-1 [-webkit-overflow-scrolling:touch]">
               <button
                 type="button"
                 className={`rounded-xl px-3 py-2 text-sm ${period === "today" ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
@@ -507,7 +507,7 @@ export function PriceViewClient({
         </div>
 
         {/* A) Summary ribbon */}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-3 grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
             <div className="text-xs text-zinc-400">{nowCard?.label ?? "Praegune hind"}</div>
             <div className="mt-1 text-2xl font-semibold text-zinc-50">
@@ -549,7 +549,7 @@ export function PriceViewClient({
                 Hover: näed täpset hinda. Marker näitab “praegu” lähimat punkti.
               </div>
             </div>
-            <div className="text-xs text-zinc-400">
+          <div className="text-xs text-zinc-400">
               Vaade: {effectiveInterval === 15 ? "15 min" : "1h"} · Periood:{" "}
               {period === "today" ? "täna" : period === "tomorrow" ? "homme" : "täna + homme"}
             </div>
@@ -609,7 +609,7 @@ export function PriceViewClient({
         ) : (
           <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
             <div className="overflow-x-auto">
-              <table className="min-w-[720px] w-full text-sm">
+              <table className="min-w-[680px] w-full text-sm">
                 <thead className="bg-white/[0.03] text-zinc-300">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Aeg</th>
