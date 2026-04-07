@@ -93,6 +93,14 @@ export function SolarCalculatorPage() {
   const calculatorRef = useRef<HTMLElement | null>(null);
   // Vormi ei salvestata brauserisse — iga külastus/uuendus on puhas sessioon (teised ei näe sinu numbreid kunagi serveri poolelt).
   const [input, setInput] = useState<CalculatorInput>(defaults);
+  // Mõnede väljade puhul (nt 0,05) vajame tekstipõhist sisestust, sest vahepealne "0," ei ole number.
+  const [priceText, setPriceText] = useState(() => ({
+    manualSpotPrice: "",
+    nordPoolAveragePrice: "",
+    gridFeePrice: "",
+    sellBackPrice: "",
+    marginPrice: "",
+  }));
   const [errors, setErrors] = useState<string[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [highlightCalculator, setHighlightCalculator] = useState(false);
@@ -116,6 +124,28 @@ export function SolarCalculatorPage() {
   }, []);
 
   const draftResult = useMemo(() => calculateComparison(input), [input]);
+
+  const setPriceField = (key: keyof typeof priceText, raw: string) => {
+    setPriceText((prev) => ({ ...prev, [key]: raw }));
+    // Uuenda numbriväärtust ainult siis, kui tekst on "valmis" number (lubab koma või punkti).
+    const trimmed = raw.trim();
+    const isCompleteNumber = /^-?\d+(?:[.,]\d+)?$/.test(trimmed);
+    if (!isCompleteNumber) return;
+    const n = toNumber(trimmed);
+    setInput((prev) => ({ ...prev, [key]: n } as CalculatorInput));
+  };
+
+  useEffect(() => {
+    // Hoia tekstiväljad sünkroonis, kui väärtus muutub programmiliselt (nt Nord Pool "Uuenda").
+    setPriceText({
+      manualSpotPrice: input.manualSpotPrice === 0 ? "" : String(input.manualSpotPrice).replace(".", ","),
+      nordPoolAveragePrice: input.nordPoolAveragePrice === 0 ? "" : String(input.nordPoolAveragePrice).replace(".", ","),
+      gridFeePrice: input.gridFeePrice === 0 ? "" : String(input.gridFeePrice).replace(".", ","),
+      sellBackPrice: input.sellBackPrice === 0 ? "" : String(input.sellBackPrice).replace(".", ","),
+      marginPrice: input.marginPrice === 0 ? "" : String(input.marginPrice).replace(".", ","),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input.manualSpotPrice, input.nordPoolAveragePrice, input.gridFeePrice, input.sellBackPrice, input.marginPrice]);
 
   const validationErrors = useMemo(() => {
     const list: string[] = [];
@@ -409,9 +439,12 @@ export function SolarCalculatorPage() {
                         className="input"
                         type="text"
                         inputMode="decimal"
-                        value={numValue(input.manualSpotPrice)}
+                        value={priceText.manualSpotPrice}
                         onFocus={(e) => e.currentTarget.select()}
-                        onChange={(e) => setInput({ ...input, manualSpotPrice: toNumber(e.target.value) })}
+                        onChange={(e) => setPriceField("manualSpotPrice", e.target.value)}
+                        onBlur={() =>
+                          setInput((prev) => ({ ...prev, manualSpotPrice: toNumber(priceText.manualSpotPrice) }))
+                        }
                         placeholder="nt 0,12"
                       />
                     </Field>
@@ -422,9 +455,15 @@ export function SolarCalculatorPage() {
                           className="input flex-1"
                           type="text"
                           inputMode="decimal"
-                          value={numValue(input.nordPoolAveragePrice)}
+                          value={priceText.nordPoolAveragePrice}
                           onFocus={(e) => e.currentTarget.select()}
-                          onChange={(e) => setInput({ ...input, nordPoolAveragePrice: toNumber(e.target.value) })}
+                          onChange={(e) => setPriceField("nordPoolAveragePrice", e.target.value)}
+                          onBlur={() =>
+                            setInput((prev) => ({
+                              ...prev,
+                              nordPoolAveragePrice: toNumber(priceText.nordPoolAveragePrice),
+                            }))
+                          }
                           placeholder="nt 0,10"
                         />
                         <button type="button" className="btn-ghost min-w-32 shrink-0" onClick={fetchNordPool}>
@@ -438,9 +477,10 @@ export function SolarCalculatorPage() {
                       className="input"
                       type="text"
                       inputMode="decimal"
-                      value={numValue(input.gridFeePrice)}
+                      value={priceText.gridFeePrice}
                       onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setInput({ ...input, gridFeePrice: toNumber(e.target.value) })}
+                      onChange={(e) => setPriceField("gridFeePrice", e.target.value)}
+                      onBlur={() => setInput((prev) => ({ ...prev, gridFeePrice: toNumber(priceText.gridFeePrice) }))}
                       placeholder="nt 0,05"
                     />
                   </Field>
@@ -449,9 +489,12 @@ export function SolarCalculatorPage() {
                       className="input"
                       type="text"
                       inputMode="decimal"
-                      value={numValue(input.sellBackPrice)}
+                      value={priceText.sellBackPrice}
                       onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setInput({ ...input, sellBackPrice: toNumber(e.target.value) })}
+                      onChange={(e) => setPriceField("sellBackPrice", e.target.value)}
+                      onBlur={() =>
+                        setInput((prev) => ({ ...prev, sellBackPrice: toNumber(priceText.sellBackPrice) }))
+                      }
                       placeholder="nt 0,06"
                     />
                   </Field>
@@ -460,9 +503,10 @@ export function SolarCalculatorPage() {
                       className="input"
                       type="text"
                       inputMode="decimal"
-                      value={numValue(input.marginPrice)}
+                      value={priceText.marginPrice}
                       onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setInput({ ...input, marginPrice: toNumber(e.target.value) })}
+                      onChange={(e) => setPriceField("marginPrice", e.target.value)}
+                      onBlur={() => setInput((prev) => ({ ...prev, marginPrice: toNumber(priceText.marginPrice) }))}
                       placeholder="nt 0,01"
                     />
                   </Field>
