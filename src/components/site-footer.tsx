@@ -26,13 +26,13 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:px-8">
         <div className="lg:col-span-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-emerald-300/45 shadow-[0_0_24px_rgba(16,185,129,0.20)]">
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-emerald-300/45 shadow-[0_0_24px_rgba(16,185,129,0.20)]">
               <Image
                 src="/logo.png"
                 alt="Energiakalkulaator"
-                width={45}
-                height={45}
-                sizes="44px"
+                width={56}
+                height={56}
+                sizes="56px"
                 quality={100}
                 unoptimized
                 className="h-[92%] w-[92%] object-contain"
