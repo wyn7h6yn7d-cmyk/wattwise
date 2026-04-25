@@ -1,6 +1,18 @@
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { A4, pdfTheme } from "@/lib/pdf/theme";
-import { drawHeader, drawFooter, drawSummaryCard, drawMetricGrid, drawAssumptionsTable, drawGroupedInputs, drawRecommendationBox, drawDisclaimerBlock, calcSubtitle, defaultRecommendation, safeDateString } from "@/lib/pdf/components";
+import {
+  drawHeader,
+  drawFooter,
+  drawSummaryCard,
+  drawMetricGrid,
+  drawAssumptionsTable,
+  drawRecommendationBox,
+  drawDisclaimerBlock,
+  drawKeyValueTable,
+  calcSubtitle,
+  defaultRecommendation,
+  safeDateString,
+} from "@/lib/pdf/components";
 import { drawCashflowChart } from "@/lib/pdf/charts";
 import type { PdfReportPayload } from "@/lib/pdf/types";
 
@@ -14,6 +26,10 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
   const date = safeDateString();
   const subtitle = calcSubtitle(payload.calculatorType);
   const pageCount = 4;
+  const flattenedInputs = payload.inputs.flatMap((g) =>
+    g.items.map((it) => ({ group: g.group, label: it.label, value: it.value })),
+  );
+  const resultRows = payload.metrics.map((m) => ({ label: m.label, value: m.value }));
 
   // Page 1 — Title / Summary
   {
@@ -45,12 +61,18 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     const page = pdf.addPage([A4.width, A4.height]);
     drawHeader(page, fonts, { title: "Sisendid ja eeldused", subtitle, date, pageNumber: 2, pageCount });
 
-    drawGroupedInputs(page, fonts, { x: pdfTheme.margin, y: 250, w: A4.width - pdfTheme.margin * 2, h: 520 }, payload.inputs);
+    drawKeyValueTable(page, fonts, { x: pdfTheme.margin, y: 236, w: A4.width - pdfTheme.margin * 2, h: 534 }, {
+      title: "Sisendite tabel",
+      leftHeader: "Sisend",
+      rightHeader: "Väärtus",
+      rows: flattenedInputs,
+      maxRows: 28,
+    });
 
     drawAssumptionsTable(
       page,
       fonts,
-      { x: pdfTheme.margin, y: 120, w: A4.width - pdfTheme.margin * 2, h: 110 },
+      { x: pdfTheme.margin, y: 118, w: A4.width - pdfTheme.margin * 2, h: 100 },
       payload.assumptions ?? [
         { label: "Märkus", value: "Eeldused on valitud konservatiivselt ja võivad erineda tegelikkusest." },
       ],
@@ -65,21 +87,28 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     const page = pdf.addPage([A4.width, A4.height]);
     drawHeader(page, fonts, { title: "Põhitulemused", subtitle, date, pageNumber: 3, pageCount });
 
-    drawMetricGrid(page, fonts, { x: pdfTheme.margin, y: 520, w: A4.width - pdfTheme.margin * 2, h: 240 }, payload.metrics.slice(0, 8));
+    drawMetricGrid(page, fonts, { x: pdfTheme.margin, y: 560, w: A4.width - pdfTheme.margin * 2, h: 200 }, payload.metrics.slice(0, 6));
+    drawKeyValueTable(page, fonts, { x: pdfTheme.margin, y: 264, w: A4.width - pdfTheme.margin * 2, h: 278 }, {
+      title: "Tulemuste tabel",
+      leftHeader: "Mõõdik",
+      rightHeader: "Väärtus",
+      rows: resultRows,
+      maxRows: 14,
+    });
 
     if (payload.charts?.cashflowByYear && payload.charts.cashflowByYear.length > 0) {
       drawCashflowChart(
         page,
         fonts,
-        { x: pdfTheme.margin, y: 260, w: A4.width - pdfTheme.margin * 2, h: 240 },
+        { x: pdfTheme.margin, y: 120, w: A4.width - pdfTheme.margin * 2, h: 130 },
         payload.charts.cashflowByYear,
-        "Rahavoo ülevaade (aastate lõikes)",
+        "Rahavoo mini-graafik",
       );
     } else {
       drawAssumptionsTable(
         page,
         fonts,
-        { x: pdfTheme.margin, y: 260, w: A4.width - pdfTheme.margin * 2, h: 240 },
+        { x: pdfTheme.margin, y: 120, w: A4.width - pdfTheme.margin * 2, h: 130 },
         [
           { label: "Graafik", value: "Selle kalkulaatori V1 raportis kuvatakse graafikud piiratud kujul." },
           { label: "Soovitus", value: "Sisesta täpsustavaid andmeid ja värskenda analüüsi, et lisagraafikud aktiveeruksid." },

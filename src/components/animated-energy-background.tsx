@@ -22,20 +22,29 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
     return () => mq.removeEventListener?.("change", update);
   }, []);
 
-  const particleCount = reducedMotion ? 0 : isMobile ? (intensity === "hero" ? 10 : 6) : intensity === "hero" ? 18 : 12;
-  const baseOpacity = intensity === "hero" ? 1 : 0.55;
-  const mobileFactor = isMobile ? 0.62 : 1;
+  const particleCount = reducedMotion ? 0 : isMobile ? (intensity === "hero" ? 8 : 4) : intensity === "hero" ? 20 : 8;
+  const baseOpacity = intensity === "hero" ? 1.08 : 0.42;
+  const mobileFactor = isMobile ? 0.52 : 1;
   const motionFactor = reducedMotion ? 0.35 : 1;
   const k = baseOpacity * mobileFactor * motionFactor;
-  const strokeA = intensity === "hero" ? 2.2 : 1.5;
-  const strokeB = intensity === "hero" ? 1.8 : 1.25;
-  const strokeC = intensity === "hero" ? 1.6 : 1.1;
+  const strokeA = intensity === "hero" ? 2.5 : 1.25;
+  const strokeB = intensity === "hero" ? 2.05 : 1.05;
+  const strokeC = intensity === "hero" ? 1.75 : 0.95;
 
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${intensity === "hero" ? "energy-scene-hero" : "energy-scene-subtle"}`}>
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(4,11,9,0.96) 0%, rgba(6,18,16,0.88) 58%, rgba(4,11,9,0.96) 100%)",
+          opacity: 0.96,
+        }}
+      />
       <div className="absolute inset-0 energy-aurora" style={{ opacity: 0.9 * k }} />
       <div className="absolute inset-0 energy-aurora energy-aurora-2" style={{ opacity: 0.65 * k }} />
       <div className="absolute inset-0 energy-grid" style={{ opacity: 0.45 * k }} />
+      <div className={`absolute inset-0 energy-pulse ${intensity === "hero" ? "energy-pulse-hero" : "energy-pulse-subtle"}`} style={{ opacity: 0.55 * k }} />
       <div
         className="absolute inset-0 energy-glow-cloud"
         style={{ opacity: 0.55 * k }}

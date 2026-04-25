@@ -56,26 +56,52 @@ export function drawSummaryCard(
   opts: { headline: string; note: string; primaryLabel: string; primaryValue: string; secondary: Array<[string, string]> },
 ) {
   drawPanel(page, box, pdfTheme.colors.emeraldSoft);
-  drawText(page, opts.headline, { x: box.x + 16, y: box.y + box.h - 22, size: 12, font: fonts.bold, color: pdfTheme.colors.text });
+  const topY = box.y + box.h - 22;
+  drawText(page, opts.headline, { x: box.x + 16, y: topY, size: 12, font: fonts.bold, color: pdfTheme.colors.text });
   const note = drawText(page, opts.note, {
     x: box.x + 16,
-    y: box.y + box.h - 40,
+    y: topY - 18,
     size: 9,
     font: fonts.regular,
     color: pdfTheme.colors.muted,
     maxWidth: box.w - 32,
+    lineHeight: 12,
+    maxLines: 4,
   });
 
-  drawText(page, opts.primaryLabel, { x: box.x + 16, y: box.y + 44, size: 9, font: fonts.regular, color: pdfTheme.colors.muted });
-  drawText(page, opts.primaryValue, { x: box.x + 16, y: box.y + 22, size: 18, font: fonts.bold, color: pdfTheme.colors.emerald });
+  const primaryLabelY = box.y + 44;
+  const primaryValueY = box.y + 22;
+  drawText(page, opts.primaryLabel, { x: box.x + 16, y: primaryLabelY, size: 9, font: fonts.regular, color: pdfTheme.colors.muted, maxLines: 1 });
+  drawText(page, opts.primaryValue, { x: box.x + 16, y: primaryValueY, size: 18, font: fonts.bold, color: pdfTheme.colors.emerald, maxWidth: box.w * 0.48, maxLines: 1 });
 
   const startX = box.x + box.w * 0.56;
   const rightW = box.x + box.w - startX - 16;
-  let y = box.y + box.h - 40 - note.height - 18;
+  let y = topY - 18 - note.height - 12;
+  const minY = box.y + 28;
   for (const [k, v] of opts.secondary.slice(0, 4)) {
-    const kh = drawText(page, k, { x: startX, y, size: 9, font: fonts.regular, color: pdfTheme.colors.muted, maxWidth: rightW, maxLines: 2 });
-    const vh = drawText(page, v, { x: startX, y: y - kh.height - 2, size: 11, font: fonts.bold, color: pdfTheme.colors.text, maxWidth: rightW, maxLines: 1 });
-    y -= Math.max(kh.height + vh.height + 10, 28);
+    if (y < minY) break;
+    const kh = drawText(page, k, {
+      x: startX,
+      y,
+      size: 9,
+      font: fonts.regular,
+      color: pdfTheme.colors.muted,
+      maxWidth: rightW,
+      lineHeight: 12,
+      maxLines: 2,
+    });
+    const valueY = y - kh.height - 3;
+    const vh = drawText(page, v, {
+      x: startX,
+      y: valueY,
+      size: 11,
+      font: fonts.bold,
+      color: pdfTheme.colors.text,
+      maxWidth: rightW,
+      lineHeight: 12,
+      maxLines: 2,
+    });
+    y = valueY - vh.height - 8;
   }
 }
 
@@ -124,6 +150,112 @@ export function drawMetricGrid(page: PDFPage, fonts: PdfFonts, box: Box, metrics
       drawText(page, m.sub, { x: cx + 12, y: cy + 18, size: 8.5, font: fonts.regular, color: pdfTheme.colors.muted, maxWidth: cellW - 24, maxLines: 2 });
     }
   });
+}
+
+export function drawKeyValueTable(
+  page: PDFPage,
+  fonts: PdfFonts,
+  box: Box,
+  opts: {
+    title: string;
+    leftHeader: string;
+    rightHeader: string;
+    rows: Array<{ label: string; value: string; group?: string }>;
+    maxRows?: number;
+  },
+) {
+  const { title, leftHeader, rightHeader, rows, maxRows = 20 } = opts;
+  drawPanel(page, box, pdfTheme.colors.panel);
+  drawText(page, title, { x: box.x + 14, y: box.y + box.h - 22, size: 11, font: fonts.bold, color: pdfTheme.colors.text });
+
+  const tableX = box.x + 14;
+  const tableY = box.y + 16;
+  const tableW = box.w - 28;
+  const tableH = box.h - 46;
+  const headerH = 18;
+  const leftW = Math.round(tableW * 0.56);
+  const rightW = tableW - leftW;
+
+  page.drawRectangle({
+    x: tableX,
+    y: tableY + tableH - headerH,
+    width: tableW,
+    height: headerH,
+    color: pdfTheme.colors.emeraldSoft,
+    borderColor: pdfTheme.colors.line,
+    borderWidth: 1,
+  });
+  drawText(page, leftHeader, {
+    x: tableX + 8,
+    y: tableY + tableH - 13,
+    size: 8.5,
+    font: fonts.bold,
+    color: pdfTheme.colors.text,
+    maxWidth: leftW - 12,
+    maxLines: 1,
+  });
+  drawText(page, rightHeader, {
+    x: tableX + leftW + 8,
+    y: tableY + tableH - 13,
+    size: 8.5,
+    font: fonts.bold,
+    color: pdfTheme.colors.text,
+    maxWidth: rightW - 12,
+    maxLines: 1,
+  });
+  page.drawLine({
+    start: { x: tableX + leftW, y: tableY },
+    end: { x: tableX + leftW, y: tableY + tableH },
+    thickness: 1,
+    color: pdfTheme.colors.line,
+  });
+
+  let y = tableY + tableH - headerH - 4;
+  const usableRows = rows.slice(0, maxRows);
+  for (let i = 0; i < usableRows.length; i += 1) {
+    const row = usableRows[i];
+    const rowTop = y;
+    const label = row.group ? `${row.group} · ${row.label}` : row.label;
+    const lh = drawText(page, label, {
+      x: tableX + 8,
+      y: rowTop - 10,
+      size: 8.5,
+      font: fonts.regular,
+      color: pdfTheme.colors.muted,
+      maxWidth: leftW - 14,
+      lineHeight: 11,
+      maxLines: 3,
+    });
+    const rh = drawText(page, row.value, {
+      x: tableX + leftW + 8,
+      y: rowTop - 10,
+      size: 8.8,
+      font: fonts.bold,
+      color: pdfTheme.colors.text,
+      maxWidth: rightW - 14,
+      lineHeight: 11,
+      maxLines: 3,
+    });
+    const rowH = Math.max(lh.height, rh.height) + 8;
+    y -= rowH;
+    if (i % 2 === 0) {
+      page.drawRectangle({
+        x: tableX,
+        y,
+        width: tableW,
+        height: rowH,
+        color: pdfTheme.colors.panel2,
+        opacity: 0.45,
+      });
+    }
+    page.drawLine({
+      start: { x: tableX, y },
+      end: { x: tableX + tableW, y },
+      thickness: 0.7,
+      color: pdfTheme.colors.line,
+    });
+    if (y < tableY + 10) break;
+  }
 }
 
 export function drawAssumptionsTable(
@@ -220,20 +352,30 @@ export function drawRecommendationBox(page: PDFPage, fonts: PdfFonts, box: Box, 
   drawPanel(page, box, pdfTheme.colors.warningSoft);
   drawText(page, title, { x: box.x + 14, y: box.y + box.h - 22, size: 11, font: fonts.bold, color: pdfTheme.colors.text });
   let y = box.y + box.h - 44;
+  const minY = box.y + 20;
   for (const b of bullets.slice(0, 6)) {
-    drawText(page, `• ${b}`, { x: box.x + 14, y, size: 9.5, font: fonts.regular, color: pdfTheme.colors.text, maxWidth: box.w - 28 });
-    y -= 14;
-    if (y < box.y + 18) break;
+    if (y < minY) break;
+    const h = drawText(page, `• ${b}`, {
+      x: box.x + 14,
+      y,
+      size: 9.5,
+      font: fonts.regular,
+      color: pdfTheme.colors.text,
+      maxWidth: box.w - 28,
+      lineHeight: 12,
+      maxLines: 4,
+    });
+    y -= h.height + 6;
   }
 }
 
 export function drawDisclaimerBlock(page: PDFPage, fonts: PdfFonts, box: Box) {
-  drawPanel(page, box, pdfTheme.colors.panel);
+  drawPanel(page, box, pdfTheme.colors.panel2);
   const text =
     "Analüüs põhineb kasutaja sisestatud andmetel ja valitud eeldustel. Tegu on informatiivse tööriistaga ning raport ei ole finants-, investeerimis-, maksu- ega õigusnõu. Lõplike otsuste tegemisel soovitame vajadusel konsulteerida vastava ala spetsialistiga.";
   drawText(page, "Disclaimer", { x: box.x + 14, y: box.y + box.h - 22, size: 10.5, font: fonts.bold, color: pdfTheme.colors.text });
   drawText(page, text, { x: box.x + 14, y: box.y + box.h - 40, size: 9, font: fonts.regular, color: pdfTheme.colors.muted, maxWidth: box.w - 28 });
-  drawText(page, "Teenust osutab hetkel eraisik Kenneth Alto. Täiendavad ettevõtte andmed lisatakse pärast ettevõtlusvormi vormistamist.", {
+  drawText(page, "Kontakt: Kenneth Alto · kennethalto95@gmail.com", {
     x: box.x + 14,
     y: box.y + 26,
     size: 8.5,

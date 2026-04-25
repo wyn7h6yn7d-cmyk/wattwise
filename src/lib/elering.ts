@@ -13,6 +13,28 @@ export type MarketPriceSeries = {
 
 export const VAT_RATE = 0.24;
 
+export function eurMWhToEurKWh(priceEurPerMWh: number) {
+  return priceEurPerMWh / 1000;
+}
+
+export function eurMWhToSntKWh(priceEurPerMWh: number) {
+  return priceEurPerMWh / 10;
+}
+
+export function eurMWhToSntKWhWithVat(priceEurPerMWh: number) {
+  return eurMWhToSntKWh(priceEurPerMWh) * (1 + VAT_RATE);
+}
+
+export function formatSntKWh(valueSntPerKwh: number) {
+  if (!Number.isFinite(valueSntPerKwh)) return "—";
+  const abs = Math.abs(valueSntPerKwh);
+  const maxFractionDigits = abs < 1 ? 2 : 1;
+  return new Intl.NumberFormat("et-EE", {
+    minimumFractionDigits: abs < 1 ? 2 : 0,
+    maximumFractionDigits: maxFractionDigits,
+  }).format(valueSntPerKwh);
+}
+
 export function addVat(priceEurPerKwh: number) {
   return priceEurPerKwh * (1 + VAT_RATE);
 }
@@ -36,7 +58,7 @@ function normalizeEurPerKwh(value: unknown) {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return null;
   // Elering NPS API uses EUR/MWh. Convert to EUR/kWh.
-  return n / 1000;
+  return eurMWhToEurKWh(n);
 }
 
 export async function fetchEleringNpsSeries({

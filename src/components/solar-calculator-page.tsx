@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { calculateComparison } from "@/lib/calculator";
 import { CalculatorInput } from "@/types/calculator";
-import { canDownloadPdf, canViewFullAnalysis } from "@/lib/unlock";
+import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
@@ -65,14 +65,14 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-2 text-sm">
-      <span className="text-zinc-100">{label}</span>
+    <label className="field-label">
+      <span className="field-label-text">{label}</span>
       {children}
       {hint ? (
-        <span className="text-xs text-zinc-400">{hint}</span>
+        <span className="field-hint">{hint}</span>
       ) : (
         // Hoia väljade kõrgus ühtlane (mobiil/desktop joondus)
-        <span className="text-xs text-zinc-400 opacity-0">.</span>
+        <span className="field-hint opacity-0">.</span>
       )}
     </label>
   );
@@ -342,12 +342,13 @@ export function SolarCalculatorPage() {
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli makse staatust
+              Kontrolli ligipääsu staatust
             </button>
           </div>
         </div>
       ) : null}
 
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <section
           id="kalkulaator"
           ref={calculatorRef}
@@ -466,7 +467,11 @@ export function SolarCalculatorPage() {
                           }
                           placeholder="nt 0,10"
                         />
-                        <button type="button" className="btn-ghost min-w-32 shrink-0" onClick={fetchNordPool}>
+                        <button
+                          type="button"
+                          className="btn-ghost w-full shrink-0 sm:w-auto sm:min-w-32"
+                          onClick={fetchNordPool}
+                        >
                           {nordPoolState.loading ? "Laen..." : "Uuenda"}
                         </button>
                       </div>
@@ -616,7 +621,7 @@ export function SolarCalculatorPage() {
           </form>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+        <section className="mt-6 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 lg:mt-0">
           <h3 className="text-2xl font-semibold text-zinc-50">Tulemused</h3>
           <p className="mt-2 text-zinc-300">
             Efektiivne elektri hind arvutuses:{" "}
@@ -624,33 +629,61 @@ export function SolarCalculatorPage() {
           </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="result-card">
-              <p>Hinnanguline aastane sääst</p>
-              <strong>{fmtEur(result.selected.annualSavingsEur)}</strong>
+            <div className="metric-card metric-card-primary metric-card-accent-emerald">
+              <p className="metric-label">Olulisim: hinnanguline aastane sääst</p>
+              <div className="metric-main">
+                <strong className="metric-value">
+                  {Math.round(result.selected.annualSavingsEur).toLocaleString("et-EE")}
+                </strong>
+                <span className="metric-unit">EUR/a</span>
+              </div>
+              <p className="metric-help">Aastane netosääst omatarbe, müügi ja tasude arvestusega.</p>
             </div>
-            <div className="result-card">
-              <p>Lihtne tasuvusaeg</p>
-              <strong>
-                {Number.isFinite(result.paybackYears)
-                  ? `${result.paybackYears.toFixed(1)} aastat`
-                  : "Pole võimalik arvutada"}
-              </strong>
+            <div className="metric-card metric-card-accent-teal">
+              <p className="metric-label">Lihtne tasuvusaeg</p>
+              <div className="metric-main">
+                <strong className="metric-value">
+                  {Number.isFinite(result.paybackYears) ? result.paybackYears.toFixed(1) : "—"}
+                </strong>
+                <span className="metric-unit">aastat</span>
+              </div>
+              <p className="metric-help">Investeeringu hinnanguline tasuvus lihtsustatud mudelis.</p>
             </div>
-            <div className="result-card">
-              <p>Omakasutus</p>
-              <strong>{formatNum(result.selected.selfConsumptionRatePercent, 1)}%</strong>
+            <div className="metric-card metric-card-accent-teal">
+              <p className="metric-label">Omakasutus</p>
+              <div className="metric-main">
+                <strong className="metric-value">{formatNum(result.selected.selfConsumptionRatePercent, 1)}</strong>
+                <span className="metric-unit">%</span>
+              </div>
+              <p className="metric-help">Toodangust kohapeal ära kasutatud osa.</p>
             </div>
-            <div className="result-card">
-              <p>Võrku müük</p>
-              <strong>{fmtKwh(result.selected.exportedKwh)}</strong>
+            <div className="metric-card metric-card-accent-emerald">
+              <p className="metric-label">Võrku müük</p>
+              <div className="metric-main">
+                <strong className="metric-value">{Math.round(result.selected.exportedKwh).toLocaleString("et-EE")}</strong>
+                <span className="metric-unit">kWh</span>
+              </div>
+              <p className="metric-help">Aastane energia, mis läheb võrku tagasi.</p>
             </div>
-            <div className="result-card">
-              <p>Kogutulu perioodis</p>
-              <strong>{fmtEur(result.selected.totalNetBenefitPeriodEur)}</strong>
+            <div className="metric-card metric-card-accent-emerald">
+              <p className="metric-label">Kogutulu perioodis</p>
+              <div className="metric-main">
+                <strong className="metric-value">
+                  {Math.round(result.selected.totalNetBenefitPeriodEur).toLocaleString("et-EE")}
+                </strong>
+                <span className="metric-unit">EUR</span>
+              </div>
+              <p className="metric-help">Kumulatiivne netotulemus kogu valitud perioodil.</p>
             </div>
-            <div className="result-card">
-              <p>Aku lisaväärtus</p>
-              <strong>{fmtEur(result.batteryAddedValuePeriodEur)}</strong>
+            <div className="metric-card metric-card-accent-teal">
+              <p className="metric-label">Aku lisaväärtus</p>
+              <div className="metric-main">
+                <strong className="metric-value">
+                  {Math.round(result.batteryAddedValuePeriodEur).toLocaleString("et-EE")}
+                </strong>
+                <span className="metric-unit">EUR</span>
+              </div>
+              <p className="metric-help">Aku mõju kogu perioodi netotulemusele.</p>
             </div>
           </div>
 
@@ -665,7 +698,7 @@ export function SolarCalculatorPage() {
               {FEATURES.paywallEnabled && !canViewFullAnalysis(unlock) ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                   <p className="text-sm text-zinc-300">
-                    Täisanalüüs avab detailse rahavoo, tundlikkuse, lisagraafikud ja võrdlused.
+                    Hetkel tasuta beetaversioon: detailne rahavoog, tundlikkus, lisagraafikud ja võrdlused.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -674,33 +707,22 @@ export function SolarCalculatorPage() {
                       onClick={() => startCheckout("full_analysis")}
                       disabled={purchaseBusy === "full_analysis"}
                     >
-                      {purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
+                      {purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
                     </button>
                     <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-                      Kontrolli makse staatust
+                      Kontrolli ligipääsu staatust
                     </button>
                   </div>
                 </div>
               ) : FEATURES.paywallEnabled && canViewFullAnalysis(unlock) ? (
                 <div className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                   <p className="text-sm text-zinc-100">
-                    Täisanalüüs on selle projekti jaoks avatud.
+                    Detailne vaade on selle projekti jaoks avatud.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {!unlock.pdfUnlocked ? (
-                      <button
-                        type="button"
-                        className="btn-glow"
-                        onClick={() => startCheckout("pdf_report")}
-                        disabled={purchaseBusy === "pdf_report"}
-                      >
-                        {purchaseBusy === "pdf_report" ? "Suunamine..." : "Lisa PDF raport"}
-                      </button>
-                    ) : (
-                      <button type="button" className="btn-glow" onClick={downloadPdf} disabled={!canDownloadPdf(unlock)}>
-                        Laadi PDF alla
-                      </button>
-                    )}
+                    <button type="button" className="btn-glow" onClick={downloadPdf}>
+                      Laadi PDF alla
+                    </button>
                   </div>
                   <p className="mt-2 text-xs text-zinc-300">
                     Projekt: <span className="font-medium text-zinc-100">{projectId}</span>
@@ -725,7 +747,7 @@ export function SolarCalculatorPage() {
                   <p className="mb-1 text-zinc-300">Omakasutatud energia</p>
                   <div className="h-3 rounded-full bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-cyan-400"
+                      className="h-full rounded-full bg-emerald-400"
                       style={{
                         width: `${isEmptyInputs ? 0 : Math.min(result.selected.selfConsumptionRatePercent, 100)}%`,
                       }}
@@ -736,7 +758,7 @@ export function SolarCalculatorPage() {
                   <p className="mb-1 text-zinc-300">Võrku müüdud energia</p>
                   <div className="h-3 rounded-full bg-zinc-800">
                     <div
-                      className="h-full rounded-full bg-violet-400"
+                      className="h-full rounded-full bg-teal-400"
                       style={{
                         width: `${
                           isEmptyInputs
@@ -756,10 +778,10 @@ export function SolarCalculatorPage() {
 
           <PaywallCard
             locked={!canViewFullAnalysis(unlock)}
-            title="Täisanalüüs"
+            title="Detailne vaade"
             description="avab detailse rahavoo, lisagraafikud ja võrdlused selle projekti jaoks."
-            ctaLabel={purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
-            secondaryLabel="Kontrolli makse staatust"
+            ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
+            secondaryLabel="Kontrolli ligipääsu staatust"
             onCta={() => startCheckout("full_analysis")}
             onSecondary={checkPaymentStatus}
             footer={
@@ -809,7 +831,7 @@ export function SolarCalculatorPage() {
                                 key={`${value}-${index}`}
                                 className="group relative flex w-7 shrink-0 flex-col items-stretch gap-1 md:min-w-0 md:flex-1"
                               >
-                                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-cyan-300/30 bg-zinc-950/95 px-2 py-1 text-[11px] font-medium text-cyan-200 opacity-0 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-opacity duration-150 group-hover:opacity-100 sm:block">
+                                <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-emerald-300/30 bg-zinc-950/95 px-2 py-1 text-[11px] font-medium text-emerald-200 opacity-0 shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-opacity duration-150 group-hover:opacity-100 sm:block">
                                   {formatNum(value, 0)} €
                                 </div>
                                 <div
@@ -817,7 +839,7 @@ export function SolarCalculatorPage() {
                                   style={{ height: chartTrackPx }}
                                 >
                                   <div
-                                    className="w-full shrink-0 rounded bg-gradient-to-t from-cyan-500/80 to-blue-400/90"
+                                    className="w-full shrink-0 rounded bg-gradient-to-t from-emerald-500/80 to-teal-400/90"
                                     style={{ height: barPx }}
                                     aria-label={`Aasta ${index + 1}`}
                                     title={`${formatNum(value, 0)} €`}
@@ -849,6 +871,7 @@ export function SolarCalculatorPage() {
           </PaywallCard>
 
         </section>
+      </div>
     </div>
   );
 }

@@ -18,6 +18,18 @@ export function drawCashflowChart(
   const barW = Math.max(inner.w / bars - 2, 6);
   const zeroY = inner.y + inner.h * 0.2; // jätame rohkem ruumi positiivsele
 
+  // soft grid lines
+  for (const g of [0.25, 0.5, 0.75]) {
+    const gy = inner.y + inner.h * g;
+    page.drawLine({
+      start: { x: inner.x, y: gy },
+      end: { x: inner.x + inner.w, y: gy },
+      thickness: 0.6,
+      color: pdfTheme.colors.line,
+      opacity: 0.6,
+    });
+  }
+
   // axes baseline
   page.drawLine({
     start: { x: inner.x, y: zeroY },
@@ -36,8 +48,8 @@ export function drawCashflowChart(
       y,
       width: barW,
       height: Math.max(h, 1),
-      color: v >= 0 ? pdfTheme.colors.emerald : pdfTheme.colors.muted,
-      opacity: v >= 0 ? 0.75 : 0.35,
+      color: v >= 0 ? pdfTheme.colors.emerald : pdfTheme.colors.emerald,
+      opacity: v >= 0 ? 0.78 : 0.38,
     });
     if (i % 5 === 0) {
       drawText(page, String(i + 1), {

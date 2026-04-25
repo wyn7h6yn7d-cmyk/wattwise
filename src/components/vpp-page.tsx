@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { canDownloadPdf, canViewFullAnalysis } from "@/lib/unlock";
+import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
-import { buildCumulative, irr, npv } from "@/lib/calculators/finance";
 import { MiniCashflowChart } from "@/components/charts/mini-cashflow-chart";
 
 function num(v: string): number {
@@ -23,73 +22,42 @@ export function VppPageClient() {
   const [powerKw, setPowerKw] = useState("");
   const [investmentEur, setInvestmentEur] = useState("");
   const [annualRevenueEur, setAnnualRevenueEur] = useState(""); // baas-stsenaarium
-  const [cyclesPerYear, setCyclesPerYear] = useState("250");
   const [lifetimeYears, setLifetimeYears] = useState("10");
   const [efficiencyPct, setEfficiencyPct] = useState("92");
-  const [degradationPct, setDegradationPct] = useState("1,5");
   const [annualOandMEur, setAnnualOandMEur] = useState("250");
-  const [discountRatePct, setDiscountRatePct] = useState("6");
 
   const model = useMemo(() => {
     const inv = Math.max(num(investmentEur), 0);
     const baseRev = Math.max(num(annualRevenueEur), 0);
     const eff = Math.min(Math.max(num(efficiencyPct), 50), 99) / 100;
     const years = Math.max(Math.round(num(lifetimeYears)), 1);
-    const degr = Math.min(Math.max(num(degradationPct), 0), 10) / 100;
     const opex = Math.max(num(annualOandMEur), 0);
-    const disc = Math.min(Math.max(num(discountRatePct), 0), 20) / 100;
-
-    // Cycles affect how realistic the revenue is (simple sanity factor).
-    const cycles = Math.min(Math.max(num(cyclesPerYear), 0), 1500);
-    const cycleFactor = cycles >= 50 ? 1 : 0.7;
 
     const scenarios = [
-      { key: "konservatiivne", label: "Konservatiivne", rev: baseRev * 0.75 },
+      { key: "konservatiivne", label: "Konservatiivne (70%)", rev: baseRev * 0.7 },
       { key: "baas", label: "Baas", rev: baseRev },
-      { key: "optimistlik", label: "Optimistlik", rev: baseRev * 1.25 },
+      { key: "optimistlik", label: "Optimistlik (130%)", rev: baseRev * 1.3 },
     ] as const;
 
     const perScenario = scenarios.map((s) => {
-      const cashflows: number[] = [];
-      cashflows.push(-inv);
-      let factor = 1;
-      for (let y = 1; y <= years; y += 1) {
-        const gross = s.rev * eff * cycleFactor * factor;
-        const net = Math.max(gross - opex, 0);
-        cashflows.push(net);
-        factor *= 1 - degr;
-      }
-      const cum = buildCumulative(cashflows);
-      const npvValue = npv(disc, cashflows);
-      const irrValue = irr(cashflows);
-      const payback =
-        cum.findIndex((v) => v >= 0) === -1 ? null : (() => {
-          // reuse cumulative for approximate payback year without importing helper again
-          for (let t = 1; t < cum.length; t += 1) {
-            if (cum[t] >= 0) {
-              const prev = cum[t - 1];
-              const curr = cum[t];
-              if (prev >= 0) return t - 1;
-              const frac = (curr - prev) !== 0 ? (-prev) / (curr - prev) : 1;
-              return (t - 1) + Math.min(Math.max(frac, 0), 1);
-            }
-          }
-          return null;
-        })();
+      // netotulu = tulupotentsiaal * efficiency - hooldus
+      const netRevenueYear = s.rev * eff - opex;
+      // tasuvusaeg = investeering / netotulu
+      const payback = netRevenueYear > 0 ? inv / netRevenueYear : null;
+      // kogukasum = netotulu * eluiga - investeering
+      const totalProfit = netRevenueYear * years - inv;
+      const cashflows = Array.from({ length: years }, () => netRevenueYear);
       return {
         ...s,
         cashflows,
-        cum,
-        netRevYear1: cashflows[1] ?? 0,
-        totalProfit: cum[cum.length - 1] ?? -inv,
-        npv: npvValue,
-        irr: irrValue,
+        netRevYear1: netRevenueYear,
+        totalProfit,
         paybackYears: payback,
       };
     });
 
-    return { inv, eff, years, degr, opex, disc, cycles, perScenario };
-  }, [annualOandMEur, annualRevenueEur, cyclesPerYear, degradationPct, discountRatePct, efficiencyPct, investmentEur, lifetimeYears]);
+    return { inv, eff, years, opex, perScenario };
+  }, [annualOandMEur, annualRevenueEur, efficiencyPct, investmentEur, lifetimeYears]);
 
   const downloadPdf = async () => {
     if (!projectId) return;
@@ -124,8 +92,8 @@ export function VppPageClient() {
                 group: "Kulud ja eeldused",
                 items: [
                   { label: "Hooldus (€/a)", value: annualOandMEur ? `${annualOandMEur} €` : "—" },
-                  { label: "Degradatsioon", value: `${degradationPct}%/a` },
-                  { label: "Tsüklid", value: `${cyclesPerYear}/a` },
+                  { label: "Round-trip efficiency", value: `${efficiencyPct}%` },
+                  { label: "Eluiga", value: `${lifetimeYears} a` },
                 ],
               },
             ],
@@ -133,8 +101,7 @@ export function VppPageClient() {
             metrics: [
               { label: "Baas: netotulu (aasta 1)", value: fmtEur(model.perScenario[1]?.netRevYear1 ?? 0) },
               { label: "Baas: tasuvusaeg", value: model.perScenario[1]?.paybackYears ? `${model.perScenario[1].paybackYears.toFixed(1)} a` : "—" },
-              { label: "Baas: NPV", value: fmtEur(model.perScenario[1]?.npv ?? 0) },
-              { label: "Baas: IRR", value: model.perScenario[1]?.irr ? `${(model.perScenario[1].irr * 100).toFixed(1)}%` : "—" },
+              { label: "Baas: kogukasum", value: fmtEur(model.perScenario[1]?.totalProfit ?? 0) },
               { label: "Efektiivsus", value: `${efficiencyPct}%` },
               { label: "Eluiga", value: `${lifetimeYears} a` },
               { label: "Investeering", value: investmentEur ? `${investmentEur} €` : "—" },
@@ -178,7 +145,7 @@ export function VppPageClient() {
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli makse staatust
+              Kontrolli ligipääsu staatust
             </button>
           </div>
         </div>
@@ -192,8 +159,8 @@ export function VppPageClient() {
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Aku maht (kWh)</span>
+          <label className="field-label">
+            <span className="field-label-text">Aku maht (kWh)</span>
             <input
               className="input"
               value={capacityKwh}
@@ -201,9 +168,10 @@ export function VppPageClient() {
               onChange={(e) => setCapacityKwh(e.target.value)}
               placeholder="nt 100"
             />
+            <span className="field-hint">Aku nimimaht.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Aku võimsus (kW)</span>
+          <label className="field-label">
+            <span className="field-label-text">Aku võimsus (kW)</span>
             <input
               className="input"
               value={powerKw}
@@ -211,39 +179,32 @@ export function VppPageClient() {
               onChange={(e) => setPowerKw(e.target.value)}
               placeholder="nt 50"
             />
+            <span className="field-hint">Max laadimis/tühjendusvõimsus.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Investeering (€)</span>
+          <label className="field-label">
+            <span className="field-label-text">Investeering (€)</span>
             <input
-              className="input"
+              className={`input ${num(investmentEur) <= 0 ? "input-warning" : ""}`}
               value={investmentEur}
               inputMode="numeric"
               onChange={(e) => setInvestmentEur(e.target.value)}
               placeholder="nt 60000"
             />
+            <span className="field-hint">Koguinvesteering eurodes.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Aastane tulupotentsiaal (€)</span>
+          <label className="field-label">
+            <span className="field-label-text">Aastane tulupotentsiaal (€)</span>
             <input
-              className="input"
+              className={`input ${num(annualRevenueEur) <= 0 ? "input-warning" : ""}`}
               value={annualRevenueEur}
               inputMode="numeric"
               onChange={(e) => setAnnualRevenueEur(e.target.value)}
               placeholder="nt 12000"
             />
+            <span className="field-hint">Aastane brutotulu eeldus.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Tsüklid aastas</span>
-            <input
-              className="input"
-              value={cyclesPerYear}
-              inputMode="numeric"
-              onChange={(e) => setCyclesPerYear(e.target.value)}
-              placeholder="nt 250"
-            />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Aku eluiga (a)</span>
+          <label className="field-label">
+            <span className="field-label-text">Aku eluiga (a)</span>
             <select className="input" value={lifetimeYears} onChange={(e) => setLifetimeYears(e.target.value)}>
               <option value="5">5</option>
               <option value="7">7</option>
@@ -251,29 +212,21 @@ export function VppPageClient() {
               <option value="12">12</option>
               <option value="15">15</option>
             </select>
+            <span className="field-hint">Arvutusperiood aastates.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Round-trip efficiency (%)</span>
+          <label className="field-label">
+            <span className="field-label-text">Round-trip efficiency (%)</span>
             <input
-              className="input"
+              className={`input ${num(efficiencyPct) < 70 ? "input-warning" : ""}`}
               value={efficiencyPct}
               inputMode="decimal"
               onChange={(e) => setEfficiencyPct(e.target.value)}
               placeholder="nt 92"
             />
+            <span className="field-hint">Aku tsükli kasutegur.</span>
           </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Degradatsioon (%/a)</span>
-            <input
-              className="input"
-              value={degradationPct}
-              inputMode="decimal"
-              onChange={(e) => setDegradationPct(e.target.value)}
-              placeholder="nt 1,5"
-            />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Hooldus (€/a)</span>
+          <label className="field-label">
+            <span className="field-label-text">Hooldus (€/a)</span>
             <input
               className="input"
               value={annualOandMEur}
@@ -281,16 +234,7 @@ export function VppPageClient() {
               onChange={(e) => setAnnualOandMEur(e.target.value)}
               placeholder="nt 250"
             />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-zinc-100">Diskontomäär (%/a)</span>
-            <input
-              className="input"
-              value={discountRatePct}
-              inputMode="decimal"
-              onChange={(e) => setDiscountRatePct(e.target.value)}
-              placeholder="nt 6"
-            />
+            <span className="field-hint">Aastane hoolduskulu.</span>
           </label>
         </div>
 
@@ -306,14 +250,10 @@ export function VppPageClient() {
 
       <PaywallCard
         locked={!canViewFullAnalysis(unlock)}
-        title={FEATURES.paywallEnabled ? "Täisanalüüs" : "Detailne analüüs"}
-        description={
-          FEATURES.paywallEnabled
-            ? "avab VPP detailse simulatsiooni (stsenaariumid, risk, cashflow tabel, eksport) selle projekti jaoks."
-            : "detailsem vaade VPP tasuvusele koos tundlikkuse ja soovitustega."
-        }
-        ctaLabel={purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
-        secondaryLabel="Kontrolli makse staatust"
+        title={FEATURES.paywallEnabled ? "Detailne vaade" : "Detailne analüüs"}
+        description="avab VPP detailse simulatsiooni (stsenaariumid, risk, cashflow tabel, eksport) selle projekti jaoks."
+        ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
+        secondaryLabel="Kontrolli ligipääsu staatust"
         onCta={() => startCheckout("full_analysis")}
         onSecondary={checkPaymentStatus}
         footer={
@@ -324,23 +264,35 @@ export function VppPageClient() {
       >
         <h2 className="text-2xl font-semibold text-zinc-50">Tulemused</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="result-card">
-            <p>Baas: netotulu (aasta 1)</p>
-            <strong>{fmtEur(model.perScenario[1]?.netRevYear1 ?? 0)}</strong>
+          <div className="metric-card metric-card-primary metric-card-accent-emerald">
+            <p className="metric-label">Olulisim: baas netotulu (aasta 1)</p>
+            <div className="metric-main">
+              <strong className="metric-value">
+                {Math.round(model.perScenario[1]?.netRevYear1 ?? 0).toLocaleString("et-EE")}
+              </strong>
+              <span className="metric-unit">EUR/a</span>
+            </div>
+            <p className="metric-help">Aastane netotulu pärast efektiivsuse ja hoolduse arvestamist.</p>
           </div>
-          <div className="result-card">
-            <p>Baas: tasuvusaeg</p>
-            <strong>
-              {model.perScenario[1]?.paybackYears ? `${model.perScenario[1].paybackYears.toFixed(1)} aastat` : "—"}
-            </strong>
+          <div className="metric-card metric-card-accent-teal">
+            <p className="metric-label">Baas: tasuvusaeg</p>
+            <div className="metric-main">
+              <strong className="metric-value">
+                {model.perScenario[1]?.paybackYears ? model.perScenario[1].paybackYears.toFixed(1) : "—"}
+              </strong>
+              <span className="metric-unit">aastat</span>
+            </div>
+            <p className="metric-help">Mitu aastat kulub investeeringu tagasi teenimiseks.</p>
           </div>
-          <div className="result-card">
-            <p>Baas: NPV</p>
-            <strong>{fmtEur(model.perScenario[1]?.npv ?? 0)}</strong>
-          </div>
-          <div className="result-card">
-            <p>Baas: IRR</p>
-            <strong>{model.perScenario[1]?.irr ? `${(model.perScenario[1].irr * 100).toFixed(1)}%` : "—"}</strong>
+          <div className="metric-card metric-card-accent-emerald">
+            <p className="metric-label">Baas: kogukasum (eluiga)</p>
+            <div className="metric-main">
+              <strong className="metric-value">
+                {Math.round(model.perScenario[1]?.totalProfit ?? 0).toLocaleString("et-EE")}
+              </strong>
+              <span className="metric-unit">EUR</span>
+            </div>
+            <p className="metric-help">Kogukasum kogu valitud eluaja jooksul.</p>
           </div>
         </div>
 
@@ -361,7 +313,7 @@ export function VppPageClient() {
                 <div key={s.key} className="compare-row">
                   <span className="compare-label">{s.label}</span>
                   <strong>
-                    {s.paybackYears ? `${s.paybackYears.toFixed(1)} a` : "—"} · NPV {fmtEur(s.npv)}
+                    {s.paybackYears ? `${s.paybackYears.toFixed(1)} a` : "—"} · Kogukasum {fmtEur(s.totalProfit)}
                   </strong>
                 </div>
               ))}
@@ -383,7 +335,7 @@ export function VppPageClient() {
               return (
                 <div className="grid gap-3 text-sm">
                   <div className="compare-row">
-                    <span className="compare-label">Madalam tulu (−20%)</span>
+                    <span className="compare-label">Konservatiivne (70%)</span>
                     <strong>{low ? `${low.toFixed(1)} a` : "—"}</strong>
                   </div>
                   <div className="compare-row">
@@ -391,7 +343,7 @@ export function VppPageClient() {
                     <strong>{base ? `${base.toFixed(1)} a` : "—"}</strong>
                   </div>
                   <div className="compare-row">
-                    <span className="compare-label">Kõrgem tulu (+20%)</span>
+                    <span className="compare-label">Optimistlik (130%)</span>
                     <strong>{high ? `${high.toFixed(1)} a` : "—"}</strong>
                   </div>
                 </div>
@@ -414,22 +366,11 @@ export function VppPageClient() {
 
         {FEATURES.paywallEnabled ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-            <p className="text-sm text-zinc-200">PDF raport on saadaval pärast ligipääsu avamist.</p>
+            <p className="text-sm text-zinc-200">PDF raport on tasuta beetaversioonis allalaaditav.</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {!unlock.pdfUnlocked ? (
-                <button
-                  type="button"
-                  className="btn-glow"
-                  onClick={() => startCheckout("pdf_report")}
-                  disabled={purchaseBusy === "pdf_report"}
-                >
-                  {purchaseBusy === "pdf_report" ? "Suunamine..." : "Lisa PDF raport"}
-                </button>
-              ) : (
-                <button type="button" className="btn-glow" onClick={downloadPdf} disabled={!canDownloadPdf(unlock)}>
-                  Laadi PDF alla
-                </button>
-              )}
+              <button type="button" className="btn-glow" onClick={downloadPdf}>
+                Laadi PDF alla
+              </button>
             </div>
           </div>
         ) : (

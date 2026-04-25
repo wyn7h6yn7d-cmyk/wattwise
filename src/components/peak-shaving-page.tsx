@@ -4,6 +4,11 @@ import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { useMemo, useState } from "react";
+import {
+  annualPeakShavingSavingsEur,
+  possibleCutKw,
+  requiredCutKw,
+} from "@/lib/calculators/peak-shaving";
 
 function toNumber(value: string) {
   if (!value.trim()) return 0;
@@ -33,14 +38,17 @@ export function PeakShavingPageClient() {
     const hours = Math.max(toNumber(peakHours), 0.25);
     const fee = Math.max(toNumber(demandFeeEurPerKwMonth), 0);
 
-    const needCut = Math.max(peak - limit, 0);
+    // vajalik_lõige = praegune_peak - soovitud_piir
+    const needCut = requiredCutKw(peak, limit);
+    // võimalik_lõige = min(vajalik_lõige, aku_võimsus, aku_maht / tiputunni_kestus)
     const energyLimitedCut = battKwh / hours;
-    const achievableCut = Math.max(Math.min(needCut, battKw, energyLimitedCut), 0);
+    const achievableCut = possibleCutKw(needCut, battKw, battKwh, hours);
 
-    const powerOk = battKw >= achievableCut && needCut > 0;
-    const energyOk = battKwh >= achievableCut * hours && needCut > 0;
+    const powerLimits = needCut > 0 && battKw < needCut;
+    const energyLimits = needCut > 0 && energyLimitedCut < needCut;
+    const targetRealistic = needCut <= 0 || achievableCut >= needCut - 1e-9;
 
-    const annualSavings = achievableCut * fee * 12;
+    const annualSavings = annualPeakShavingSavingsEur(achievableCut, fee);
     const note =
       needCut <= 0
         ? "Sinu sisendi põhjal pole vaja tippu lõigata (piir on juba piisav)."
@@ -50,7 +58,17 @@ export function PeakShavingPageClient() {
             ? "Aku piirab lõikamist (võimsus või energia ei pruugi täielikult piisata)."
             : "Aku parameetritega on tippude lõikamine selle piirini realistlik.";
 
-    return { needCut, achievableCut, annualSavings, powerOk, energyOk, note, hours, fee };
+    return {
+      needCut,
+      achievableCut,
+      annualSavings,
+      powerLimits,
+      energyLimits,
+      targetRealistic,
+      note,
+      hours,
+      fee,
+    };
   }, [batteryKw, batteryKwh, currentPeakKw, demandFeeEurPerKwMonth, peakHours, targetLimitKw]);
 
   return (
@@ -65,7 +83,7 @@ export function PeakShavingPageClient() {
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli makse staatust
+              Kontrolli ligipääsu staatust
             </button>
           </div>
         </div>
@@ -81,29 +99,65 @@ export function PeakShavingPageClient() {
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Olemasolev tipukoormus (kW)</span>
-                <input className="input" value={currentPeakKw} inputMode="decimal" onChange={(e) => setCurrentPeakKw(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Olemasolev tipukoormus (kW)</span>
+                <input
+                  className={`input ${toNumber(currentPeakKw) <= 0 ? "input-warning" : ""}`}
+                  value={currentPeakKw}
+                  inputMode="decimal"
+                  onChange={(e) => setCurrentPeakKw(e.target.value)}
+                />
+                <span className="field-hint">Praegune kõrgeim võimsus.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Soovitud piir (kW)</span>
-                <input className="input" value={targetLimitKw} inputMode="decimal" onChange={(e) => setTargetLimitKw(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Soovitud piir (kW)</span>
+                <input
+                  className={`input ${toNumber(targetLimitKw) >= toNumber(currentPeakKw) ? "input-warning" : ""}`}
+                  value={targetLimitKw}
+                  inputMode="decimal"
+                  onChange={(e) => setTargetLimitKw(e.target.value)}
+                />
+                <span className="field-hint">Sihttase, millest üle ei soovita minna.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Aku suurus (kWh)</span>
-                <input className="input" value={batteryKwh} inputMode="decimal" onChange={(e) => setBatteryKwh(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Aku suurus (kWh)</span>
+                <input
+                  className={`input ${toNumber(batteryKwh) <= 0 ? "input-error" : ""}`}
+                  value={batteryKwh}
+                  inputMode="decimal"
+                  onChange={(e) => setBatteryKwh(e.target.value)}
+                />
+                <span className="field-hint">Aku energiamaht.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Aku võimsus (kW)</span>
-                <input className="input" value={batteryKw} inputMode="decimal" onChange={(e) => setBatteryKw(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Aku võimsus (kW)</span>
+                <input
+                  className={`input ${toNumber(batteryKw) <= 0 ? "input-error" : ""}`}
+                  value={batteryKw}
+                  inputMode="decimal"
+                  onChange={(e) => setBatteryKw(e.target.value)}
+                />
+                <span className="field-hint">Aku maksimaalne hetkeline võimsus.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Tiputunni kestus (h)</span>
-                <input className="input" value={peakHours} inputMode="decimal" onChange={(e) => setPeakHours(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Tiputunni kestus (h)</span>
+                <input
+                  className={`input ${toNumber(peakHours) <= 0 ? "input-warning" : ""}`}
+                  value={peakHours}
+                  inputMode="decimal"
+                  onChange={(e) => setPeakHours(e.target.value)}
+                />
+                <span className="field-hint">Kui kaua tippkoormus tavaliselt kestab.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Võimsustasu (€/kW/kuu)</span>
-                <input className="input" value={demandFeeEurPerKwMonth} inputMode="decimal" onChange={(e) => setDemandFeeEurPerKwMonth(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Võimsustasu (€/kW/kuu)</span>
+                <input
+                  className={`input ${toNumber(demandFeeEurPerKwMonth) <= 0 ? "input-warning" : ""}`}
+                  value={demandFeeEurPerKwMonth}
+                  inputMode="decimal"
+                  onChange={(e) => setDemandFeeEurPerKwMonth(e.target.value)}
+                />
+                <span className="field-hint">Võrgu võimsuskomponendi tasu.</span>
               </label>
             </div>
           </article>
@@ -111,17 +165,29 @@ export function PeakShavingPageClient() {
           <article className="card">
             <h3 className="section-title">Tulemused</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="result-card">
-                <p>Vajalik lõige</p>
-                <strong>{result.needCut.toFixed(1)} kW</strong>
+              <div className="metric-card metric-card-accent-teal">
+                <p className="metric-label">Vajalik lõige</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.needCut.toFixed(1).replace(".", ",")}</strong>
+                  <span className="metric-unit">kW</span>
+                </div>
+                <p className="metric-help">Kui palju tuleks tippu vähendada sihtpiiri saavutamiseks.</p>
               </div>
-              <div className="result-card">
-                <p>Saavutatav lõige</p>
-                <strong>{result.achievableCut.toFixed(1)} kW</strong>
+              <div className="metric-card metric-card-accent-emerald">
+                <p className="metric-label">Saavutatav lõige</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.achievableCut.toFixed(1).replace(".", ",")}</strong>
+                  <span className="metric-unit">kW</span>
+                </div>
+                <p className="metric-help">Aku reaalselt võimaldatav tipukoormuse vähendus.</p>
               </div>
-              <div className="result-card sm:col-span-2">
-                <p>Hinnanguline sääst aastas</p>
-                <strong>{fmtEur(result.annualSavings)}</strong>
+              <div className="metric-card metric-card-primary metric-card-accent-emerald sm:col-span-2">
+                <p className="metric-label">Olulisim: hinnanguline sääst aastas</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{Math.round(result.annualSavings).toLocaleString("et-EE")}</strong>
+                  <span className="metric-unit">EUR/a</span>
+                </div>
+                <p className="metric-help">Aastane võimsustasu kokkuhoid saavutatud lõike põhjal.</p>
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-zinc-200">
@@ -130,12 +196,16 @@ export function PeakShavingPageClient() {
             </div>
             <div className="mt-3 grid gap-2 text-sm">
               <div className="compare-row">
-                <span className="compare-label">Aku võimsus piisav?</span>
-                <strong>{result.needCut <= 0 ? "—" : result.powerOk ? "Jah" : "Piirab"}</strong>
+                <span className="compare-label">Kas piirab aku võimsus?</span>
+                <strong>{result.needCut <= 0 ? "—" : result.powerLimits ? "Jah, piirab" : "Ei"}</strong>
               </div>
               <div className="compare-row">
-                <span className="compare-label">Aku energia piisav (kestus {result.hours}h)?</span>
-                <strong>{result.needCut <= 0 ? "—" : result.energyOk ? "Jah" : "Piirab"}</strong>
+                <span className="compare-label">Kas piirab aku maht (kestus {result.hours}h)?</span>
+                <strong>{result.needCut <= 0 ? "—" : result.energyLimits ? "Jah, piirab" : "Ei"}</strong>
+              </div>
+              <div className="compare-row">
+                <span className="compare-label">Kas soovitud piir on realistlik?</span>
+                <strong>{result.targetRealistic ? "Jah" : "Ei"}</strong>
               </div>
             </div>
           </article>
@@ -144,10 +214,10 @@ export function PeakShavingPageClient() {
 
       <PaywallCard
         locked={!canViewFullAnalysis(unlock)}
-        title="Täisanalüüs"
+        title="Detailne vaade"
         description="avab 15-min tarbimisprofiili simulatsiooni, tippude analüüsi ja rahavoo tabelina selle projekti jaoks."
-        ctaLabel={purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
-        secondaryLabel="Kontrolli makse staatust"
+        ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
+        secondaryLabel="Kontrolli ligipääsu staatust"
         onCta={() => startCheckout("full_analysis")}
         onSecondary={checkPaymentStatus}
         footer={
@@ -156,9 +226,9 @@ export function PeakShavingPageClient() {
           </>
         }
       >
-        <h3 className="text-xl font-semibold text-zinc-50">Täisanalüüs: detailsem simulatsioon</h3>
+        <h3 className="text-xl font-semibold text-zinc-50">Detailne simulatsioon</h3>
         <p className="mt-2 text-sm text-zinc-400">
-          Täisanalüüs lisab 15-min tarbimisprofiili põhise simulatsiooni, stsenaariumid ja selgema rahavoo.
+          Detailne vaade lisab 15-min tarbimisprofiili põhise simulatsiooni, stsenaariumid ja selgema rahavoo.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {[

@@ -70,6 +70,13 @@ export function RenewableEnergyScene() {
             <span className="blade-third" />
           </span>
         </div>
+        <div className="turbine turbine-xs" style={{ right: "58%", bottom: "35%" }}>
+          <span className="mast" />
+          <span className="hub" />
+          <span className="blades">
+            <span className="blade-third" />
+          </span>
+        </div>
       </div>
 
       <div className="scene-energy-wash" />

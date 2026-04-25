@@ -24,7 +24,7 @@ export function CalculatorTabs() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`whitespace-nowrap rounded-2xl px-4 py-2 text-sm transition-colors ${
+              className={`whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs min-[390px]:text-sm min-[390px]:px-4 min-[390px]:py-2 transition-colors ${
                 active
                   ? "bg-gradient-to-r from-emerald-400/20 to-teal-400/20 text-zinc-50 ring-1 ring-emerald-300/25"
                   : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"

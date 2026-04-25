@@ -37,17 +37,18 @@ export function ToolCardsSection() {
           <Link
             key={card.title}
             href={card.href}
-            className="group relative overflow-hidden rounded-2xl border border-emerald-300/20 bg-[#091514]/80 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300/55 hover:shadow-[0_0_52px_rgba(16,185,129,0.16)]"
+            className="calc-card premium-card group relative flex min-h-[210px] flex-col justify-between overflow-hidden p-5"
           >
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.1),transparent_30%)] opacity-30" />
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-400/10 text-emerald-200 shadow-[0_0_28px_rgba(16,185,129,0.15)]">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 12h16M12 4l8 8-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
+            <div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-300/45 bg-emerald-400/10 text-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.16)]">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 12h16M12 4l8 8-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-base font-semibold text-zinc-100">{card.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{card.text}</p>
             </div>
-            <h3 className="mt-4 text-base font-semibold text-zinc-100">{card.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{card.text}</p>
-            <div className="mt-6 text-right text-emerald-200 transition group-hover:translate-x-1">→</div>
+            <div className="mt-6 flex items-center justify-end text-emerald-200 transition group-hover:translate-x-1">→</div>
           </Link>
         ))}
       </div>

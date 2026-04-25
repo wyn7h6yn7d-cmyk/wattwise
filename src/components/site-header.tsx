@@ -13,11 +13,31 @@ const nav = [
 ];
 
 const calculatorLinks = [
-  { href: "/kalkulaatorid/paikesejaam", label: "Päikesejaam" },
-  { href: "/kalkulaatorid/vpp", label: "VPP" },
-  { href: "/kalkulaatorid/ev-laadimine", label: "EV laadimine" },
-  { href: "/kalkulaatorid/elektripaketid", label: "Elektripaketid" },
-  { href: "/kalkulaatorid/peak-shaving", label: "Peak shaving" },
+  {
+    href: "/kalkulaatorid/paikesejaam",
+    label: "Päikesejaam",
+    description: "Tasuvus, sääst, omatarve ja tasuvusaeg.",
+  },
+  {
+    href: "/kalkulaatorid/vpp",
+    label: "VPP",
+    description: "Aku paindlikkuse tulu ja investeeringu tasuvus.",
+  },
+  {
+    href: "/kalkulaatorid/ev-laadimine",
+    label: "EV laadimine",
+    description: "Laadimise aeg, kulu ja sobiv laadija võimsus.",
+  },
+  {
+    href: "/kalkulaatorid/elektripaketid",
+    label: "Elektripaketid",
+    description: "Spot vs fikseeritud kulu võrdlus.",
+  },
+  {
+    href: "/kalkulaatorid/peak-shaving",
+    label: "Peak shaving",
+    description: "Tipukoormuse lõikamine ja võimsustasu sääst.",
+  },
 ];
 
 export function SiteHeader() {
@@ -63,15 +83,15 @@ export function SiteHeader() {
     closeTimerRef.current = setTimeout(() => {
       setDropdownOpen(false);
       closeTimerRef.current = null;
-    }, 170);
+    }, 280);
   };
 
   return (
-    <header className="sticky top-0 z-50 px-3 pb-2 pt-3 sm:px-5 sm:pb-3 sm:pt-4 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 rounded-2xl border border-emerald-300/30 bg-zinc-950/82 px-3 py-2 shadow-[0_16px_65px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:px-4">
+    <header className="sticky top-0 z-50 overflow-x-clip px-3 pb-2 pt-2 sm:px-5 sm:pb-3 sm:pt-3 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 items-center justify-between gap-2 rounded-2xl border border-emerald-300/22 bg-zinc-950/68 px-2.5 py-2 shadow-[0_14px_52px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:px-4 lg:grid lg:grid-cols-[auto,1fr,auto] lg:gap-3 lg:rounded-3xl lg:px-5 lg:py-2.5">
         <Link
           href="/"
-          className="flex min-w-0 items-center gap-2.5 sm:gap-3"
+          className="flex min-w-0 max-w-[calc(100%-3.75rem)] items-center gap-2 sm:gap-3"
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
@@ -88,19 +108,19 @@ export function SiteHeader() {
               priority
             />
           </div>
-          <div className="truncate text-sm font-medium tracking-tight text-zinc-100 sm:text-[1.05rem]">
+          <div className="truncate text-[0.92rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1.05rem]">
             Energiakalkulaator
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Peamenüü">
+        <nav className="hidden items-center justify-center gap-1 lg:flex" aria-label="Peamenüü">
           {navItems.slice(0, 1).map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`rounded-xl px-3 py-1.5 text-sm transition-colors ${
                 item.active
-                  ? "border-b border-emerald-300/70 text-emerald-100"
+                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
                   : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
               }`}
             >
@@ -115,9 +135,9 @@ export function SiteHeader() {
           >
             <button
               type="button"
-              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-colors ${
                 calcActive || dropdownOpen
-                  ? "border-b border-emerald-300/70 text-emerald-100"
+                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
                   : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
               }`}
               onClick={() => setDropdownOpen((v) => !v)}
@@ -130,30 +150,35 @@ export function SiteHeader() {
               </svg>
             </button>
 
-            {dropdownOpen ? (
-              <div className="absolute left-0 top-full z-50 w-64 pt-1.5">
-                <div className="rounded-2xl border border-white/15 bg-zinc-950/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+            <div
+              className={`absolute left-0 top-full z-50 w-[21rem] pt-2 transition-all duration-220 ease-out ${
+                dropdownOpen
+                  ? "pointer-events-auto translate-y-0 opacity-100"
+                  : "pointer-events-none -translate-y-1 opacity-0"
+              }`}
+            >
+              <div className="rounded-2xl border border-emerald-300/20 bg-zinc-950/88 p-2 shadow-[0_22px_65px_rgba(0,0,0,0.58)] backdrop-blur-2xl">
                 {calculatorLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="block rounded-xl px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/7 hover:text-emerald-100"
+                    className="block rounded-xl px-3 py-2.5 transition hover:bg-emerald-400/12 hover:text-emerald-100"
                   >
-                    {link.label}
+                    <div className="text-sm font-medium text-zinc-100">{link.label}</div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-zinc-400">{link.description}</div>
                   </Link>
                 ))}
-                </div>
               </div>
-            ) : null}
+            </div>
           </div>
 
           {navItems.slice(1).map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`rounded-xl px-3 py-1.5 text-sm transition-colors ${
                 item.active
-                  ? "border-b border-emerald-300/70 text-emerald-100"
+                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
                   : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
               }`}
             >
@@ -162,10 +187,10 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-zinc-100 shadow-[0_0_24px_rgba(16,185,129,0.08)] backdrop-blur-xl transition-colors hover:bg-white/[0.06] lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/[0.06] text-zinc-100 shadow-[0_0_24px_rgba(16,185,129,0.08)] backdrop-blur-xl transition-colors hover:bg-white/[0.1] lg:hidden"
             aria-label={mobileOpen ? "Sulge menüü" : "Ava menüü"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
@@ -179,9 +204,9 @@ export function SiteHeader() {
           </button>
           <Link
             href="/kalkulaatorid"
-            className="btn-glow hidden whitespace-nowrap px-4 py-2 text-sm lg:inline-flex"
+            className="btn-glow hidden whitespace-nowrap px-4 py-1.5 text-sm lg:inline-flex"
           >
-            Proovi tasuta
+            Alusta tasuta
           </Link>
         </div>
       </div>
@@ -216,10 +241,24 @@ function MobileMenu({
         aria-hidden="true"
       />
       <div className="relative z-50 mx-auto max-w-7xl px-3 pb-4 pt-2 sm:px-5 lg:px-8">
-        <div className="rounded-2xl border border-white/12 bg-zinc-950/88 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-          <div className="flex items-center justify-between px-2 py-2">
-            <div className="text-sm font-semibold text-zinc-50">Menüü</div>
-            <button type="button" className="btn-ghost" onClick={onClose} aria-label="Sulge menüü">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/12 bg-zinc-950/88 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+          <div className="flex items-center justify-between gap-2 px-2 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-emerald-300/45 shadow-[0_0_16px_rgba(16,185,129,0.2)]">
+                <Image
+                  src="/logo.png"
+                  alt="Energiakalkulaator"
+                  width={32}
+                  height={32}
+                  sizes="32px"
+                  quality={100}
+                  unoptimized
+                  className="h-[92%] w-[92%] object-contain"
+                />
+              </div>
+              <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
+            </div>
+            <button type="button" className="btn-ghost shrink-0" onClick={onClose} aria-label="Sulge menüü">
               Sulge
             </button>
           </div>
@@ -230,7 +269,7 @@ function MobileMenu({
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`block rounded-xl px-3 py-3 text-sm transition-colors ${
+                className={`block rounded-xl px-3 py-3.5 text-sm transition-colors ${
                   item.active
                     ? "bg-white/10 text-zinc-50"
                     : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"
@@ -247,9 +286,10 @@ function MobileMenu({
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className="block rounded-lg px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/7 hover:text-emerald-100"
+                    className="block rounded-lg px-3 py-3 transition hover:bg-emerald-400/12 hover:text-emerald-100"
                   >
-                    {item.label}
+                    <div className="text-sm font-medium text-zinc-100">{item.label}</div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-zinc-400">{item.description}</div>
                   </Link>
                 ))}
               </div>
@@ -259,7 +299,7 @@ function MobileMenu({
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`block rounded-xl px-3 py-3 text-sm transition-colors ${
+                className={`block rounded-xl px-3 py-3.5 text-sm transition-colors ${
                   item.active
                     ? "bg-emerald-400/20 text-emerald-100"
                     : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"
@@ -272,7 +312,7 @@ function MobileMenu({
 
           <div className="mt-2 border-t border-white/10 p-2">
             <Link href="/kalkulaatorid" onClick={onClose} className="btn-glow w-full justify-center">
-              Proovi tasuta
+              Alusta tasuta
             </Link>
           </div>
         </div>

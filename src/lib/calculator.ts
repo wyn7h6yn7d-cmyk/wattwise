@@ -2,6 +2,25 @@ import { CalculatorInput, ComparisonResult, InterpretationKind, ScenarioResult }
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
+/**
+ * Accept both percentage input styles:
+ * - 76  -> 0.76
+ * - 0.76 -> 0.76
+ */
+const toRatio = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return value <= 1 ? value : value / 100;
+};
+
+/**
+ * Guard against accidental EUR/MWh values in EUR/kWh fields.
+ * Example: 120 (EUR/MWh) -> 0.12 (EUR/kWh)
+ */
+const normalizeEurPerKwh = (value: number): number => {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value > 3 ? value / 1000 : value;
+};
+
 const directionFactorMap: Record<CalculatorInput["panelDirection"], number> = {
   louna: 1,
   "ida-laas": 0.93,
@@ -18,9 +37,9 @@ const profileFactorMap: Record<CalculatorInput["consumptionProfile"], number> = 
 function computeScenario(input: CalculatorInput, withBattery: boolean): ScenarioResult {
   const directionFactor = directionFactorMap[input.panelDirection];
   const profileFactor = profileFactorMap[input.consumptionProfile];
-  const shadingFactor = clamp(1 - input.shadingPercent / 100, 0.6, 1);
-  const efficiencyFactor = clamp(input.systemEfficiencyPercent / 100, 0.7, 1.05);
-  const seasonalFactor = clamp(input.seasonalMultiplierPercent / 100, 0.75, 1.35);
+  const shadingFactor = clamp(1 - toRatio(input.shadingPercent), 0.6, 1);
+  const efficiencyFactor = clamp(toRatio(input.systemEfficiencyPercent), 0.7, 1.05);
+  const seasonalFactor = clamp(toRatio(input.seasonalMultiplierPercent), 0.75, 1.35);
 
   const baseProduction = Math.max(input.annualProductionKwh, input.pvPowerKw * 900);
   const annualProductionKwh = baseProduction * directionFactor * shadingFactor * efficiencyFactor * seasonalFactor;
@@ -44,16 +63,16 @@ function computeScenario(input: CalculatorInput, withBattery: boolean): Scenario
   }
 
   const baseSelfConsumptionRate = clamp(
-    input.selfConsumptionWithoutBatteryPercent / 100 * profileFactor,
+    toRatio(input.selfConsumptionWithoutBatteryPercent) * profileFactor,
     0.08,
     0.95,
   );
   const batteryBoost = withBattery
-    ? clamp(input.selfConsumptionBoostWithBatteryPercent / 100, 0, 0.35)
+    ? clamp(toRatio(input.selfConsumptionBoostWithBatteryPercent), 0, 0.35)
     : 0;
 
   const batteryUsableKwh =
-    input.batteryCapacityKwh * (input.batteryUsablePercent / 100) * (input.batteryRoundTripPercent / 100);
+    input.batteryCapacityKwh * toRatio(input.batteryUsablePercent) * toRatio(input.batteryRoundTripPercent);
   const batteryCoverageFactor = withBattery
     ? clamp((batteryUsableKwh * 320) / Math.max(input.annualConsumptionKwh, 1), 0, 0.25)
     : 0;
@@ -63,26 +82,30 @@ function computeScenario(input: CalculatorInput, withBattery: boolean): Scenario
   const exportedKwh = Math.max(annualProductionKwh - selfConsumedKwh, 0);
   const avoidedGridPurchaseKwh = selfConsumedKwh;
 
-  const energyPrice = input.priceSource === "manual" ? input.manualSpotPrice : input.nordPoolAveragePrice;
-  const effectiveEnergyPrice = energyPrice + input.gridFeePrice + input.marginPrice;
+  const energyPrice = normalizeEurPerKwh(
+    input.priceSource === "manual" ? input.manualSpotPrice : input.nordPoolAveragePrice,
+  );
+  const effectiveEnergyPrice =
+    energyPrice + normalizeEurPerKwh(input.gridFeePrice) + normalizeEurPerKwh(input.marginPrice);
+  const sellBackPrice = normalizeEurPerKwh(input.sellBackPrice);
   const annualSavingsEur = avoidedGridPurchaseKwh * effectiveEnergyPrice;
-  const annualExportRevenueEur = exportedKwh * input.sellBackPrice;
-  const annualNetBenefitEur = Math.max(annualSavingsEur + annualExportRevenueEur - input.annualMaintenanceEur, 0);
+  const annualExportRevenueEur = exportedKwh * sellBackPrice;
+  const annualNetBenefitEur = annualSavingsEur + annualExportRevenueEur - input.annualMaintenanceEur;
 
   const cashflowByYear: number[] = [];
   let totalNetBenefitPeriodEur = 0;
   let production = annualProductionKwh;
   for (let year = 1; year <= input.periodYears; year += 1) {
-    const growth = (1 + input.annualPriceGrowthPercent / 100) ** (year - 1);
-    const discount = (1 + input.discountRatePercent / 100) ** (year - 1);
+    const growth = (1 + toRatio(input.annualPriceGrowthPercent)) ** (year - 1);
+    const discount = (1 + toRatio(input.discountRatePercent)) ** (year - 1);
     const yearlyBenefit =
       ((production * selfConsumptionRate * effectiveEnergyPrice * growth) +
-        (Math.max(production - production * selfConsumptionRate, 0) * input.sellBackPrice * growth) -
+        (Math.max(production - production * selfConsumptionRate, 0) * sellBackPrice * growth) -
         input.annualMaintenanceEur) /
       discount;
     cashflowByYear.push(yearlyBenefit);
     totalNetBenefitPeriodEur += yearlyBenefit;
-    production *= 1 - input.degradationPercent / 100;
+    production *= 1 - toRatio(input.degradationPercent);
   }
 
   const selfConsumptionRatePercent = selfConsumptionRate * 100;
@@ -128,9 +151,9 @@ export function calculateComparison(input: CalculatorInput): ComparisonResult {
 
   const batteryAddedValuePeriodEur = withBattery.totalNetBenefitPeriodEur - withoutBattery.totalNetBenefitPeriodEur;
   const effectiveEnergyPrice =
-    (input.priceSource === "manual" ? input.manualSpotPrice : input.nordPoolAveragePrice) +
-    input.gridFeePrice +
-    input.marginPrice;
+    normalizeEurPerKwh(input.priceSource === "manual" ? input.manualSpotPrice : input.nordPoolAveragePrice) +
+    normalizeEurPerKwh(input.gridFeePrice) +
+    normalizeEurPerKwh(input.marginPrice);
 
   return {
     withoutBattery,

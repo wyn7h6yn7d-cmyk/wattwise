@@ -10,34 +10,26 @@ export default function RefundsPage() {
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">1. Digiteenused ja hinnad</h2>
       <p className="mt-2">
-        Hetkel pakume järgmisi digiteenuseid:
+        Hetkel on teenus saadaval tasuta beetaversioonina.
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         <li>
-          <strong>Täisanalüüs</strong> – detailsem tulemuste vaade ja analüüs ühe projekti kohta.
-        </li>
-        <li>
-          <strong>PDF raport</strong> – kokkuvõtte eksport ühele projektile.
+          <strong>Kalkulaatorid</strong> – detailne tulemuste vaade ja analüüs eri tööriistades.
         </li>
       </ul>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">2. Digitaalse teenuse osutamine</h2>
       <p className="mt-2">
-        Digiteenus loetakse osutatuks, kui ligipääs täisanalüüsile või raporti eksport on kasutajale
-        avatud. Teenuse osutamine võib toimuda kohe pärast makse kinnitamist.
+        Digiteenus loetakse osutatuks, kui tööriistade kasutus on kasutajale avatud.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">3. Enne ostu kinnitatavad tingimused</h2>
       <p className="mt-2">
-        Checkouti juures peab kasutaja kinnitama vähemalt:
+        Beetaversioonis peab kasutaja tutvuma vähemalt:
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         <li>“Olen tutvunud kasutustingimustega.”</li>
         <li>“Olen tutvunud privaatsuspoliitikaga.”</li>
-        <li>
-          “Nõustun, et digitaalse teenuse kohene osutamine võib mõjutada minu taganemisõigust vastavalt
-          kohaldatavale õigusele.”
-        </li>
       </ul>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">4. Tagasimaksed</h2>

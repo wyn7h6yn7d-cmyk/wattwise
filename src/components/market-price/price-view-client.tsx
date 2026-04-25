@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { addVat, eurPerKwhToSntPerKwh, MarketPricePoint } from "@/lib/elering";
+import { ReactNode, useMemo, useState } from "react";
+import {
+  addVat,
+  eurMWhToSntKWh,
+  eurMWhToSntKWhWithVat,
+  formatSntKWh,
+  MarketPricePoint,
+} from "@/lib/elering";
 import { pickBestWindows, pickTopSlots, summarizeDay } from "@/lib/market-recommendations";
 
 function pad2(n: number) {
@@ -18,10 +24,9 @@ function fmtRangeEt(startTs: number, endTs: number) {
 }
 
 function fmtSnt(eurPerKwh: number, vat: boolean) {
-  const base = vat ? addVat(eurPerKwh) : eurPerKwh;
-  const snt = eurPerKwhToSntPerKwh(base);
-  const rounded = Math.round(snt * 10) / 10;
-  return new Intl.NumberFormat("et-EE", { maximumFractionDigits: 1 }).format(rounded);
+  const eurPerMWh = eurPerKwh * 1000;
+  const snt = vat ? eurMWhToSntKWhWithVat(eurPerMWh) : eurMWhToSntKWh(eurPerMWh);
+  return formatSntKWh(snt);
 }
 
 type ViewInterval = 15 | 60;
@@ -109,13 +114,43 @@ function priceClass(p: number, mean: number, std: number) {
   // Cheap/avg/expensive/peak based on z-score.
   const z = std > 0 ? (p - mean) / std : 0;
   if (z <= -0.6) return { label: "odav", pill: "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/20" };
-  if (z >= 1.2) return { label: "tipp", pill: "bg-rose-400/15 text-rose-100 ring-1 ring-rose-300/20" };
-  if (z >= 0.6) return { label: "kallis", pill: "bg-amber-400/15 text-amber-100 ring-1 ring-amber-300/20" };
+  if (z >= 1.2) return { label: "tipp", pill: "bg-teal-300/20 text-teal-100 ring-1 ring-teal-200/30" };
+  if (z >= 0.6) return { label: "kallis", pill: "bg-teal-400/12 text-teal-100 ring-1 ring-teal-300/20" };
   return { label: "keskmine", pill: "bg-white/[0.04] text-zinc-200 ring-1 ring-white/10" };
 }
 
 function cardTitle(label: string) {
   return <div className="text-xs text-zinc-400">{label}</div>;
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+  disabled = false,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
+        active
+          ? "border-emerald-300/35 bg-emerald-400/15 text-zinc-50 shadow-[0_0_20px_rgba(16,185,129,0.12)]"
+          : "border-white/10 bg-white/[0.02] text-zinc-300 hover:bg-white/[0.05] hover:text-zinc-50"
+      } ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+    >
+      {children}
+    </button>
+  );
 }
 
 function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) {
@@ -134,12 +169,7 @@ function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) 
         {points.map((p) => {
           const v = vat ? addVat(p.price_eur_per_kwh) : p.price_eur_per_kwh;
           const t = (v - min) / span;
-          const bg =
-            t < 0.33
-              ? "bg-emerald-400/45"
-              : t < 0.66
-                ? "bg-emerald-300/25"
-                : "bg-amber-300/25";
+          const bg = t < 0.33 ? "bg-emerald-400/45" : t < 0.66 ? "bg-teal-400/30" : "bg-teal-300/22";
           return (
             <div
               key={p.ts}
@@ -167,7 +197,7 @@ function AreaChart({
   const max = Math.max(...values);
   const span = Math.max(max - min, 1e-9);
   const w = 520;
-  const h = 160;
+  const h = 220;
   const pad = 10;
 
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
@@ -195,7 +225,7 @@ function AreaChart({
   })();
 
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+    <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
       <div className="flex items-center justify-between text-xs text-zinc-400">
         <span>Hinnagraafik</span>
         <span>
@@ -220,7 +250,7 @@ function AreaChart({
         ) : null}
         <svg
           viewBox={`0 0 ${w} ${h}`}
-          className="h-[170px] w-full sm:h-[160px]"
+          className="h-[230px] w-full sm:h-[220px]"
           onMouseLeave={() => setHover(null)}
           onMouseMove={(e) => {
             const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
@@ -235,11 +265,15 @@ function AreaChart({
         >
         <defs>
           <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(16,185,129,0.30)" />
+            <stop offset="0%" stopColor="rgba(20,184,166,0.34)" />
             <stop offset="100%" stopColor="rgba(16,185,129,0.02)" />
           </linearGradient>
         </defs>
-        <path d={d} fill="none" stroke="rgba(110,231,183,0.92)" strokeWidth="2" />
+        {[0.2, 0.4, 0.6, 0.8].map((g) => {
+          const gy = pad + g * (h - pad * 2);
+          return <line key={g} x1={pad} x2={w - pad} y1={gy} y2={gy} stroke="rgba(255,255,255,0.08)" />;
+        })}
+        <path d={d} fill="none" stroke="rgba(45,212,191,0.95)" strokeWidth="2.2" />
         <path d={`${d} L${w - pad},${h - pad} L${pad},${h - pad} Z`} fill="url(#area)" />
         {/* now marker */}
         {points.length > 1 ? (
@@ -249,8 +283,8 @@ function AreaChart({
             const y = pad + (1 - (v - min) / span) * (h - pad * 2);
             return (
               <g>
-                <line x1={x} x2={x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.18)" strokeDasharray="3 4" />
-                <circle cx={x} cy={y} r="4" fill="rgba(16,185,129,0.95)" />
+                <line x1={x} x2={x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.16)" strokeDasharray="3 4" />
+                <circle cx={x} cy={y} r="4.5" fill="rgba(45,212,191,0.95)" />
               </g>
             );
           })()
@@ -281,13 +315,13 @@ function SlotTable({
 }) {
   const intervalSec = intervalMinutes * 60;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+    <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
       <div className="text-sm font-semibold text-zinc-50">{title}</div>
       <div className="mt-3 grid gap-2">
         {points.map((p) => (
-          <div key={p.ts} className="compare-row">
-            <span className="compare-label">{fmtRangeEt(p.ts, p.ts + intervalSec)}</span>
-            <strong className="text-zinc-50">{fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh</strong>
+          <div key={p.ts} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+            <span className="text-sm text-zinc-200">{fmtRangeEt(p.ts, p.ts + intervalSec)}</span>
+            <strong className="text-sm font-semibold text-zinc-50">{fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh</strong>
           </div>
         ))}
       </div>
@@ -299,62 +333,21 @@ function WindowCard({
   hours,
   pick,
   vat,
+  variant = "cheapest",
 }: {
   hours: 1 | 2 | 3 | 4;
   pick: { startTs: number; endTs: number; avgEurPerKwh: number } | null;
   vat: boolean;
+  variant?: "cheapest" | "priciest";
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-      <div className="text-xs text-zinc-400">Odavaim {hours}h aken</div>
-      <div className="mt-2 text-sm font-semibold text-zinc-50">
+    <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+      <div className="text-xs text-zinc-400">{variant === "cheapest" ? "Odavaim" : "Kalleim"} {hours}h aken</div>
+      <div className="mt-2 text-base font-semibold text-zinc-50">
         {pick ? fmtRangeEt(pick.startTs, pick.endTs) : "—"}
       </div>
       <div className="mt-1 text-sm text-zinc-300">
         {pick ? `${fmtSnt(pick.avgEurPerKwh, vat)} snt/kWh (keskmine)` : "Ei leitud andmeid."}
-      </div>
-    </div>
-  );
-}
-
-function AdviceCards({
-  cheapestWindow,
-  priciestWindow,
-  intervalMinutes,
-}: {
-  cheapestWindow: { startTs: number; endTs: number } | null;
-  priciestWindow: { startTs: number; endTs: number } | null;
-  intervalMinutes: 15 | 60;
-}) {
-  const intervalLabel = intervalMinutes === 15 ? "15 minuti" : "tunni";
-  return (
-    <div className="mt-6 grid gap-4 lg:grid-cols-3">
-      <div className="card rounded-3xl p-6">
-        <div className="text-sm font-semibold text-zinc-50">Millal tasub tarbida rohkem?</div>
-        <p className="mt-2 text-sm text-zinc-300">
-          Kui saad tarbimist nihutada, suuna suurem tarbimine eelkõige odavamatesse akendesse. Need on head ajad
-          näiteks pesumasinale, boilerile või EV laadimisele.
-        </p>
-        <p className="mt-3 text-xs text-zinc-400">
-          {cheapestWindow ? `Soovitus: ${fmtRangeEt(cheapestWindow.startTs, cheapestWindow.endTs)}.` : `Soovitus: vaata päeva odavaimaid ${intervalLabel} perioode.`}
-        </p>
-      </div>
-      <div className="card rounded-3xl p-6">
-        <div className="text-sm font-semibold text-zinc-50">Millal tasub tarbida vähem?</div>
-        <p className="mt-2 text-sm text-zinc-300">
-          Kõrgema hinnaga tipud tekivad tavaliselt hommikul ja õhtul. Kui võimalik, väldi sel ajal suure tarbimisega seadmeid.
-        </p>
-        <p className="mt-3 text-xs text-zinc-400">
-          {priciestWindow ? `Väldi eelkõige: ${fmtRangeEt(priciestWindow.startTs, priciestWindow.endTs)}.` : `Väldi päeva kalleimaid ${intervalLabel} perioode.`}
-        </p>
-      </div>
-      <div className="card rounded-3xl p-6">
-        <div className="text-sm font-semibold text-zinc-50">Kiirnõuanded</div>
-        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-zinc-300">
-          <li>EV laadimine: vali 2–4h odavaim aken.</li>
-          <li>Boiler: küta odavaimal tunnil, hoia temperatuuri hiljem.</li>
-          <li>Soojuspump: väldi tippu, kui maja soojusmaht lubab.</li>
-        </ul>
       </div>
     </div>
   );
@@ -449,7 +442,7 @@ export function PriceViewClient({
   const intervalSec = effectiveInterval * 60;
 
   return (
-    <section className="mt-8 grid grid-cols-1 gap-6">
+    <section className="mt-8 grid grid-cols-1 gap-6 overflow-x-hidden">
       <div className="glass-panel rounded-3xl p-5 sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -458,110 +451,80 @@ export function PriceViewClient({
               Eesti (EE) turuhind Eleringi andmetel. Vaikimisi näitame hinna käibemaksuga (24%).
             </p>
           </div>
-          <div className="grid min-w-0 grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-            <div className="grid w-full grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1 sm:w-auto sm:grid-cols-2">
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${!vat ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setVat(false)}
-              >
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/45 px-2 py-1">
+              <FilterChip active={!vat} onClick={() => setVat(false)}>
                 Ilma KM-ta
-              </button>
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${vat ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setVat(true)}
-              >
+              </FilterChip>
+              <FilterChip active={vat} onClick={() => setVat(true)}>
                 KM-ga
-              </button>
+              </FilterChip>
             </div>
 
-            <div className="grid w-full grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1 sm:w-auto sm:grid-cols-2">
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${effectiveInterval === 15 ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/45 px-2 py-1">
+              <FilterChip
+                active={effectiveInterval === 15}
                 onClick={() => setViewInterval(15)}
                 disabled={sourceInterval !== 15}
                 title={sourceInterval === 15 ? "15 min vaade" : "15 min andmeid ei ole saadaval"}
               >
                 15 min
-              </button>
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${effectiveInterval === 60 ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setViewInterval(60)}
-              >
+              </FilterChip>
+              <FilterChip active={effectiveInterval === 60} onClick={() => setViewInterval(60)}>
                 1h
-              </button>
+              </FilterChip>
             </div>
 
-            <div className="grid w-full grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1 sm:w-auto sm:grid-cols-3">
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${period === "today" ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setPeriod("today")}
-              >
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/45 px-2 py-1">
+              <FilterChip active={period === "today"} onClick={() => setPeriod("today")}>
                 Täna
-              </button>
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${period === "today_tomorrow" ? "bg-emerald-400/15 text-zinc-50 ring-1 ring-emerald-300/20" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setPeriod("today_tomorrow")}
-              >
+              </FilterChip>
+              <FilterChip active={period === "today_tomorrow"} onClick={() => setPeriod("today_tomorrow")}>
                 Täna + homme
-              </button>
-              <button
-                type="button"
-                className={`w-full rounded-xl px-3 py-2 text-sm ${period === "tomorrow" ? "bg-white/10 text-zinc-50" : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"}`}
-                onClick={() => setPeriod("tomorrow")}
-              >
+              </FilterChip>
+              <FilterChip active={period === "tomorrow"} onClick={() => setPeriod("tomorrow")}>
                 Homme
-              </button>
+              </FilterChip>
             </div>
           </div>
         </div>
 
-        {/* A) Summary ribbon */}
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-              <div className="text-xs text-zinc-400">{nowCard?.label ?? "Praegune hind"}</div>
-              <div className="mt-1 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                {nowCard ? fmtSnt(nowCard.eurPerKwh, vat) : "—"}{" "}
-                <span className="text-sm font-semibold text-zinc-300">snt/kWh</span>
+        {/* A) Summary cards */}
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-12">
+          <div className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/15 to-teal-400/10 p-4 shadow-[0_0_30px_rgba(20,184,166,0.12)] lg:col-span-5">
+            <div className="text-xs uppercase tracking-wide text-emerald-100/80">{nowCard?.label ?? "Praegune hind"}</div>
+            <div className="mt-2 flex items-end gap-2">
+              <div className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
+                {nowCard ? fmtSnt(nowCard.eurPerKwh, vat) : "—"}
               </div>
+              <span className="pb-1 text-sm font-medium text-emerald-100/80">snt/kWh</span>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-              <div className="text-xs text-zinc-400">Päeva madalaim</div>
-              <div className="mt-1 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                {statsToday ? fmtSnt(statsToday.min, vat) : "—"}{" "}
-                <span className="text-sm font-semibold text-zinc-300">snt</span>
-              </div>
+            <div className="mt-2 text-xs text-emerald-100/70">
+              {nowCard ? fmtRangeEt(nowCard.startTs, nowCard.endTs) : "Aknainfo puudub"}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-              <div className="text-xs text-zinc-400">Päeva kõrgeim</div>
-              <div className="mt-1 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                {statsToday ? fmtSnt(statsToday.max, vat) : "—"}{" "}
-                <span className="text-sm font-semibold text-zinc-300">snt</span>
-              </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+              <div className="text-xs text-zinc-400">Päeva min</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.min, vat) : "—"}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+              <div className="text-xs text-zinc-400">Päeva max</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.max, vat) : "—"}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Päeva keskmine</div>
-              <div className="mt-1 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                {statsToday ? fmtSnt(statsToday.mean, vat) : "—"}{" "}
-                <span className="text-sm font-semibold text-zinc-300">snt</span>
-              </div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.mean, vat) : "—"}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-              <div className="text-xs text-zinc-400">Homme (keskmine)</div>
-              <div className="mt-1 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                {statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"}{" "}
-                <span className="text-sm font-semibold text-zinc-300">snt</span>
-              </div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+              <div className="text-xs text-zinc-400">Homme keskmine</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"}</div>
             </div>
+          </div>
         </div>
 
         {/* B) Main chart */}
-        <div className="mt-5 card rounded-3xl p-5 sm:p-6 lg:-mx-6 lg:rounded-[28px] lg:px-8">
+        <div className="mt-5 rounded-3xl border border-white/10 bg-zinc-950/45 p-4 sm:p-6 lg:rounded-[28px]">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-zinc-50">Hinnagraafik</div>
@@ -574,16 +537,32 @@ export function PriceViewClient({
               {period === "today" ? "täna" : period === "tomorrow" ? "homme" : "täna + homme"}
             </div>
           </div>
-          <HeatRow points={visiblePoints} vat={vat} />
-          <AreaChart points={visiblePoints} vat={vat} nowTs={nowTs} />
+          <div className="-mx-1 sm:mx-0">
+            <HeatRow points={visiblePoints} vat={vat} />
+            <AreaChart points={visiblePoints} vat={vat} nowTs={nowTs} />
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-12">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-7">
-            <WindowCard hours={1} pick={windowPicks.cheapest["1"]} vat={vat} />
-            <WindowCard hours={2} pick={windowPicks.cheapest["2"]} vat={vat} />
-            <WindowCard hours={3} pick={windowPicks.cheapest["3"]} vat={vat} />
-            <WindowCard hours={4} pick={windowPicks.cheapest["4"]} vat={vat} />
+          <div className="grid grid-cols-1 gap-4 lg:col-span-7">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
+              <div className="mb-3 text-sm font-semibold text-zinc-50">Odavaimad aknad</div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <WindowCard hours={1} pick={windowPicks.cheapest["1"]} vat={vat} variant="cheapest" />
+                <WindowCard hours={2} pick={windowPicks.cheapest["2"]} vat={vat} variant="cheapest" />
+                <WindowCard hours={3} pick={windowPicks.cheapest["3"]} vat={vat} variant="cheapest" />
+                <WindowCard hours={4} pick={windowPicks.cheapest["4"]} vat={vat} variant="cheapest" />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
+              <div className="mb-3 text-sm font-semibold text-zinc-50">Kalleimad aknad</div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <WindowCard hours={1} pick={windowPicks.priciest["1"]} vat={vat} variant="priciest" />
+                <WindowCard hours={2} pick={windowPicks.priciest["2"]} vat={vat} variant="priciest" />
+                <WindowCard hours={3} pick={windowPicks.priciest["3"]} vat={vat} variant="priciest" />
+                <WindowCard hours={4} pick={windowPicks.priciest["4"]} vat={vat} variant="priciest" />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:col-span-5">
@@ -592,11 +571,6 @@ export function PriceViewClient({
           </div>
         </div>
 
-        <AdviceCards
-          cheapestWindow={windowPicks.cheapest["2"] ? { startTs: windowPicks.cheapest["2"]!.startTs, endTs: windowPicks.cheapest["2"]!.endTs } : null}
-          priciestWindow={windowPicks.priciest["2"] ? { startTs: windowPicks.priciest["2"]!.startTs, endTs: windowPicks.priciest["2"]!.endTs } : null}
-          intervalMinutes={effectiveInterval}
-        />
       </div>
 
       {/* C) Price table + market overview */}
@@ -609,7 +583,7 @@ export function PriceViewClient({
             </p>
           </div>
           {marketOverview ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+            <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-sm text-zinc-200">
               <div className="text-xs text-zinc-400">Turu ülevaade</div>
               <div className="mt-1 text-zinc-100">
                 Täna on keskmise hinna järgi <strong>{marketOverview.compared}</strong> kui eile.
@@ -623,14 +597,64 @@ export function PriceViewClient({
         </div>
 
         {visiblePoints.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+          <div className="mt-6 rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-sm text-zinc-200">
             Andmeid ei ole saadaval.
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
-            <div className="overflow-x-auto">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/35">
+            <div className="grid gap-2 p-2 sm:hidden">
+              {(() => {
+                const dayStats = summarizeDay(visiblePoints);
+                const mean = dayStats?.mean ?? 0;
+                const vi = volatilityIndex(visiblePoints);
+                const std = vi?.std ?? 0;
+                return visiblePoints
+                  .slice()
+                  .sort((a, b) => a.ts - b.ts)
+                  .map((p) => {
+                    const cls = priceClass(p.price_eur_per_kwh, mean, std);
+                    const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
+                    return (
+                      <article
+                        key={p.ts}
+                        className={`rounded-xl border p-3 ${
+                          isNow
+                            ? "border-emerald-300/35 bg-emerald-400/10"
+                            : "border-white/12 bg-zinc-950/46"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-sm font-medium text-zinc-100">
+                            {fmtRangeEt(p.ts, p.ts + intervalSec)}
+                          </div>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${cls.pill}`}>
+                            {cls.label}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                          <div className="rounded-lg border border-white/12 bg-white/[0.04] p-2">
+                            <div className="text-zinc-300">Ilma KM-ta</div>
+                            <div className="mt-1 text-sm font-semibold text-zinc-50">
+                              {fmtSnt(p.price_eur_per_kwh, false)} snt/kWh
+                            </div>
+                          </div>
+                          <div className="rounded-lg border border-white/12 bg-white/[0.04] p-2">
+                            <div className="text-zinc-300">KM-ga</div>
+                            <div className="mt-1 text-sm font-semibold text-zinc-50">
+                              {fmtSnt(p.price_eur_per_kwh, true)} snt/kWh
+                            </div>
+                          </div>
+                        </div>
+                        {isNow ? <div className="mt-2 text-xs text-emerald-200">Praegu aktiivne periood</div> : null}
+                      </article>
+                    );
+                  });
+              })()}
+            </div>
+
+            <div className="hidden max-w-full overflow-x-auto sm:block">
               <table className="min-w-[680px] w-full text-sm">
-                <thead className="bg-white/[0.03] text-zinc-300">
+                <thead className="bg-white/[0.05] text-zinc-200">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Aeg</th>
                     <th className="px-4 py-3 text-right font-medium">Ilma KM-ta (snt/kWh)</th>
@@ -638,7 +662,7 @@ export function PriceViewClient({
                     <th className="px-4 py-3 text-left font-medium">Staatus</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-white/12">
                   {(() => {
                     const dayStats = summarizeDay(visiblePoints);
                     const mean = dayStats?.mean ?? 0;
@@ -651,8 +675,8 @@ export function PriceViewClient({
                         const cls = priceClass(p.price_eur_per_kwh, mean, std);
                         const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
                         return (
-                          <tr key={p.ts} className={isNow ? "bg-emerald-400/5" : "bg-zinc-950/20"}>
-                            <td className="px-4 py-3 text-zinc-200">{fmtRangeEt(p.ts, p.ts + intervalSec)}</td>
+                          <tr key={p.ts} className={isNow ? "bg-teal-400/12" : "bg-transparent hover:bg-white/[0.04]"}>
+                            <td className="px-4 py-3 text-zinc-100">{fmtRangeEt(p.ts, p.ts + intervalSec)}</td>
                             <td className="px-4 py-3 text-right font-semibold text-zinc-50">
                               {fmtSnt(p.price_eur_per_kwh, false)}
                             </td>

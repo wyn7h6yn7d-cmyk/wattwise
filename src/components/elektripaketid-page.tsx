@@ -23,31 +23,50 @@ export function ElektripaketidPageClient() {
   const [monthlyKwh, setMonthlyKwh] = useState("400");
   const [spotEurKwh, setSpotEurKwh] = useState("0,12");
   const [fixedEurKwh, setFixedEurKwh] = useState("0,16");
-  const [addOnEurKwh, setAddOnEurKwh] = useState("0,05");
+  const [marginEurKwh, setMarginEurKwh] = useState("0,01");
+  const [gridFeeEurKwh, setGridFeeEurKwh] = useState("0,04");
   const [vat, setVat] = useState(true);
 
   const result = useMemo(() => {
     const kwhMonth = Math.max(toNumber(monthlyKwh), 0);
     const kwhYear = kwhMonth * 12;
-    const addOn = Math.max(toNumber(addOnEurKwh), 0);
     const spot = Math.max(toNumber(spotEurKwh), 0);
     const fixed = Math.max(toNumber(fixedEurKwh), 0);
-    const vatRate = vat ? 0.22 : 0;
+    const margin = Math.max(toNumber(marginEurKwh), 0);
+    const gridFee = Math.max(toNumber(gridFeeEurKwh), 0);
+    const vatMultiplier = vat ? 1.24 : 1;
 
-    const spotCost = kwhYear * (spot + addOn) * (1 + vatRate);
-    const fixedCost = kwhYear * (fixed + addOn) * (1 + vatRate);
-    const diff = spotCost - fixedCost;
-    const cheaper = spotCost < fixedCost ? "Spot" : "Fikseeritud";
+    // spot_kulu = tarbimine_kWh * (spot + marginaal + võrgutasu)
+    // fixed_kulu = tarbimine_kWh * (fixed + võrgutasu)
+    // Kui KM sees: kulu = kulu * 1.24
+    const spotAnnualCost = kwhYear * (spot + margin + gridFee) * vatMultiplier;
+    const fixedAnnualCost = kwhYear * (fixed + gridFee) * vatMultiplier;
+    const spotMonthlyCost = spotAnnualCost / 12;
+    const fixedMonthlyCost = fixedAnnualCost / 12;
+    const annualDiff = spotAnnualCost - fixedAnnualCost;
+    const monthlyDiff = annualDiff / 12;
+    const cheaper = spotAnnualCost < fixedAnnualCost ? "Spot" : "Fikseeritud";
 
     const reco =
-      Math.abs(diff) < 30
+      Math.abs(annualDiff) < 30
         ? "Hinnang on väga lähedane — vali pigem stabiilsuse ja riskitaluvuse järgi."
         : cheaper === "Spot"
           ? "Selle sisendi põhjal on soodsam spot-hinnaga pakett."
           : "Selle sisendi põhjal on soodsam fikseeritud pakett (stabiilsem valik).";
 
-    return { kwhYear, spotCost, fixedCost, diff, cheaper, reco, vatRate };
-  }, [addOnEurKwh, fixedEurKwh, monthlyKwh, spotEurKwh, vat]);
+    return {
+      kwhYear,
+      spotAnnualCost,
+      fixedAnnualCost,
+      spotMonthlyCost,
+      fixedMonthlyCost,
+      annualDiff,
+      monthlyDiff,
+      cheaper,
+      reco,
+      vatMultiplier,
+    };
+  }, [fixedEurKwh, gridFeeEurKwh, marginEurKwh, monthlyKwh, spotEurKwh, vat]);
 
   return (
     <div className="grid gap-6">
@@ -61,7 +80,7 @@ export function ElektripaketidPageClient() {
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli makse staatust
+              Kontrolli ligipääsu staatust
             </button>
           </div>
         </div>
@@ -77,21 +96,45 @@ export function ElektripaketidPageClient() {
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Kuutarbimine (kWh)</span>
-                <input className="input" value={monthlyKwh} inputMode="numeric" onChange={(e) => setMonthlyKwh(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Kuutarbimine (kWh)</span>
+                <input
+                  className={`input ${toNumber(monthlyKwh) <= 0 ? "input-warning" : ""}`}
+                  value={monthlyKwh}
+                  inputMode="numeric"
+                  onChange={(e) => setMonthlyKwh(e.target.value)}
+                />
+                <span className="field-hint">Keskmine tarbimine kuus.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Spot keskmine (€/kWh)</span>
-                <input className="input" value={spotEurKwh} inputMode="decimal" onChange={(e) => setSpotEurKwh(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Spot keskmine (€/kWh)</span>
+                <input
+                  className={`input ${toNumber(spotEurKwh) <= 0 ? "input-warning" : ""}`}
+                  value={spotEurKwh}
+                  inputMode="decimal"
+                  onChange={(e) => setSpotEurKwh(e.target.value)}
+                />
+                <span className="field-hint">Prognoositav keskmine spot hind.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Fikseeritud (€/kWh)</span>
-                <input className="input" value={fixedEurKwh} inputMode="decimal" onChange={(e) => setFixedEurKwh(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Fikseeritud (€/kWh)</span>
+                <input
+                  className={`input ${toNumber(fixedEurKwh) <= 0 ? "input-warning" : ""}`}
+                  value={fixedEurKwh}
+                  inputMode="decimal"
+                  onChange={(e) => setFixedEurKwh(e.target.value)}
+                />
+                <span className="field-hint">Paketis fikseeritud energiahind.</span>
               </label>
-              <label className="grid gap-2 text-sm">
-                <span className="text-zinc-100">Võrgukulu + marginaal (€/kWh)</span>
-                <input className="input" value={addOnEurKwh} inputMode="decimal" onChange={(e) => setAddOnEurKwh(e.target.value)} />
+              <label className="field-label">
+                <span className="field-label-text">Spot marginaal (€/kWh)</span>
+                <input className="input" value={marginEurKwh} inputMode="decimal" onChange={(e) => setMarginEurKwh(e.target.value)} />
+                <span className="field-hint">Müüja lisatasu spot paketil.</span>
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Võrgutasu (€/kWh)</span>
+                <input className="input" value={gridFeeEurKwh} inputMode="decimal" onChange={(e) => setGridFeeEurKwh(e.target.value)} />
+                <span className="field-hint">Võrguenergia tasu kWh kohta.</span>
               </label>
             </div>
             <label className="mt-4 flex items-center gap-3 text-sm text-zinc-200">
@@ -101,24 +144,60 @@ export function ElektripaketidPageClient() {
                 onChange={(e) => setVat(e.target.checked)}
                 className="h-4 w-4 rounded border-white/20 bg-transparent"
               />
-              Lisa käibemaks (22%)
+              Hinnad sisaldavad käibemaksu (24%)
             </label>
           </article>
 
           <article className="card">
             <h3 className="section-title">Tulemused</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="result-card">
-                <p>Aastakulu spotiga</p>
-                <strong>{fmtEur(result.spotCost)}</strong>
+              <div className="metric-card metric-card-accent-teal">
+                <p className="metric-label">Aastakulu spotiga</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{Math.round(result.spotAnnualCost).toLocaleString("et-EE")}</strong>
+                  <span className="metric-unit">EUR/a</span>
+                </div>
+                <p className="metric-help">Prognoositud aastane kogukulu spot paketiga.</p>
               </div>
-              <div className="result-card">
-                <p>Aastakulu fikseeritud paketiga</p>
-                <strong>{fmtEur(result.fixedCost)}</strong>
+              <div className="metric-card metric-card-accent-emerald">
+                <p className="metric-label">Aastakulu fikseeritud paketiga</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{Math.round(result.fixedAnnualCost).toLocaleString("et-EE")}</strong>
+                  <span className="metric-unit">EUR/a</span>
+                </div>
+                <p className="metric-help">Prognoositud aastane kogukulu fikseeritud paketiga.</p>
               </div>
-              <div className="result-card sm:col-span-2">
-                <p>Vahe (spot − fikseeritud)</p>
-                <strong>{fmtEur2(result.diff)}</strong>
+              <div className="metric-card metric-card-accent-teal">
+                <p className="metric-label">Kuu kulu spotiga</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{Math.round(result.spotMonthlyCost).toLocaleString("et-EE")}</strong>
+                  <span className="metric-unit">EUR/kuu</span>
+                </div>
+                <p className="metric-help">Keskmine kuine kulu spoti eeldusel.</p>
+              </div>
+              <div className="metric-card metric-card-accent-emerald">
+                <p className="metric-label">Kuu kulu fikseeritud paketiga</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{Math.round(result.fixedMonthlyCost).toLocaleString("et-EE")}</strong>
+                  <span className="metric-unit">EUR/kuu</span>
+                </div>
+                <p className="metric-help">Keskmine kuine kulu fikseeritud hinnaga.</p>
+              </div>
+              <div className="metric-card metric-card-primary metric-card-accent-emerald sm:col-span-2">
+                <p className="metric-label">Olulisim: vahe aastas (spot − fikseeritud)</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.annualDiff.toFixed(2).replace(".", ",")}</strong>
+                  <span className="metric-unit">EUR/a</span>
+                </div>
+                <p className="metric-help">Negatiivne tulemus = spot on odavam, positiivne = fikseeritud on odavam.</p>
+              </div>
+              <div className="metric-card metric-card-accent-teal sm:col-span-2">
+                <p className="metric-label">Vahe kuus (spot − fikseeritud)</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.monthlyDiff.toFixed(2).replace(".", ",")}</strong>
+                  <span className="metric-unit">EUR/kuu</span>
+                </div>
+                <p className="metric-help">Kuu taseme võrdlus sama tarbimise korral.</p>
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-zinc-200">
@@ -126,7 +205,8 @@ export function ElektripaketidPageClient() {
               <p className="mt-1 text-zinc-300">{result.reco}</p>
             </div>
             <p className="mt-3 text-xs text-zinc-400">
-              Arvutus: \(kWh/a \times (energiahind + lisakulud) \times (1 + KM)\). Aastane tarbimine:{" "}
+              Arvutus: spot = kWh/a × (spot + marginaal + võrgutasu), fikseeritud = kWh/a × (fixed + võrgutasu),
+              KM sees korrutame tulemuse 1,24-ga. Aastane tarbimine:{" "}
               <span className="font-medium text-zinc-200">{Math.round(result.kwhYear)} kWh</span>.
             </p>
           </article>
@@ -135,10 +215,10 @@ export function ElektripaketidPageClient() {
 
       <PaywallCard
         locked={!canViewFullAnalysis(unlock)}
-        title="Täisanalüüs"
+        title="Detailne vaade"
         description="avab tunnipõhise simulatsiooni, CSV tarbimise impordi ja detailse võrdluse selle projekti jaoks."
-        ctaLabel={purchaseBusy === "full_analysis" ? "Suunamine..." : "Ava Täisanalüüs 9,99 €"}
-        secondaryLabel="Kontrolli makse staatust"
+        ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
+        secondaryLabel="Kontrolli ligipääsu staatust"
         onCta={() => startCheckout("full_analysis")}
         onSecondary={checkPaymentStatus}
         footer={
@@ -147,7 +227,7 @@ export function ElektripaketidPageClient() {
           </>
         }
       >
-        <h3 className="text-xl font-semibold text-zinc-50">Täisanalüüs: detailsem vaade</h3>
+        <h3 className="text-xl font-semibold text-zinc-50">Detailne vaade</h3>
         <p className="mt-2 text-sm text-zinc-400">
           Siin näed V1-s lihtsat tundlikkuse hinnangut. Hiljem lisandub tunnipõhine simulatsioon ja CSV import.
         </p>
@@ -157,13 +237,14 @@ export function ElektripaketidPageClient() {
             <h4 className="section-title">Tundlikkus (spot ±20%)</h4>
             {(() => {
               const baseSpot = Math.max(toNumber(spotEurKwh), 0);
-              const addOn = Math.max(toNumber(addOnEurKwh), 0);
-              const vatRate = vat ? 0.22 : 0;
+              const margin = Math.max(toNumber(marginEurKwh), 0);
+              const gridFee = Math.max(toNumber(gridFeeEurKwh), 0);
+              const vatMultiplier = vat ? 1.24 : 1;
               const kwh = Math.max(toNumber(monthlyKwh), 0) * 12;
               const fixed = Math.max(toNumber(fixedEurKwh), 0);
-              const fixedCost = kwh * (fixed + addOn) * (1 + vatRate);
-              const low = kwh * (baseSpot * 0.8 + addOn) * (1 + vatRate);
-              const high = kwh * (baseSpot * 1.2 + addOn) * (1 + vatRate);
+              const fixedCost = kwh * (fixed + gridFee) * vatMultiplier;
+              const low = kwh * (baseSpot * 0.8 + margin + gridFee) * vatMultiplier;
+              const high = kwh * (baseSpot * 1.2 + margin + gridFee) * vatMultiplier;
               return (
                 <div className="grid gap-3 text-sm">
                   <div className="compare-row">
@@ -172,7 +253,7 @@ export function ElektripaketidPageClient() {
                   </div>
                   <div className="compare-row">
                     <span className="compare-label">Spot (baas) vs fikseeritud</span>
-                    <strong>{fmtEur(result.spotCost - fixedCost)}</strong>
+                    <strong>{fmtEur(result.spotAnnualCost - fixedCost)}</strong>
                   </div>
                   <div className="compare-row">
                     <span className="compare-label">Spot (+20%) vs fikseeritud</span>

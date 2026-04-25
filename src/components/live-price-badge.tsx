@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { eurMWhToSntKWhWithVat, formatSntKWh } from "@/lib/elering";
 
 type BadgeData =
   | {
@@ -14,12 +15,6 @@ type BadgeData =
 
 function toIso(d: Date) {
   return d.toISOString();
-}
-
-function fmtSnt(value: number) {
-  if (!Number.isFinite(value)) return "—";
-  const rounded = Math.round(value * 10) / 10;
-  return new Intl.NumberFormat("et-EE", { maximumFractionDigits: 1 }).format(rounded);
 }
 
 export function LivePriceBadge() {
@@ -62,10 +57,10 @@ export function LivePriceBadge() {
         const chosen = current ?? next ?? points[0];
         const chosenIsNext = Boolean(current && next && chosen.ts === next.ts) || (!current && Boolean(next));
 
-        // Elering is EUR/MWh -> already normalized to EUR/kWh by API route.
+        // Elering hind on EUR/MWh; API route normaliseerib selle EUR/kWh-ks.
         const eurPerKwh = chosen.price_eur_per_kwh;
-        const eurPerKwhVat = eurPerKwh * 1.24;
-        const sntPerKwhVat = eurPerKwhVat * 100;
+        const eurPerMWh = eurPerKwh * 1000;
+        const sntPerKwhVat = eurMWhToSntKWhWithVat(eurPerMWh);
 
         const label =
           series.intervalMinutes === 15
@@ -103,7 +98,7 @@ export function LivePriceBadge() {
     if (!data.ok) return { title: data.message, value: "—", subtle: "" };
     return {
       title: data.label,
-      value: `${fmtSnt(data.sntPerKwh)} snt/kWh`,
+      value: `${formatSntKWh(data.sntPerKwh)} snt/kWh`,
       subtle: "KM-ga",
     };
   }, [data]);
