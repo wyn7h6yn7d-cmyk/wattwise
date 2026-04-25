@@ -69,6 +69,39 @@ canvas {
     linear-gradient(180deg, #050807 0%, #050b08 45%, #050807 100%);
 }
 
+.hero-reference-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("/hero-reference-bg.png");
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.5;
+  transform: scale(1.03);
+}
+
+.hero-reference-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 8, 6, 0.88) 0%, rgba(2, 8, 6, 0.8) 32%, rgba(2, 8, 6, 0.46) 60%, rgba(2, 8, 6, 0.25) 100%),
+    radial-gradient(circle at 66% 26%, rgba(16, 185, 129, 0.2), transparent 45%);
+}
+
+.hero-reference-glow {
+  position: absolute;
+  right: 17%;
+  top: 8%;
+  width: 500px;
+  height: 300px;
+  border-radius: 999px;
+  border: 2px solid rgba(74, 222, 128, 0.34);
+  border-top-color: rgba(110, 231, 183, 0.78);
+  border-right-color: rgba(45, 212, 191, 0.58);
+  box-shadow: 0 0 56px rgba(16, 185, 129, 0.22);
+  transform: rotate(-12deg);
+  animation: hero-ring-float 16s ease-in-out infinite;
+}
+
 .aurora {
   position: absolute;
   inset: -30%;
@@ -659,6 +692,21 @@ canvas {
   }
 }
 
+@keyframes hero-ring-float {
+  0% {
+    transform: rotate(-12deg) translate3d(0, 0, 0);
+    opacity: 0.64;
+  }
+  50% {
+    transform: rotate(-10deg) translate3d(0, 4px, 0);
+    opacity: 0.92;
+  }
+  100% {
+    transform: rotate(-12deg) translate3d(0, 0, 0);
+    opacity: 0.64;
+  }
+}
+
 @keyframes aurora-drift {
   0% {
     transform: translate3d(-2%, -1%, 0) rotate(0deg);
@@ -866,6 +914,17 @@ canvas {
   }
   .section-sub {
     font-size: 0.92rem;
+  }
+  .hero-reference-bg {
+    background-position: 62% top;
+    opacity: 0.44;
+  }
+  .hero-reference-glow {
+    width: 300px;
+    height: 190px;
+    right: 6%;
+    top: 11%;
+    opacity: 0.7;
   }
   .feature-card,
   .calc-card {

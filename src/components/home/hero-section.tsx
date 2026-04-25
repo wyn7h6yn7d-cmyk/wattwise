@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
 import { DashboardMockup } from "@/components/home/dashboard-mockup";
-import { RenewableEnergyScene } from "@/components/home/renewable-energy-scene";
 
 export function HeroSection() {
   return (
     <section className="relative isolate overflow-hidden rounded-3xl border border-emerald-300/20 bg-[#07110f]/80 px-5 py-7 shadow-[0_24px_90px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:px-8 sm:py-9 lg:px-10 lg:py-10">
-      <RenewableEnergyScene />
-      <AnimatedEnergyBackground intensity="hero" />
+      <div className="hero-reference-bg" />
+      <div className="hero-reference-overlay" />
+      <div className="hero-reference-glow" />
 
       <div className="relative grid items-center gap-8 lg:grid-cols-[0.98fr_1.12fr] lg:gap-8">
         <div className="hero-content-shield">
