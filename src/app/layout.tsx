@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -66,7 +67,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SiteHeader />
-        <div className="flex-1">{children}</div>
+        <div className="relative page-bg flex-1">
+          <AnimatedEnergyBackground intensity="subtle" />
+          <div className="relative flex-1">{children}</div>
+        </div>
         <SiteFooter />
         <Analytics />
       </body>
