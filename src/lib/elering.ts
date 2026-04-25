@@ -25,7 +25,7 @@ export function eurMWhToSntKWhWithVat(priceEurPerMWh: number) {
   return eurMWhToSntKWh(priceEurPerMWh) * (1 + VAT_RATE);
 }
 
-export function formatSntKWh(valueSntPerKwh: number) {
+export function formatSntKwh(valueSntPerKwh: number) {
   if (!Number.isFinite(valueSntPerKwh)) return "—";
   if (Object.is(valueSntPerKwh, 0) || valueSntPerKwh === 0) {
     return new Intl.NumberFormat("et-EE", {
@@ -45,6 +45,9 @@ export function formatSntKWh(valueSntPerKwh: number) {
     maximumFractionDigits: fractionDigits,
   }).format(valueSntPerKwh);
 }
+
+// Backward-compatible alias.
+export const formatSntKWh = formatSntKwh;
 
 export function addVat(priceEurPerKwh: number) {
   return priceEurPerKwh * (1 + VAT_RATE);

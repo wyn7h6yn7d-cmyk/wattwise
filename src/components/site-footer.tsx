@@ -104,7 +104,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 py-3 text-center text-xs text-zinc-500">
-        © {year} Energiakalkulaator.ee · Kõik õigused kaitstud.
+        © {year} Energiakalkulaator · Kõik õigused kaitstud.
       </div>
     </footer>
   );

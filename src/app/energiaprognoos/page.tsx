@@ -7,7 +7,7 @@ import { buildHistoricalSolarAnalysis } from "@/lib/weather/historical-solar";
 import { HistoricalSolarAnalysisPanel } from "@/components/energy-forecast/historical-solar-analysis";
 
 export const metadata = {
-  title: "Energiaprognoos | Energiakalkulaator",
+  title: "Energiakalkulaator",
 };
 export const dynamic = "force-dynamic";
 
@@ -220,6 +220,7 @@ export default async function EnergiaprognoosPage({
             <label className="field-label">
               <span className="field-label-text">Päikesejaama võimsus (kW)</span>
               <input name="systemKw" defaultValue={String(input.systemKw)} className="input" />
+              <span className="field-hint">Inverteri või süsteemi nimivõimsus.</span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Paneelide suund</span>
@@ -230,14 +231,17 @@ export default async function EnergiaprognoosPage({
                 <option value="laas">Lääs</option>
                 <option value="muu">Muu</option>
               </select>
+              <span className="field-hint">Mõjutab tootluse koefitsienti.</span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Paneelide kalle (°)</span>
               <input name="panelTiltDeg" defaultValue={String(input.panelTiltDeg)} className="input" />
+              <span className="field-hint">Eestis töötab sageli 30-40 kraadi.</span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Süsteemikaod (%)</span>
               <input name="systemLossesPercent" defaultValue={String(input.systemLossesPercent)} className="input" />
+              <span className="field-hint">Sisaldab inverteri, juhtmete ja muu süsteemi kaod.</span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Prognoosi ulatus</span>
@@ -255,8 +259,8 @@ export default async function EnergiaprognoosPage({
               <span className="field-hint">Serveri cache kasutatakse raskete päringute vähendamiseks.</span>
             </label>
             <div className="grid gap-2 sm:grid-cols-2 lg:col-span-1">
-              <label className="relative flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-zinc-200">
-                <span>Kas kasutajal on EV</span>
+              <label className="field-label rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+                <span className="field-label-text">Kas kasutajal on EV</span>
                 <div className="yes-no-row">
                   <span className="yes-no-text">Ei</span>
                   <input type="checkbox" name="hasEv" defaultChecked={input.hasEv} className="yes-no-input" />
@@ -265,9 +269,10 @@ export default async function EnergiaprognoosPage({
                   </span>
                   <span className="yes-no-text">Jah</span>
                 </div>
+                <span className="field-hint">Mõjutab laadimisakna soovitusi.</span>
               </label>
-              <label className="relative flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-zinc-200">
-                <span>Kas kasutajal on aku</span>
+              <label className="field-label rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+                <span className="field-label-text">Kas kasutajal on aku</span>
                 <div className="yes-no-row">
                   <span className="yes-no-text">Ei</span>
                   <input type="checkbox" name="hasBattery" defaultChecked={input.hasBattery} className="yes-no-input" />
@@ -276,6 +281,7 @@ export default async function EnergiaprognoosPage({
                   </span>
                   <span className="yes-no-text">Jah</span>
                 </div>
+                <span className="field-hint">Mõjutab aku kasutuse soovitusi.</span>
               </label>
             </div>
 
@@ -318,7 +324,12 @@ export default async function EnergiaprognoosPage({
           V1 loogika: PV hinnang põhineb kiirgusel, süsteemi võimsusel, kadudel ja lihtsatel suuna/kalde koefitsientidel.
           Soovitused põhinevad hinnal, pilvisusel ja PV tootlusel (lihtsustatud energyScore mudel).
         </section>
-        <HistoricalSolarAnalysisPanel analysis={historicalAnalysis} loadingFallback={historicalFallback} />
+        <HistoricalSolarAnalysisPanel
+          analysis={historicalAnalysis}
+          loadingFallback={historicalFallback}
+          systemKw={input.systemKw}
+          lossesPercent={input.systemLossesPercent}
+        />
       </main>
     </div>
   );

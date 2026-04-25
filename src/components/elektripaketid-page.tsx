@@ -5,7 +5,7 @@ import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { useMemo, useState } from "react";
-import { calculateElectricityPlan } from "@/lib/calculators/electricity-plan";
+import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "@/lib/calculators/electricity-plan";
 import { ELECTRICITY_PLANS_UPDATED_AT, ELECTRICITY_PLAN_TEMPLATES } from "@/data/electricity-plans";
 
 function toNumber(value: string) {
@@ -493,28 +493,27 @@ export function ElektripaketidPageClient() {
           <article className="card">
             <h4 className="section-title">Tundlikkus (spot ±20%)</h4>
             {(() => {
-              const baseSpot = Math.max(toNumber(spotEurKwh), 0);
-              const margin = Math.max(toNumber(spotMarginEurKwh), 0);
-              const gridFee = Math.max(toNumber(gridFeeEurKwh), 0);
-              const vatMultiplier = pricesIncludeVat ? 1 : 1.24;
-              const kwh = Math.max(toNumber(monthlyKwh), 0) * 12;
-              const fixed = Math.max(toNumber(fixedEurKwh), 0);
-              const fixedCost = kwh * (fixed + gridFee) * vatMultiplier;
-              const low = kwh * (baseSpot * 0.8 + margin + gridFee) * vatMultiplier;
-              const high = kwh * (baseSpot * 1.2 + margin + gridFee) * vatMultiplier;
+              const sensitivity = calculateElectricityPlanSensitivity({
+                monthlyKwh: toNumber(monthlyKwh),
+                spotEurKwh: toNumber(spotEurKwh),
+                fixedEurKwh: toNumber(fixedEurKwh),
+                spotMarginEurKwh: toNumber(spotMarginEurKwh),
+                gridFeeEurKwh: toNumber(gridFeeEurKwh),
+                pricesIncludeVat,
+              });
               return (
                 <div className="grid gap-3 text-sm">
                   <div className="compare-row">
                     <span className="compare-label">Spot (−20%) vs fikseeritud</span>
-                    <strong>{fmtEur(low - fixedCost)}</strong>
+                    <strong>{fmtEur(sensitivity.diffLowVsFixed)}</strong>
                   </div>
                   <div className="compare-row">
                     <span className="compare-label">Spot (baas) vs fikseeritud</span>
-                    <strong>{fmtEur(result.spotAnnualCost - fixedCost)}</strong>
+                    <strong>{fmtEur(sensitivity.diffBaseVsFixed)}</strong>
                   </div>
                   <div className="compare-row">
                     <span className="compare-label">Spot (+20%) vs fikseeritud</span>
-                    <strong>{fmtEur(high - fixedCost)}</strong>
+                    <strong>{fmtEur(sensitivity.diffHighVsFixed)}</strong>
                   </div>
                 </div>
               );

@@ -7,11 +7,17 @@ import {
 } from "../elering";
 import { calculateComparison } from "../calculator";
 import type { CalculatorInput } from "../../types/calculator";
-import { calculateEvCharging, mainFusePower3fKw } from "./ev";
-import { annualPeakShavingSavingsEur, calculatePeakShaving, possibleCutKw, requiredCutKw } from "./peak-shaving";
+import { calculateEvChargeableEnergy, calculateEvCharging, mainFusePower3fKw } from "./ev";
+import {
+  annualPeakShavingSavingsEur,
+  calculatePeakShaving,
+  calculatePeakShavingProjection,
+  possibleCutKw,
+  requiredCutKw,
+} from "./peak-shaving";
 import { toRatio } from "../units";
 import { calculateVppCore, calculateVppModel } from "./vpp";
-import { calculateElectricityPlan } from "./electricity-plan";
+import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "./electricity-plan";
 import { calculateSolarCoreFormulas } from "./solar";
 
 function baseSolarInput(overrides: Partial<CalculatorInput> = {}): CalculatorInput {
@@ -161,6 +167,20 @@ describe("EV and peak shaving formulas", () => {
     );
   });
 
+  it("EV chargeable energy formulas are computed in calculator lib", () => {
+    const result = calculateEvChargeableEnergy({
+      mode: "advanced",
+      batteryKwh: 60,
+      startSocPct: 20,
+      targetSocPct: 80,
+      energyToChargeKwh: 0,
+      chargerEfficiencyPct: 92,
+      chargingLossPct: 8,
+    });
+    expect(result.chargeableEnergyKwh).toBeCloseTo(36, 6);
+    expect(result.gridEnergyKwh).toBeCloseTo((36 / 0.92) * 1.08, 6);
+  });
+
   it("peak shaving annual savings are computed correctly", () => {
     const needCut = requiredCutKw(120, 90); // 30
     const possible = possibleCutKw(needCut, 20, 40, 2); // min(30,20,20)=20
@@ -195,6 +215,36 @@ describe("EV and peak shaving formulas", () => {
     expect(result.limitingFactor).toBe("aku võimsus");
   });
 
+  it("peak shaving distinguishes limiting factor: battery power vs battery energy", () => {
+    const powerLimited = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 500,
+      usableSocPercent: 90,
+      efficiencyPercent: 95,
+      batteryPowerKw: 15,
+      peakDurationHours: 1,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 500,
+      investment: 30000,
+    });
+    const energyLimited = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 10,
+      usableSocPercent: 60,
+      efficiencyPercent: 90,
+      batteryPowerKw: 100,
+      peakDurationHours: 1,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 500,
+      investment: 30000,
+    });
+
+    expect(powerLimited.limitingFactor).toBe("aku võimsus");
+    expect(energyLimited.limitingFactor).toBe("aku maht");
+  });
+
   it("peak shaving payback is null when net savings <= 0", () => {
     const result = calculatePeakShaving({
       currentPeakKw: 120,
@@ -211,6 +261,25 @@ describe("EV and peak shaving formulas", () => {
 
     expect(result.netSavings).toBeLessThanOrEqual(0);
     expect(result.paybackYears).toBeNull();
+  });
+
+  it("peak shaving projection formulas are computed in calculator lib", () => {
+    const result = calculatePeakShavingProjection({
+      possibleReductionKw: 25,
+      requiredReductionKw: 30,
+      peakDurationHours: 2,
+      usableSocPercent: 75,
+      efficiencyPercent: 92,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 500,
+      demandFeeGrowthPercent: 3,
+      batteryDegradationPercent: 2,
+      periodYears: 10,
+      investment: 30000,
+    });
+    expect(result.recommendedBatteryKw).toBe(30);
+    expect(result.recommendedBatteryKwh).toBeCloseTo((30 * 2) / (0.75 * 0.92), 6);
+    expect(Number.isFinite(result.discountedNetEur)).toBe(true);
   });
 
   it("peak shaving identifies limiting factor through min-cut logic", () => {
@@ -334,5 +403,19 @@ describe("VPP and electricity plan formulas", () => {
     const expectedFixed = 1200 * (0.12 + 0.04 + 0.001 + 0.0015) + (3 + 4) * 12;
     expect(result.spotAnnualCost).toBeCloseTo(expectedSpot, 6);
     expect(result.fixedAnnualCost).toBeCloseTo(expectedFixed, 6);
+  });
+
+  it("electricity sensitivity formulas are computed in calculator lib", () => {
+    const result = calculateElectricityPlanSensitivity({
+      monthlyKwh: 100,
+      spotEurKwh: 0.10,
+      fixedEurKwh: 0.12,
+      spotMarginEurKwh: 0.01,
+      gridFeeEurKwh: 0.04,
+      pricesIncludeVat: true,
+    });
+    expect(result.diffLowVsFixed).toBeCloseTo(-36, 6);
+    expect(result.diffBaseVsFixed).toBeCloseTo(-12, 6);
+    expect(result.diffHighVsFixed).toBeCloseTo(12, 6);
   });
 });

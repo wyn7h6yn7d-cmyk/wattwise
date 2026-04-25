@@ -45,6 +45,54 @@ export type PeakShavingResult = {
   limitingFactor: PeakShavingLimitingFactor;
 };
 
+export type PeakShavingProjectionInput = {
+  possibleReductionKw: number;
+  requiredReductionKw: number;
+  peakDurationHours: number;
+  usableSocPercent: number;
+  efficiencyPercent: number;
+  demandChargeEurKwMonth: number;
+  annualMaintenanceCost: number;
+  demandFeeGrowthPercent: number;
+  batteryDegradationPercent: number;
+  periodYears: number;
+  investment: number;
+};
+
+export type PeakShavingProjectionResult = {
+  discountedNetEur: number;
+  recommendedBatteryKw: number;
+  recommendedBatteryKwh: number;
+};
+
+export function calculatePeakShavingProjection(input: PeakShavingProjectionInput): PeakShavingProjectionResult {
+  const possibleReductionKw = Math.max(input.possibleReductionKw, 0);
+  const requiredReductionKw = Math.max(input.requiredReductionKw, 0);
+  const peakDurationHours = Math.max(input.peakDurationHours, 0);
+  const usableSocRatio = Math.min(Math.max(input.usableSocPercent, 0), 100) / 100;
+  const efficiencyRatio = Math.min(Math.max(input.efficiencyPercent, 0), 100) / 100;
+  const demandFee = Math.max(input.demandChargeEurKwMonth, 0);
+  const maintenance = Math.max(input.annualMaintenanceCost, 0);
+  const feeGrowth = Math.min(Math.max(input.demandFeeGrowthPercent, 0), 100) / 100;
+  const degradation = Math.min(Math.max(input.batteryDegradationPercent, 0), 30) / 100;
+  const years = Math.max(Math.round(input.periodYears), 1);
+  const investment = Math.max(input.investment, 0);
+
+  let discountedNetEur = -investment;
+  for (let year = 1; year <= years; year += 1) {
+    const yearlyCut = possibleReductionKw * (1 - degradation) ** (year - 1);
+    const yearlyFee = demandFee * (1 + feeGrowth) ** (year - 1);
+    const yearlySavings = yearlyCut * yearlyFee * 12;
+    discountedNetEur += yearlySavings - maintenance;
+  }
+
+  const recommendedBatteryKw = requiredReductionKw > 0 ? requiredReductionKw : 0;
+  const recommendedBatteryKwh =
+    requiredReductionKw > 0 ? (requiredReductionKw * peakDurationHours) / Math.max(usableSocRatio * efficiencyRatio, 0.1) : 0;
+
+  return { discountedNetEur, recommendedBatteryKw, recommendedBatteryKwh };
+}
+
 export function calculatePeakShaving(input: PeakShavingInput): PeakShavingResult {
   // requiredReductionKw = currentPeakKw - targetPeakKw
   const requiredReductionKw = requiredCutKw(input.currentPeakKw, input.targetPeakKw);

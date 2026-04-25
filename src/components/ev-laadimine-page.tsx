@@ -8,6 +8,7 @@ import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { useMemo, useState } from "react";
 import {
   calculateEvCharging,
+  calculateEvChargeableEnergy,
   CHARGER_STEPS_KW,
   mainFusePower1fKw,
   mainFusePower3fKw,
@@ -52,17 +53,15 @@ export function EvLaadiminePageClient() {
   const hasValue = (v: string) => v.trim().length > 0;
 
   const result = useMemo(() => {
-    const battery = Math.max(toNumber(batteryKwh), 0);
-    const startSoc = Math.min(Math.max(toNumber(startSocPct), 0), 100);
-    const targetSoc = Math.min(Math.max(toNumber(targetSocPct), 0), 100);
-    const quickEnergy = Math.max(toNumber(energyToChargeKwh), 0);
-    const chargeableEnergy =
-      mode === "advanced"
-        ? Math.max((battery * Math.max(targetSoc - startSoc, 0)) / 100, 0)
-        : quickEnergy;
-    const chargerEff = Math.min(Math.max(toNumber(chargerEfficiencyPct), 1), 100) / 100;
-    const lossFactor = 1 + Math.min(Math.max(toNumber(chargingLossPct), 0), 40) / 100;
-    const gridEnergy = chargeableEnergy > 0 ? (chargeableEnergy / chargerEff) * lossFactor : 0;
+    const chargeable = calculateEvChargeableEnergy({
+      mode,
+      batteryKwh: toNumber(batteryKwh),
+      startSocPct: toNumber(startSocPct),
+      targetSocPct: toNumber(targetSocPct),
+      energyToChargeKwh: toNumber(energyToChargeKwh),
+      chargerEfficiencyPct: toNumber(chargerEfficiencyPct),
+      chargingLossPct: toNumber(chargingLossPct),
+    });
 
     const power = Math.max(toNumber(chargerKw), 0.1);
     const price = Math.max(toNumber(priceEurKwh), 0);
@@ -73,7 +72,7 @@ export function EvLaadiminePageClient() {
       amps: fuseA,
       phase,
       householdReserveKw: reserve,
-      energyToChargeKwh: gridEnergy,
+      energyToChargeKwh: chargeable.gridEnergyKwh,
       chargerKw: power,
       priceEurKwh: price,
     });
@@ -111,8 +110,8 @@ export function EvLaadiminePageClient() {
       p3,
       note,
       warning22kw,
-      chargeableEnergy,
-      gridEnergy,
+      chargeableEnergy: chargeable.chargeableEnergyKwh,
+      gridEnergy: chargeable.gridEnergyKwh,
       recommended,
       fits11,
       fits22,

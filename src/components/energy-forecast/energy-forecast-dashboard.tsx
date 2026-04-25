@@ -322,9 +322,9 @@ export function EnergyForecastDashboard({
             <p className="mt-1 text-zinc-300">Madal score viitab kombinatsioonile kõrge hind + madal PV potentsiaal.</p>
           </article>
           <article className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 text-sm text-zinc-200">
-            <p className="font-medium text-zinc-50">Päikeseenergia potentsiaal on parim siin</p>
+            <p className="font-medium text-zinc-50">PV aja kategooriad</p>
             <p className="mt-1 text-zinc-300">
-              Keskpäevased tunnid on tavaliselt tugevaima kiirgusega; kasuta neid tarbimise nihutamiseks.
+              Väga hea PV aeg (top 20%), Hea PV aeg (20-50%), Neutraalne, Madal PV tootlus või Öine tund.
             </p>
           </article>
           {hasBattery ? (

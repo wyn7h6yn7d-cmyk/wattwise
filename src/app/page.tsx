@@ -82,7 +82,7 @@ export default function Home() {
                     LIVE
                   </div>
                   <div className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.03] px-2 py-1 text-[11px] text-zinc-400">
-                    Näidisvaade / Demoandmed
+                    Näidisvaade
                   </div>
                 </div>
 
@@ -151,6 +151,9 @@ export default function Home() {
                     <p className="mt-1 truncate text-base font-semibold text-zinc-100">34.2 kWh</p>
                   </div>
                 </div>
+                <p className="text-[11px] text-zinc-400">
+                  Kõik selle ploki numbrid on näidisandmed ega kujuta sinu isiklikke tulemusi.
+                </p>
               </div>
             </div>
           </div>

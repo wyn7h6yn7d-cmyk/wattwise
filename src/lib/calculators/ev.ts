@@ -39,6 +39,34 @@ export type EvChargingFormulaInput = {
   priceEurKwh: number;
 };
 
+export type EvChargeableEnergyInput = {
+  mode: "quick" | "advanced";
+  batteryKwh: number;
+  startSocPct: number;
+  targetSocPct: number;
+  energyToChargeKwh: number;
+  chargerEfficiencyPct: number;
+  chargingLossPct: number;
+};
+
+export type EvChargeableEnergyResult = {
+  chargeableEnergyKwh: number;
+  gridEnergyKwh: number;
+};
+
+export function calculateEvChargeableEnergy(input: EvChargeableEnergyInput): EvChargeableEnergyResult {
+  const batteryKwh = Math.max(input.batteryKwh, 0);
+  const startSocPct = Math.min(Math.max(input.startSocPct, 0), 100);
+  const targetSocPct = Math.min(Math.max(input.targetSocPct, 0), 100);
+  const quickEnergy = Math.max(input.energyToChargeKwh, 0);
+  const chargeableEnergyKwh =
+    input.mode === "advanced" ? Math.max((batteryKwh * Math.max(targetSocPct - startSocPct, 0)) / 100, 0) : quickEnergy;
+  const chargerEff = Math.min(Math.max(input.chargerEfficiencyPct, 1), 100) / 100;
+  const lossFactor = 1 + Math.min(Math.max(input.chargingLossPct, 0), 40) / 100;
+  const gridEnergyKwh = chargeableEnergyKwh > 0 ? (chargeableEnergyKwh / chargerEff) * lossFactor : 0;
+  return { chargeableEnergyKwh, gridEnergyKwh };
+}
+
 export type EvChargingFormulaResult = {
   singlePhaseKw: number;
   threePhaseKw: number;

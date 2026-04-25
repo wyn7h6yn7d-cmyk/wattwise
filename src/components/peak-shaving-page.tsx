@@ -8,6 +8,7 @@ import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { useMemo, useState } from "react";
 import {
   calculatePeakShaving,
+  calculatePeakShavingProjection,
 } from "@/lib/calculators/peak-shaving";
 
 function toNumber(value: string) {
@@ -88,16 +89,19 @@ export function PeakShavingPageClient() {
     const powerLimits = !targetRealistic && limitingFactor === "aku võimsus";
     const energyLimits = !targetRealistic && (limitingFactor === "aku maht" || limitingFactor === "tipu kestus");
 
-    let discountedNet = -inv;
-    for (let year = 1; year <= years; year += 1) {
-      const yearlyCut = achievableCut * (1 - degradation) ** (year - 1);
-      const yearlyFee = fee * (1 + feeGrowth) ** (year - 1);
-      const yearlySavings = yearlyCut * yearlyFee * 12;
-      discountedNet += yearlySavings - maintenance;
-    }
-
-    const recommendedBatteryKw = needCut > 0 ? Math.max(needCut, 0) : 0;
-    const recommendedBatteryKwh = needCut > 0 ? (needCut * hours) / Math.max(usableSocRange * efficiency, 0.1) : 0;
+    const projection = calculatePeakShavingProjection({
+      possibleReductionKw: achievableCut,
+      requiredReductionKw: needCut,
+      peakDurationHours: hours,
+      usableSocPercent: usableSocRange * 100,
+      efficiencyPercent: efficiency * 100,
+      demandChargeEurKwMonth: fee,
+      annualMaintenanceCost: maintenance,
+      demandFeeGrowthPercent: feeGrowth * 100,
+      batteryDegradationPercent: degradation * 100,
+      periodYears: years,
+      investment: inv,
+    });
     const note =
       needCut <= 0
         ? "Sinu sisendi põhjal pole vaja tippu lõigata (piir on juba piisav)."
@@ -116,9 +120,9 @@ export function PeakShavingPageClient() {
       annualSavings,
       netSavings,
       paybackYears,
-      discountedNet,
-      recommendedBatteryKw,
-      recommendedBatteryKwh,
+      discountedNet: projection.discountedNetEur,
+      recommendedBatteryKw: projection.recommendedBatteryKw,
+      recommendedBatteryKwh: projection.recommendedBatteryKwh,
       powerLimits,
       energyLimits,
       targetRealistic,

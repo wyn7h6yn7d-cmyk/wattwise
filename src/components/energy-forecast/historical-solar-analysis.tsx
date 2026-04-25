@@ -7,9 +7,13 @@ function fmt1(v: number) {
 export function HistoricalSolarAnalysisPanel({
   analysis,
   loadingFallback = false,
+  systemKw,
+  lossesPercent,
 }: {
   analysis: HistoricalSolarAnalysis;
   loadingFallback?: boolean;
+  systemKw: number;
+  lossesPercent: number;
 }) {
   const maxPotential = Math.max(...analysis.monthly.map((m) => m.productionPotentialKwh), 1);
   const suitabilityColor =
@@ -70,6 +74,19 @@ export function HistoricalSolarAnalysisPanel({
         <div className="metric-card metric-card-primary metric-card-accent-emerald">
           <p className="metric-label">Raporti kokkuvõte</p>
           <p className="mt-2 text-sm text-zinc-200">{analysis.reportSummary}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-xs text-zinc-300">
+        <p className="font-medium text-zinc-100">Arvutuse alused</p>
+        <div className="mt-2 grid gap-1">
+          <p>Süsteemi võimsus: <span className="text-zinc-100">{fmt1(systemKw)} kW</span></p>
+          <p>Kasutatud kaod: <span className="text-zinc-100">{fmt1(lossesPercent)}%</span></p>
+          <p>
+            Ühikud: kiirgus on <span className="text-zinc-100">kWh/m²</span>; tootmispotentsiaal teisendatakse lihtsustatud
+            valemiga hinnanguliseks <span className="text-zinc-100">kWh</span> väärtuseks.
+          </p>
+          <p>Tegu on lihtsustatud hinnanguga, mitte detailse projektipõhise simulatsiooniga.</p>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import {
   EleringArea,
   eurMWhToSntKWh,
   eurMWhToSntKWhWithVat,
-  formatSntKWh,
+  formatSntKwh,
   MarketPriceSeries,
   MarketPricePoint,
 } from "@/lib/elering";
@@ -28,7 +28,7 @@ function fmtRangeEt(startTs: number, endTs: number) {
 function fmtSnt(eurPerKwh: number, vat: boolean) {
   const eurPerMWh = eurPerKwh * 1000;
   const snt = vat ? eurMWhToSntKWhWithVat(eurPerMWh) : eurMWhToSntKWh(eurPerMWh);
-  return formatSntKWh(snt);
+  return formatSntKwh(snt);
 }
 
 type ViewInterval = 15 | 60;
@@ -423,6 +423,7 @@ export function PriceViewClient({
   const [areaError, setAreaError] = useState<string | null>(null);
   const [viewInterval, setViewInterval] = useState<ViewInterval>(initialIntervalMinutes);
   const [period, setPeriod] = useState<ViewPeriod>("today_tomorrow");
+  const [showFullDayTable, setShowFullDayTable] = useState(false);
 
   const effectiveInterval: ViewInterval =
     sourceInterval === 15 ? viewInterval : 60; // if only hourly data, force 60
@@ -533,6 +534,21 @@ export function PriceViewClient({
   const topSlots = useMemo(() => pickTopSlots(todayPoints, 3), [todayPoints]);
 
   const intervalSec = effectiveInterval * 60;
+  const tableRows = useMemo(() => {
+    const sorted = visiblePoints.slice().sort((a, b) => a.ts - b.ts);
+    if (showFullDayTable) return sorted;
+    if (sorted.length === 0) return sorted;
+
+    if (effectiveInterval === 60) {
+      const sixHoursSec = 6 * 60 * 60;
+      const aroundNow = sorted.filter((p) => p.ts >= nowTs - sixHoursSec && p.ts <= nowTs + sixHoursSec);
+      return aroundNow.length > 0 ? aroundNow : sorted.slice(0, 24);
+    }
+
+    const nowIndex = sorted.findIndex((p) => p.ts >= nowTs);
+    const startIndex = nowIndex >= 0 ? nowIndex : Math.max(sorted.length - 24, 0);
+    return sorted.slice(startIndex, startIndex + 24);
+  }, [visiblePoints, showFullDayTable, effectiveInterval, nowTs]);
 
   return (
     <section className="mt-8 grid grid-cols-1 gap-6 overflow-x-hidden">
@@ -697,6 +713,18 @@ export function PriceViewClient({
               Hind ilma KM-ta ja KM-ga, koos lihtsa märgistusega (odav/keskmine/kallis/tipp).
             </p>
           </div>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-zinc-400">
+              Näitan {tableRows.length} / {visiblePoints.length} rida
+            </p>
+            <button
+              type="button"
+              className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-white/[0.08]"
+              onClick={() => setShowFullDayTable((v) => !v)}
+            >
+              {showFullDayTable ? "Näita lühemat tabelit" : "Näita kogu päeva tabelit"}
+            </button>
+          </div>
           {marketOverview ? (
             <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-sm text-zinc-200">
               <div className="text-xs text-zinc-400">Turu ülevaade</div>
@@ -717,13 +745,10 @@ export function PriceViewClient({
           </div>
         ) : (
           <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/35">
-            <div className="grid gap-2 p-2 sm:hidden">
+            <div className="grid max-h-[26rem] gap-2 overflow-y-auto p-2 sm:hidden">
               {(() => {
                 const thresholds = buildPriceThresholds(visiblePoints);
-                return visiblePoints
-                  .slice()
-                  .sort((a, b) => a.ts - b.ts)
-                  .map((p) => {
+                return tableRows.map((p) => {
                     const cls = priceClass(p.price_eur_per_kwh, thresholds);
                     const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
                     return (
@@ -777,10 +802,7 @@ export function PriceViewClient({
                 <tbody className="divide-y divide-white/12">
                   {(() => {
                     const thresholds = buildPriceThresholds(visiblePoints);
-                    return visiblePoints
-                      .slice()
-                      .sort((a, b) => a.ts - b.ts)
-                      .map((p) => {
+                    return tableRows.map((p) => {
                         const cls = priceClass(p.price_eur_per_kwh, thresholds);
                         const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
                         return (

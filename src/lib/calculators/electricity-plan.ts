@@ -96,3 +96,37 @@ export function calculateElectricityPlan(input: ElectricityPlanInput) {
     nightShare: Math.max(toNumber(input.nightSharePct), 0),
   };
 }
+
+export function calculateElectricityPlanSensitivity({
+  monthlyKwh,
+  spotEurKwh,
+  fixedEurKwh,
+  spotMarginEurKwh,
+  gridFeeEurKwh,
+  pricesIncludeVat,
+}: {
+  monthlyKwh: number;
+  spotEurKwh: number;
+  fixedEurKwh: number;
+  spotMarginEurKwh: number;
+  gridFeeEurKwh: number;
+  pricesIncludeVat: boolean;
+}) {
+  const kwhYear = Math.max(monthlyKwh, 0) * 12;
+  const baseSpot = Math.max(spotEurKwh, 0);
+  const fixed = Math.max(fixedEurKwh, 0);
+  const margin = Math.max(spotMarginEurKwh, 0);
+  const gridFee = Math.max(gridFeeEurKwh, 0);
+  const vatMultiplier = pricesIncludeVat ? 1 : 1.24;
+
+  const fixedCost = kwhYear * (fixed + gridFee) * vatMultiplier;
+  const low = kwhYear * (baseSpot * 0.8 + margin + gridFee) * vatMultiplier;
+  const base = kwhYear * (baseSpot + margin + gridFee) * vatMultiplier;
+  const high = kwhYear * (baseSpot * 1.2 + margin + gridFee) * vatMultiplier;
+
+  return {
+    diffLowVsFixed: low - fixedCost,
+    diffBaseVsFixed: base - fixedCost,
+    diffHighVsFixed: high - fixedCost,
+  };
+}

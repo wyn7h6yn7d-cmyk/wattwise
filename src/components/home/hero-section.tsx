@@ -21,7 +21,8 @@ export function HeroSection() {
             </span>
           </h1>
           <p className="mt-4 max-w-lg text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">
-            Premium tööriistad energiaotsuste hindamiseks - selge tulemus, tugev visuaal, kiire algus.
+            Arvuta kiiresti, kas päikesejaam, aku, EV laadimine või elektripaketi vahetus võiks sinu olukorras
+            rahaliselt mõistlik olla.
           </p>
 
           <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3.5">

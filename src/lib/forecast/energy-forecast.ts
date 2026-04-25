@@ -60,6 +60,17 @@ function normalizeValue(values: number[]) {
   return (v: number) => (v - min) / span;
 }
 
+function quantile(sorted: number[], q: number) {
+  if (!sorted.length) return 0;
+  if (sorted.length === 1) return sorted[0];
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const a = sorted[base];
+  const b = sorted[Math.min(base + 1, sorted.length - 1)];
+  return a + rest * (b - a);
+}
+
 function classifyRecommendation(score: number): string {
   if (score >= 78) return "Väga hea aeg tarbimiseks";
   if (score >= 58) return "Hea aeg";
@@ -163,13 +174,47 @@ export function buildEnergyForecast({
     return { ...r, score, recommendation };
   });
 
-  const bestSolarHour = rows.slice().sort((a, b) => b.pvEnergyEstimateKwh - a.pvEnergyEstimateKwh)[0] ?? null;
-  const lowestPriceHour = rows.slice().sort((a, b) => a.priceSntWithVat - b.priceSntWithVat)[0] ?? null;
+  const daylightRows = rows.filter((r) => r.radiationWm2 > 0.01);
+  const pvSorted = daylightRows
+    .map((r) => r.pvEnergyEstimateKwh)
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+  const radiationSorted = daylightRows
+    .map((r) => r.radiationWm2)
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+  const pvQ80 = quantile(pvSorted, 0.8);
+  const pvMedian = quantile(pvSorted, 0.5);
+  const radiationMedian = quantile(radiationSorted, 0.5);
+
+  const categorizedRows: ForecastRow[] = rows.map((r) => {
+    if (r.radiationWm2 <= 0.01) {
+      return { ...r, recommendation: "Öine tund" };
+    }
+
+    const localHour = new Date(r.ts * 1000).getHours();
+    const isEvening = localHour >= 18;
+    const isLowRadiation = r.radiationWm2 <= radiationMedian;
+
+    if (r.pvEnergyEstimateKwh >= pvQ80) {
+      return { ...r, recommendation: "Väga hea PV aeg" };
+    }
+    if (r.pvEnergyEstimateKwh >= pvMedian) {
+      return { ...r, recommendation: "Hea PV aeg" };
+    }
+    if (r.pvEnergyEstimateKwh < pvMedian || isEvening || isLowRadiation) {
+      return { ...r, recommendation: "Madal PV tootlus" };
+    }
+    return { ...r, recommendation: "Neutraalne" };
+  });
+
+  const bestSolarHour = categorizedRows.slice().sort((a, b) => b.pvEnergyEstimateKwh - a.pvEnergyEstimateKwh)[0] ?? null;
+  const lowestPriceHour = categorizedRows.slice().sort((a, b) => a.priceSntWithVat - b.priceSntWithVat)[0] ?? null;
 
   let bestChargingWindow: ForecastSummary["bestChargingWindow"] = null;
   for (const length of [2, 3, 4]) {
-    for (let i = 0; i <= rows.length - length; i += 1) {
-      const slice = rows.slice(i, i + length);
+    for (let i = 0; i <= categorizedRows.length - length; i += 1) {
+      const slice = categorizedRows.slice(i, i + length);
       const avgPrice = slice.reduce((s, x) => s + x.priceSntWithVat, 0) / length;
       if (!bestChargingWindow || avgPrice < bestChargingWindow.avgPriceSntWithVat) {
         bestChargingWindow = {
@@ -195,7 +240,7 @@ export function buildEnergyForecast({
     .reduce((sum, r) => sum + r.pvEnergyEstimateKwh, 0);
 
   return {
-    rows,
+    rows: categorizedRows,
     summary: {
       bestSolarHour,
       lowestPriceHour,
