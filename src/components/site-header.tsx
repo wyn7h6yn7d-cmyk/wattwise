@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
 const nav = [
   { href: "/", label: "Avaleht" },
+  { href: "/kalkulaatorid", label: "Kalkulaatorid" },
   { href: "/borsihind", label: "Börsihind" },
   { href: "/pricing", label: "Hinnad" },
   { href: "/kontakt", label: "Kontakt" },
@@ -43,8 +44,6 @@ const calculatorLinks = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const navItems = useMemo(() => {
     return nav.map((item) => {
@@ -54,48 +53,20 @@ export function SiteHeader() {
     });
   }, [pathname]);
 
-  const calcActive = pathname?.startsWith("/kalkulaatorid") ?? false;
-
   useEffect(() => {
-    setDropdownOpen(false);
+    setMobileOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, []);
-
-  const openDropdown = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-    setDropdownOpen(true);
-  };
-
-  const scheduleDropdownClose = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-    }
-    closeTimerRef.current = setTimeout(() => {
-      setDropdownOpen(false);
-      closeTimerRef.current = null;
-    }, 280);
-  };
-
   return (
-    <header className="sticky top-0 z-50 overflow-x-clip px-3 pb-2 pt-2 sm:px-5 sm:pb-3 sm:pt-3 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl min-w-0 items-center justify-between gap-2 rounded-2xl border border-emerald-300/22 bg-zinc-950/68 px-2.5 py-2 shadow-[0_14px_52px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:px-4 lg:grid lg:grid-cols-[auto,1fr,auto] lg:gap-3 lg:rounded-3xl lg:px-5 lg:py-2.5">
+    <header className="sticky top-0 z-50 overflow-x-clip px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
+      <div className="mx-auto flex h-[72px] w-full max-w-7xl min-w-0 items-center justify-between gap-3 rounded-2xl border border-emerald-300/24 bg-zinc-950/72 px-3 shadow-[0_12px_36px_rgba(0,0,0,0.42),0_0_28px_rgba(16,185,129,0.07)] backdrop-blur-xl sm:px-4 lg:h-[78px] lg:px-5">
         <Link
           href="/"
-          className="flex min-w-0 max-w-[calc(100%-3.75rem)] items-center gap-2 sm:gap-3"
+          className="flex min-w-0 max-w-[calc(100%-3.5rem)] items-center gap-2.5 sm:gap-3"
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-emerald-300/50 shadow-[0_0_30px_rgba(16,185,129,0.2)] sm:h-11 sm:w-11">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-emerald-300/45 shadow-[0_0_18px_rgba(16,185,129,0.16)] sm:h-10 sm:w-10 lg:h-11 lg:w-11">
             <Image
               src="/logo.png"
               alt="Energiakalkulaator"
@@ -108,78 +79,20 @@ export function SiteHeader() {
               priority
             />
           </div>
-          <div className="truncate text-[0.92rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1.05rem]">
+          <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
             Energiakalkulaator
           </div>
         </Link>
 
-        <nav className="hidden items-center justify-center gap-1 lg:flex" aria-label="Peamenüü">
-          {navItems.slice(0, 1).map((item) => (
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Peamenüü">
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-xl px-3 py-1.5 text-sm transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
                 item.active
-                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
-                  : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-
-          <div
-            className="relative"
-            onMouseEnter={openDropdown}
-            onMouseLeave={scheduleDropdownClose}
-          >
-            <button
-              type="button"
-              className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-colors ${
-                calcActive || dropdownOpen
-                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
-                  : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
-              }`}
-              onClick={() => setDropdownOpen((v) => !v)}
-              aria-expanded={dropdownOpen}
-              aria-haspopup="menu"
-            >
-              Kalkulaatorid
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-
-            <div
-              className={`absolute left-0 top-full z-50 w-[21rem] pt-2 transition-all duration-220 ease-out ${
-                dropdownOpen
-                  ? "pointer-events-auto translate-y-0 opacity-100"
-                  : "pointer-events-none -translate-y-1 opacity-0"
-              }`}
-            >
-              <div className="rounded-2xl border border-emerald-300/20 bg-zinc-950/88 p-2 shadow-[0_22px_65px_rgba(0,0,0,0.58)] backdrop-blur-2xl">
-                {calculatorLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block rounded-xl px-3 py-2.5 transition hover:bg-emerald-400/12 hover:text-emerald-100"
-                  >
-                    <div className="text-sm font-medium text-zinc-100">{link.label}</div>
-                    <div className="mt-0.5 text-xs leading-relaxed text-zinc-400">{link.description}</div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {navItems.slice(1).map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-xl px-3 py-1.5 text-sm transition-colors ${
-                item.active
-                  ? "bg-emerald-400/12 text-emerald-200 ring-1 ring-emerald-300/30"
-                  : "text-zinc-300 hover:bg-white/7 hover:text-zinc-50"
+                  ? "bg-emerald-400/16 text-emerald-100 ring-1 ring-emerald-300/28"
+                  : "text-zinc-300 hover:text-zinc-100"
               }`}
             >
               {item.label}
@@ -202,11 +115,8 @@ export function SiteHeader() {
               <path d="M5 17h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Link
-            href="/kalkulaatorid"
-            className="btn-glow hidden whitespace-nowrap px-4 py-1.5 text-sm lg:inline-flex"
-          >
-            Alusta tasuta
+          <Link href="/kalkulaatorid" className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm lg:inline-flex">
+            Proovi tasuta
           </Link>
         </div>
       </div>
@@ -264,7 +174,7 @@ function MobileMenu({
           </div>
 
           <div className="grid gap-1 p-2">
-            {navItems.slice(0, 1).map((item) => (
+            {navItems.filter((item) => item.href !== "/kalkulaatorid").map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -294,25 +204,11 @@ function MobileMenu({
                 ))}
               </div>
             </div>
-            {navItems.slice(1).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={`block rounded-xl px-3 py-3.5 text-sm transition-colors ${
-                  item.active
-                    ? "bg-emerald-400/20 text-emerald-100"
-                    : "text-zinc-300 hover:bg-white/5 hover:text-zinc-50"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
           </div>
 
           <div className="mt-2 border-t border-white/10 p-2">
             <Link href="/kalkulaatorid" onClick={onClose} className="btn-glow w-full justify-center">
-              Alusta tasuta
+              Proovi tasuta
             </Link>
           </div>
         </div>
