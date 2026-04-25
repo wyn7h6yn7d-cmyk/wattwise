@@ -198,25 +198,24 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <div className="mx-auto mt-2 hidden w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-950/62 px-3 py-1.5 text-[11px] text-zinc-200 md:flex">
-        <span className="text-zinc-500">{todayLabel}</span>
-        <span className="text-zinc-500">|</span>
-        <span className="text-zinc-400">Live börs:</span>
-        <strong className="text-emerald-200">{livePriceSnt} snt/kWh</strong>
-        <span className="text-zinc-500">|</span>
-        <span className="text-zinc-400">Päike:</span>
-        <span>↑ {sunTimes.rise}</span>
-        <span>↓ {sunTimes.set}</span>
+      <div className="mx-auto mt-2 hidden w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-[linear-gradient(180deg,rgba(9,20,17,0.82),rgba(7,16,13,0.76))] px-3 py-2 text-[11px] text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.32)] md:flex">
+        <span className="rounded-md bg-white/[0.03] px-2 py-0.5 text-zinc-400">{todayLabel}</span>
+        <span className="text-zinc-600">|</span>
+        <span className="text-zinc-400">Live börs</span>
+        <strong className="rounded-md bg-emerald-400/10 px-2 py-0.5 text-emerald-200">{livePriceSnt} snt/kWh</strong>
+        <span className="text-zinc-600">|</span>
+        <span className="text-zinc-400">Päike</span>
+        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">↑ {sunTimes.rise}</span>
+        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">↓ {sunTimes.set}</span>
       </div>
 
-      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-950/62 px-3 py-1.5 text-[11px] text-zinc-200 md:hidden">
-        <span className="text-zinc-500">{todayLabel}</span>
-        <span className="text-zinc-500">|</span>
-        <span className="text-zinc-400">Live:</span>
-        <strong className="text-emerald-200">{livePriceSnt} snt</strong>
-        <span className="text-zinc-500">|</span>
-        <span>↑ {sunTimes.rise}</span>
-        <span>↓ {sunTimes.set}</span>
+      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-xl border border-emerald-300/20 bg-[linear-gradient(180deg,rgba(9,20,17,0.82),rgba(7,16,13,0.76))] px-3 py-2 text-[11px] text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.28)] md:hidden">
+        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5 text-zinc-400">{todayLabel}</span>
+        <span className="text-zinc-600">|</span>
+        <strong className="rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-200">{livePriceSnt} snt</strong>
+        <span className="text-zinc-600">|</span>
+        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">↑ {sunTimes.rise}</span>
+        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">↓ {sunTimes.set}</span>
       </div>
 
       {mobileOpen ? (
