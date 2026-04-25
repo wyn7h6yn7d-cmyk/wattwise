@@ -3,7 +3,7 @@
 export function DashboardMockup() {
   return (
     <div
-      className="dashboard-pulse relative rounded-[1.7rem] border border-emerald-300/35 bg-zinc-950/88 p-3 shadow-[0_28px_78px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-4 lg:min-h-[30rem]"
+      className="dashboard-pulse relative overflow-hidden rounded-[1.7rem] border border-emerald-300/35 bg-zinc-950/88 p-3 shadow-[0_28px_78px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-4 lg:min-h-[30rem]"
       style={{ contain: "layout paint" }}
     >
       <div className="pointer-events-none absolute -left-10 top-6 hidden h-28 w-28 rounded-full bg-emerald-400/20 blur-2xl sm:block" />
@@ -35,9 +35,9 @@ export function DashboardMockup() {
               ["Tasuvusaeg", "4,2 aastat", "-0,6 a"],
               ["CO₂", "42,8 t", "-18%"],
             ].map(([label, value, delta]) => (
-              <div key={label} className="rounded-xl border border-emerald-300/22 bg-white/[0.03] px-3 py-2.5 shadow-[0_0_18px_rgba(16,185,129,0.08)]">
-                <div className="text-[11px] uppercase tracking-wide text-zinc-400">{label}</div>
-                <div className="mt-1 text-sm font-semibold text-zinc-100">{value}</div>
+              <div key={label} className="min-w-0 rounded-xl border border-emerald-300/22 bg-white/[0.03] px-3 py-2.5 shadow-[0_0_18px_rgba(16,185,129,0.08)]">
+                <div className="truncate text-[11px] uppercase tracking-wide text-zinc-400">{label}</div>
+                <div className="mt-1 truncate text-sm font-semibold text-zinc-100">{value}</div>
                 <div className="mt-1 text-[10px] text-emerald-200/85">{delta}</div>
               </div>
             ))}

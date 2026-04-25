@@ -163,12 +163,12 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Peamenüü">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 lg:flex xl:gap-1" aria-label="Peamenüü">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+              className={`rounded-full px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
                 item.active
                   ? "bg-emerald-400/16 text-emerald-100 ring-1 ring-emerald-300/28"
                   : "text-zinc-300 hover:text-zinc-100"
@@ -178,17 +178,6 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-
-        <div className="hidden lg:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-zinc-200">
-          <span className="text-zinc-500">{todayLabel}</span>
-          <span className="text-zinc-500">|</span>
-          <span className="text-zinc-400">Live börs:</span>
-          <strong className="text-emerald-200">{livePriceSnt} snt/kWh</strong>
-          <span className="text-zinc-500">|</span>
-          <span className="text-zinc-400">Päike:</span>
-          <span>↑ {sunTimes.rise}</span>
-          <span>↓ {sunTimes.set}</span>
-        </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2">
           <button
@@ -205,13 +194,24 @@ export function SiteHeader() {
               <path d="M5 17h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Link href="/kalkulaatorid" className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm lg:inline-flex">
+          <Link href="/kalkulaatorid" className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm xl:inline-flex">
             Proovi tasuta
           </Link>
         </div>
       </div>
 
-      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-950/62 px-3 py-1.5 text-[11px] text-zinc-200 lg:hidden">
+      <div className="mx-auto mt-2 hidden w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-950/62 px-3 py-1.5 text-[11px] text-zinc-200 md:flex">
+        <span className="text-zinc-500">{todayLabel}</span>
+        <span className="text-zinc-500">|</span>
+        <span className="text-zinc-400">Live börs:</span>
+        <strong className="text-emerald-200">{livePriceSnt} snt/kWh</strong>
+        <span className="text-zinc-500">|</span>
+        <span className="text-zinc-400">Päike:</span>
+        <span>↑ {sunTimes.rise}</span>
+        <span>↓ {sunTimes.set}</span>
+      </div>
+
+      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-950/62 px-3 py-1.5 text-[11px] text-zinc-200 md:hidden">
         <span className="text-zinc-500">{todayLabel}</span>
         <span className="text-zinc-500">|</span>
         <span className="text-zinc-400">Live:</span>

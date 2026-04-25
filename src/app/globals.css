@@ -103,6 +103,13 @@ canvas {
   animation: bg-drift-b 42s ease-in-out infinite;
 }
 
+.page-bg-static::before,
+.page-bg-static::after {
+  animation: none;
+  opacity: 0.2;
+  transform: none;
+}
+
 .premium-shell {
   position: relative;
 }
