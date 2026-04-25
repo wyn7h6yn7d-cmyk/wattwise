@@ -27,9 +27,8 @@ function fmtSnt(eurPerKwh: number, vat: boolean) {
 type ViewInterval = 15 | 60;
 type ViewPeriod = "today" | "today_tomorrow" | "tomorrow";
 
-function computeNow(points: MarketPricePoint[], intervalMinutes: 15 | 60) {
+function computeNow(points: MarketPricePoint[], intervalMinutes: 15 | 60, nowTs: number) {
   const sorted = points.slice().sort((a, b) => a.ts - b.ts);
-  const nowTs = Math.floor(Date.now() / 1000);
   const intervalSec = intervalMinutes * 60;
 
   let current: MarketPricePoint | null = null;
@@ -364,15 +363,16 @@ function AdviceCards({
 export function PriceViewClient({
   points,
   intervalMinutes,
+  nowTs,
 }: {
   points: MarketPricePoint[];
   intervalMinutes: 15 | 60;
+  nowTs: number;
 }) {
   const [vat, setVat] = useState(true);
   const [viewInterval, setViewInterval] = useState<ViewInterval>(intervalMinutes);
   const [period, setPeriod] = useState<ViewPeriod>("today_tomorrow");
 
-  const nowTs = Math.floor(Date.now() / 1000);
   const sourceInterval = intervalMinutes;
   const effectiveInterval: ViewInterval =
     sourceInterval === 15 ? viewInterval : 60; // if only hourly data, force 60
@@ -382,16 +382,27 @@ export function PriceViewClient({
     return effectiveInterval === 60 ? resampleToHourly(base, sourceInterval) : base;
   }, [effectiveInterval, points, sourceInterval]);
 
-  const nowCard = useMemo(() => computeNow(normalizedPoints, effectiveInterval), [normalizedPoints, effectiveInterval]);
+  const nowCard = useMemo(
+    () => computeNow(normalizedPoints, effectiveInterval, nowTs),
+    [normalizedPoints, effectiveInterval, nowTs],
+  );
 
-  const todayPoints = useMemo(() => splitByLocalDay(normalizedPoints, new Date()), [normalizedPoints]);
+  const dayRefs = useMemo(() => {
+    const base = Number.isFinite(nowTs) && nowTs > 0 ? nowTs : 0;
+    const today = new Date(base * 1000);
+    const tomorrow = new Date((base + 24 * 60 * 60) * 1000);
+    const yesterday = new Date((base - 24 * 60 * 60) * 1000);
+    return { today, tomorrow, yesterday };
+  }, [nowTs]);
+
+  const todayPoints = useMemo(() => splitByLocalDay(normalizedPoints, dayRefs.today), [normalizedPoints, dayRefs.today]);
   const tomorrowPoints = useMemo(
-    () => splitByLocalDay(normalizedPoints, new Date(Date.now() + 24 * 60 * 60 * 1000)),
-    [normalizedPoints],
+    () => splitByLocalDay(normalizedPoints, dayRefs.tomorrow),
+    [normalizedPoints, dayRefs.tomorrow],
   );
   const yesterdayPoints = useMemo(
-    () => splitByLocalDay(normalizedPoints, new Date(Date.now() - 24 * 60 * 60 * 1000)),
-    [normalizedPoints],
+    () => splitByLocalDay(normalizedPoints, dayRefs.yesterday),
+    [normalizedPoints, dayRefs.yesterday],
   );
 
   const visiblePoints = useMemo(() => {

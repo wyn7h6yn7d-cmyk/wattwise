@@ -1,24 +1,18 @@
 import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
 import { HeroSection } from "@/components/home/hero-section";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
-import { CalculatorGrid } from "@/components/home/calculator-grid";
-import { ValuePropsSection } from "@/components/home/value-props-section";
-import { FullAnalysisSection } from "@/components/home/full-analysis-section";
-import { FAQSection } from "@/components/home/faq-section";
+import { ToolCardsSection } from "@/components/home/tool-cards-section";
 
 export default function Home() {
   return (
     <div className="relative page-bg">
-      <AnimatedEnergyBackground intensity="page" />
+      <AnimatedEnergyBackground intensity="subtle" />
 
-      <main className="relative mx-auto w-full max-w-7xl px-5 pb-16 pt-10 sm:px-8 lg:px-10">
-        <div className="stack">
+      <main className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+        <div className="space-y-14 sm:space-y-20">
           <HeroSection />
+          <ToolCardsSection />
           <HowItWorksSection />
-          <CalculatorGrid />
-          <ValuePropsSection />
-          <FullAnalysisSection />
-          <FAQSection />
         </div>
       </main>
     </div>

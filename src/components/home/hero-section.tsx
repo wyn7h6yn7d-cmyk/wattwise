@@ -2,95 +2,56 @@
 
 import Link from "next/link";
 import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
-import { FEATURES } from "@/lib/features";
+import { DashboardMockup } from "@/components/home/dashboard-mockup";
+import { RenewableEnergyScene } from "@/components/home/renewable-energy-scene";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-10">
+    <section className="relative isolate overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] px-5 py-7 shadow-[0_20px_80px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-8 sm:py-9 lg:px-10 lg:py-10">
+      <RenewableEnergyScene />
       <AnimatedEnergyBackground intensity="hero" />
 
-      <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-7">
-          <p className="inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs tracking-wide text-emerald-200">
+      <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_1.08fr] lg:gap-10">
+        <div className="hero-content-shield">
+          <p className="inline-flex rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs tracking-wide text-emerald-100">
             Energiakalkulaator
           </p>
-          <h1 className="mt-4 text-balance text-[2.05rem] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-5xl">
-            Arvuta energiaotsuste tasuvus selgemalt
+          <h1 className="mt-4 text-balance text-[2.25rem] font-semibold leading-[1.04] tracking-tight text-zinc-50 sm:text-[3.45rem]">
+            Arvuta energiaotsuste <span className="text-emerald-300">tasuvus targemalt</span>
           </h1>
-          <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-300 sm:mt-4 sm:text-lg">
-            Päikesejaama, VPP, elektripaketi, laadimise ja ettevõtte energiakulude kalkulaatorid ühes kohas.
+          <p className="mt-4 max-w-xl text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">
+            Päikesejaam, VPP, EV laadimine, elektri hinnavõrdlus ja ärikliendi elektritarbimise analüüs ühes
+            platvormis.
           </p>
 
-          <div className="mt-6 grid gap-3">
-            <Link href="/kalkulaatorid" className="btn-glow w-full justify-center sm:w-auto">
-              Proovi kalkulaatorit
+          <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+            <Link href="/kalkulaatorid" className="btn-glow inline-flex w-full justify-center sm:w-auto">
+              Proovi tasuta
             </Link>
-            {FEATURES.paywallEnabled ? (
-              <Link href="/kalkulaatorid/paikesejaam" className="btn-ghost w-full justify-center sm:w-auto">
-                Ava Täisanalüüs
-              </Link>
-            ) : null}
+            <Link
+              href="/kalkulaatorid"
+              className="btn-ghost inline-flex w-full justify-center border-white/20 bg-white/[0.02] sm:w-auto"
+            >
+              Vaata kalkulaatoreid
+            </Link>
           </div>
 
-          <div className="mt-5 grid gap-2 text-xs text-zinc-400 sm:grid-cols-3">
+          <div className="mt-6 grid gap-2.5 sm:grid-cols-3">
             {[
-              "Selge ülevaade mõne minutiga",
-              "Kalkulaatorid ühes kohas",
-              FEATURES.paywallEnabled ? "Raport ja lisavaated" : "Tasuta beetaversioon",
-            ].map((t) => (
-              <div key={t} className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                {t}
+              ["Usaldusväärsed arvutused", "Täpsed metoodikad ja andmed"],
+              ["Reaalajas andmed", "Nord Pool börsihind LIVE"],
+              ["Sinu andmed on turvalised", "Privaatsus ja andmekaitse tagatud"],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+                <div className="text-xs font-medium text-zinc-100">{title}</div>
+                <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">{description}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="lg:col-span-5">
-          <div className="relative rounded-3xl border border-white/10 bg-zinc-950/55 p-4 shadow-[0_0_60px_rgba(16,185,129,0.10)] backdrop-blur-2xl sm:p-6">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.18),transparent_42%),radial-gradient(circle_at_80%_70%,rgba(20,184,166,0.14),transparent_45%)]" />
-            <div className="relative">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-sm font-semibold text-zinc-50">Näidisülevaade</div>
-                  <div className="mt-1 text-xs text-zinc-400">Päikesejaama tasuvus (tasuta vaade)</div>
-                </div>
-                <div className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] text-emerald-200">
-                  Näidis
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3">
-                {[
-                  ["Aastane sääst", "1 250 €"],
-                  ["Tasuvusaeg", "8,6 a"],
-                  ["Omakasutus", "47%"],
-                  ["Võrku müük", "3 100 kWh"],
-                ].map(([k, v]) => (
-                  <div key={k} className="rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-2.5 sm:px-4 sm:py-3">
-                    <div className="text-[11px] text-zinc-400">{k}</div>
-                    <div className="mt-1 text-base font-semibold text-zinc-50">{v}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:mt-4 sm:p-4">
-                <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                  <span>Kumulatiivne rahavoog (näidis)</span>
-                  <span>20 a</span>
-                </div>
-                <div className="mt-3 grid grid-cols-12 items-end gap-1">
-                  {[2, 3, 4, 5, 7, 9, 10, 11, 12, 12, 12, 12].map((h, i) => (
-                    <div
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={i}
-                      className="rounded-sm bg-gradient-to-t from-emerald-400/70 to-teal-300/70"
-                      style={{ height: `${h * 4}px` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="min-w-0 lg:pl-2">
+          <DashboardMockup />
         </div>
       </div>
     </section>

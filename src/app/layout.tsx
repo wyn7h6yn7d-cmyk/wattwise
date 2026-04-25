@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Energiakalkulaator",
+  applicationName: "Energiakalkulaator",
   description:
     "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas. Hinnangud Eesti tingimustes.",
   metadataBase: new URL("https://energiakalkulaator.ee"),
@@ -24,11 +25,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
-      { url: "/icon.png", type: "image/png", sizes: "48x48" },
+      { url: "/favicon-ek-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-ek-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-ek-48x48.png", type: "image/png", sizes: "48x48" },
+      { url: "/logo-ek-1024.png", type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: "/icon.png",
-    apple: [{ url: "/icon.png", sizes: "180x180" }],
+    shortcut: "/favicon.ico",
+    apple: [{ url: "/apple-touch-icon-ek-180.png", sizes: "180x180" }],
   },
   openGraph: {
     title: "Energiakalkulaator",

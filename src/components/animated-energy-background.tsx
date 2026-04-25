@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-type Intensity = "hero" | "page";
+type Intensity = "hero" | "subtle";
 
-export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: Intensity }) {
-  const [mounted, setMounted] = useState(false);
+export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?: Intensity }) {
   const [isMobile, setIsMobile] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const seed = intensity === "hero" ? 11 : 22;
   useEffect(() => {
     const update = () => setIsMobile(window.matchMedia("(max-width: 640px)").matches);
     update();
@@ -23,20 +22,28 @@ export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: I
     return () => mq.removeEventListener?.("change", update);
   }, []);
 
-  const kBase = intensity === "hero" ? 1 : 0.65;
-  const k = reducedMotion ? 0.25 : isMobile ? kBase * 0.55 : kBase;
-  const seed = useMemo(() => (mounted ? Math.floor(Math.random() * 1_000_000) : 1), [mounted]);
+  const particleCount = reducedMotion ? 0 : isMobile ? (intensity === "hero" ? 10 : 6) : intensity === "hero" ? 18 : 12;
+  const baseOpacity = intensity === "hero" ? 1 : 0.55;
+  const mobileFactor = isMobile ? 0.62 : 1;
+  const motionFactor = reducedMotion ? 0.35 : 1;
+  const k = baseOpacity * mobileFactor * motionFactor;
+  const strokeA = intensity === "hero" ? 2.2 : 1.5;
+  const strokeB = intensity === "hero" ? 1.8 : 1.25;
+  const strokeC = intensity === "hero" ? 1.6 : 1.1;
 
-  // SVG “energy flow” jooned: väga peen, aeglane liikumine + aurora glow (CSS)
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${intensity === "hero" ? "energy-scene-hero" : "energy-scene-subtle"}`}>
       <div className="absolute inset-0 energy-aurora" style={{ opacity: 0.9 * k }} />
-      <div className="absolute inset-0 energy-grid" style={{ opacity: 0.55 * k }} />
+      <div className="absolute inset-0 energy-aurora energy-aurora-2" style={{ opacity: 0.65 * k }} />
+      <div className="absolute inset-0 energy-grid" style={{ opacity: 0.45 * k }} />
+      <div
+        className="absolute inset-0 energy-glow-cloud"
+        style={{ opacity: 0.55 * k }}
+      />
 
-      {/* Floating light points (desktop rohkem, mobile vähem) */}
-      {!reducedMotion ? (
+      {particleCount > 0 ? (
         <div className="absolute inset-0" style={{ opacity: 0.55 * k }}>
-          {Array.from({ length: isMobile ? 6 : intensity === "hero" ? 16 : 10 }).map((_, i) => (
+          {Array.from({ length: particleCount }).map((_, i) => (
             <span
               // eslint-disable-next-line react/no-array-index-key
               key={i}
@@ -64,7 +71,7 @@ export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: I
             <stop offset="1" stopColor="rgba(16,185,129,0.0)" />
           </linearGradient>
           <filter id={`blur_${seed}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation={2.6 * k} />
+            <feGaussianBlur stdDeviation={2.2 * k} />
           </filter>
         </defs>
 
@@ -73,22 +80,31 @@ export function AnimatedEnergyBackground({ intensity = "page" }: { intensity?: I
             className="energy-line energy-line-1"
             d="M-50,540 C180,430 240,610 420,520 C610,420 680,560 860,470 C1030,385 1100,470 1250,380"
             stroke={`url(#g_${seed})`}
-            strokeWidth={2.2}
+            strokeWidth={strokeA}
             fill="none"
           />
           <path
             className="energy-line energy-line-2"
             d="M-60,240 C130,190 260,310 410,250 C600,175 690,295 860,230 C1040,160 1100,260 1260,210"
             stroke={`url(#g_${seed})`}
-            strokeWidth={1.8}
+            strokeWidth={strokeB}
             fill="none"
           />
-          {!isMobile ? (
+          {intensity === "hero" && !isMobile ? (
             <path
               className="energy-line energy-line-3"
               d="M-80,410 C130,340 220,520 390,430 C560,340 710,450 880,380 C1040,315 1120,390 1270,330"
               stroke={`url(#g_${seed})`}
-              strokeWidth={1.6}
+              strokeWidth={strokeC}
+              fill="none"
+            />
+          ) : null}
+          {intensity === "hero" && !reducedMotion ? (
+            <path
+              className="energy-line energy-line-4"
+              d="M-90,120 C100,80 250,220 430,170 C580,130 760,210 900,160 C1030,120 1120,170 1260,130"
+              stroke={`url(#g_${seed})`}
+              strokeWidth={1.2}
               fill="none"
             />
           ) : null}

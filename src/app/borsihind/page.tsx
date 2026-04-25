@@ -14,6 +14,7 @@ function startOfDayLocal(d: Date) {
 
 export default async function BorsihindPage() {
   const now = new Date();
+  const nowTs = Math.floor(now.getTime() / 1000);
   const today = startOfDayLocal(now);
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -68,7 +69,7 @@ export default async function BorsihindPage() {
         ) : null}
 
         {series && series.points.length > 0 ? (
-          <PriceViewClient points={series.points} intervalMinutes={series.intervalMinutes} />
+          <PriceViewClient points={series.points} intervalMinutes={series.intervalMinutes} nowTs={nowTs} />
         ) : null}
       </main>
     </div>
