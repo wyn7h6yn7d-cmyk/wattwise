@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { PurchaseType, UnlockState } from "@/lib/unlock";
+import { FEATURES } from "@/lib/features";
 
 function safeUuid() {
   try {
@@ -161,6 +162,10 @@ export function useProjectUnlock() {
   };
 
   const checkPaymentStatus = async () => {
+    if (!FEATURES.paywallEnabled) {
+      setMessage("Hetkel tasuta beetaversioon: maksekontrolli pole vaja.");
+      return;
+    }
     const sid = unlock.pdfSessionId ?? unlock.fullAnalysisSessionId;
     if (!sid) {
       setMessage("Puudub session ID, mida kontrollida.");

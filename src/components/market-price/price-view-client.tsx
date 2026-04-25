@@ -1,11 +1,13 @@
 "use client";
 
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
   addVat,
+  EleringArea,
   eurMWhToSntKWh,
   eurMWhToSntKWhWithVat,
   formatSntKWh,
+  MarketPriceSeries,
   MarketPricePoint,
 } from "@/lib/elering";
 import { pickBestWindows, pickTopSlots, summarizeDay } from "@/lib/market-recommendations";
@@ -114,7 +116,6 @@ function priceClass(p: number, mean: number, std: number) {
   // Cheap/avg/expensive/peak based on z-score.
   const z = std > 0 ? (p - mean) / std : 0;
   if (z <= -0.6) return { label: "odav", pill: "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/20" };
-  if (z >= 1.2) return { label: "tipp", pill: "bg-teal-300/20 text-teal-100 ring-1 ring-teal-200/30" };
   if (z >= 0.6) return { label: "kallis", pill: "bg-teal-400/12 text-teal-100 ring-1 ring-teal-300/20" };
   return { label: "keskmine", pill: "bg-white/[0.04] text-zinc-200 ring-1 ring-white/10" };
 }
@@ -153,36 +154,6 @@ function FilterChip({
   );
 }
 
-function HeatRow({ points, vat }: { points: MarketPricePoint[]; vat: boolean }) {
-  const values = points.map((p) => (vat ? addVat(p.price_eur_per_kwh) : p.price_eur_per_kwh));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = Math.max(max - min, 1e-9);
-
-  return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between text-xs text-zinc-400">
-        <span>Odavam</span>
-        <span>Kallim</span>
-      </div>
-      <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(5px,1fr))] gap-1 sm:grid-cols-[repeat(auto-fit,minmax(6px,1fr))]">
-        {points.map((p) => {
-          const v = vat ? addVat(p.price_eur_per_kwh) : p.price_eur_per_kwh;
-          const t = (v - min) / span;
-          const bg = t < 0.33 ? "bg-emerald-400/45" : t < 0.66 ? "bg-teal-400/30" : "bg-teal-300/22";
-          return (
-            <div
-              key={p.ts}
-              className={`h-3 rounded-sm ${bg} ring-1 ring-white/10 sm:h-4`}
-              title={`${fmtTimeEt(p.ts)} · ${fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh`}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function AreaChart({
   points,
   vat,
@@ -196,16 +167,21 @@ function AreaChart({
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = Math.max(max - min, 1e-9);
-  const w = 520;
-  const h = 220;
-  const pad = 10;
+  const w = 1000;
+  const h = 260;
+  const leftPad = 52;
+  const rightPad = 14;
+  const topPad = 14;
+  const bottomPad = 34;
+  const chartW = w - leftPad - rightPad;
+  const chartH = h - topPad - bottomPad;
 
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
 
   const d = values
     .map((v, i) => {
-      const x = pad + (i * (w - pad * 2)) / Math.max(values.length - 1, 1);
-      const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+      const x = leftPad + (i * chartW) / Math.max(values.length - 1, 1);
+      const y = topPad + (1 - (v - min) / span) * chartH;
       return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
@@ -225,14 +201,14 @@ function AreaChart({
   })();
 
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
-      <div className="flex items-center justify-between text-xs text-zinc-400">
+    <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/40">
+      <div className="flex items-center justify-between px-4 pt-4 text-xs text-zinc-400 sm:px-5">
         <span>Hinnagraafik</span>
         <span>
           min {fmtSnt(min, vat)} · max {fmtSnt(max, vat)} snt/kWh
         </span>
       </div>
-      <div className="relative mt-3">
+      <div className="relative mt-2">
         {hover ? (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-2 text-xs text-zinc-200 shadow-[0_0_30px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
@@ -250,16 +226,17 @@ function AreaChart({
         ) : null}
         <svg
           viewBox={`0 0 ${w} ${h}`}
-          className="h-[230px] w-full sm:h-[220px]"
+          preserveAspectRatio="none"
+          className="h-[250px] w-full sm:h-[260px]"
           onMouseLeave={() => setHover(null)}
           onMouseMove={(e) => {
             const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
             const px = ((e.clientX - rect.left) / rect.width) * w;
-            const i = Math.round(((px - pad) / (w - pad * 2)) * (points.length - 1));
+            const i = Math.round(((px - leftPad) / chartW) * (points.length - 1));
             const ii = Math.min(Math.max(i, 0), points.length - 1);
             const v = values[ii] ?? min;
-            const x = pad + (ii * (w - pad * 2)) / Math.max(values.length - 1, 1);
-            const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+            const x = leftPad + (ii * chartW) / Math.max(values.length - 1, 1);
+            const y = topPad + (1 - (v - min) / span) * chartH;
             setHover({ i: ii, x, y });
           }}
         >
@@ -269,21 +246,52 @@ function AreaChart({
             <stop offset="100%" stopColor="rgba(16,185,129,0.02)" />
           </linearGradient>
         </defs>
-        {[0.2, 0.4, 0.6, 0.8].map((g) => {
-          const gy = pad + g * (h - pad * 2);
-          return <line key={g} x1={pad} x2={w - pad} y1={gy} y2={gy} stroke="rgba(255,255,255,0.08)" />;
+        {[0, 0.25, 0.5, 0.75, 1].map((g) => {
+          const gy = topPad + g * chartH;
+          return <line key={g} x1={leftPad} x2={w - rightPad} y1={gy} y2={gy} stroke="rgba(255,255,255,0.08)" />;
         })}
+        <line x1={leftPad} x2={leftPad} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.15)" />
+        <line x1={leftPad} x2={w - rightPad} y1={h - bottomPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.15)" />
         <path d={d} fill="none" stroke="rgba(45,212,191,0.95)" strokeWidth="2.2" />
-        <path d={`${d} L${w - pad},${h - pad} L${pad},${h - pad} Z`} fill="url(#area)" />
+        <path d={`${d} L${w - rightPad},${h - bottomPad} L${leftPad},${h - bottomPad} Z`} fill="url(#area)" />
+
+        {/* Y-axis labels */}
+        {[max, min + span * 0.5, min].map((v, idx) => {
+          const y = topPad + (idx * chartH) / 2;
+          return (
+            <text key={`y-${idx}`} x={8} y={y + 3} fontSize="10" fill="rgba(228,233,236,0.75)">
+              {fmtSnt(v, vat)}
+            </text>
+          );
+        })}
+
+        {/* X-axis labels */}
+        {[0, Math.floor((points.length - 1) / 2), points.length - 1].map((i, idx) => {
+          if (i < 0 || !points[i]) return null;
+          const x = leftPad + (i * chartW) / Math.max(values.length - 1, 1);
+          return (
+            <text
+              key={`x-${idx}`}
+              x={x}
+              y={h - 10}
+              fontSize="10"
+              textAnchor={idx === 0 ? "start" : idx === 2 ? "end" : "middle"}
+              fill="rgba(228,233,236,0.72)"
+            >
+              {fmtTimeEt(points[i].ts)}
+            </text>
+          );
+        })}
+
         {/* now marker */}
         {points.length > 1 ? (
           (() => {
-            const x = pad + (nowIndex * (w - pad * 2)) / Math.max(points.length - 1, 1);
+            const x = leftPad + (nowIndex * chartW) / Math.max(points.length - 1, 1);
             const v = values[nowIndex] ?? min;
-            const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+            const y = topPad + (1 - (v - min) / span) * chartH;
             return (
               <g>
-                <line x1={x} x2={x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.16)" strokeDasharray="3 4" />
+                <line x1={x} x2={x} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.16)" strokeDasharray="3 4" />
                 <circle cx={x} cy={y} r="4.5" fill="rgba(45,212,191,0.95)" />
               </g>
             );
@@ -292,7 +300,7 @@ function AreaChart({
         {/* hover marker */}
         {hover ? (
           <g>
-            <line x1={hover.x} x2={hover.x} y1={pad} y2={h - pad} stroke="rgba(255,255,255,0.20)" />
+            <line x1={hover.x} x2={hover.x} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.20)" />
             <circle cx={hover.x} cy={hover.y} r="4" fill="rgba(110,231,183,0.95)" />
           </g>
         ) : null}
@@ -354,21 +362,63 @@ function WindowCard({
 }
 
 export function PriceViewClient({
-  points,
-  intervalMinutes,
+  initialPoints,
+  initialIntervalMinutes,
   nowTs,
+  initialArea,
 }: {
-  points: MarketPricePoint[];
-  intervalMinutes: 15 | 60;
+  initialPoints: MarketPricePoint[];
+  initialIntervalMinutes: 15 | 60;
   nowTs: number;
+  initialArea: EleringArea;
 }) {
   const [vat, setVat] = useState(true);
-  const [viewInterval, setViewInterval] = useState<ViewInterval>(intervalMinutes);
+  const [area, setArea] = useState<EleringArea>(initialArea);
+  const [points, setPoints] = useState<MarketPricePoint[]>(initialPoints);
+  const [sourceInterval, setSourceInterval] = useState<15 | 60>(initialIntervalMinutes);
+  const [loadingArea, setLoadingArea] = useState(false);
+  const [areaError, setAreaError] = useState<string | null>(null);
+  const [viewInterval, setViewInterval] = useState<ViewInterval>(initialIntervalMinutes);
   const [period, setPeriod] = useState<ViewPeriod>("today_tomorrow");
 
-  const sourceInterval = intervalMinutes;
   const effectiveInterval: ViewInterval =
     sourceInterval === 15 ? viewInterval : 60; // if only hourly data, force 60
+
+  useEffect(() => {
+    if (area === initialArea) {
+      setPoints(initialPoints);
+      setSourceInterval(initialIntervalMinutes);
+      setAreaError(null);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      setLoadingArea(true);
+      setAreaError(null);
+      try {
+        const now = new Date();
+        const start = new Date(now.getTime() - 27 * 60 * 60 * 1000).toISOString();
+        const end = new Date(now.getTime() + 51 * 60 * 60 * 1000).toISOString();
+        const res = await fetch(
+          `/api/elering/nps?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&area=${area}`,
+        );
+        if (!res.ok) throw new Error("Piirkonna andmeid ei saanud laadida.");
+        const data = (await res.json()) as MarketPriceSeries;
+        if (cancelled) return;
+        setPoints(data.points ?? []);
+        setSourceInterval(data.intervalMinutes ?? 60);
+      } catch {
+        if (cancelled) return;
+        setAreaError("Valitud piirkonna hinnad ei ole hetkel kättesaadavad.");
+      } finally {
+        if (!cancelled) setLoadingArea(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [area, initialArea, initialPoints, initialIntervalMinutes]);
 
   const normalizedPoints = useMemo(() => {
     const base = points.slice().sort((a, b) => a.ts - b.ts);
@@ -453,6 +503,13 @@ export function PriceViewClient({
           </div>
           <div className="flex min-w-0 flex-wrap gap-2">
             <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/45 px-2 py-1">
+              <FilterChip active={area === "ee"} onClick={() => setArea("ee")}>Eesti</FilterChip>
+              <FilterChip active={area === "lv"} onClick={() => setArea("lv")}>Läti</FilterChip>
+              <FilterChip active={area === "lt"} onClick={() => setArea("lt")}>Leedu</FilterChip>
+              <FilterChip active={area === "fi"} onClick={() => setArea("fi")}>Soome</FilterChip>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/45 px-2 py-1">
               <FilterChip active={!vat} onClick={() => setVat(false)}>
                 Ilma KM-ta
               </FilterChip>
@@ -488,6 +545,8 @@ export function PriceViewClient({
             </div>
           </div>
         </div>
+        {loadingArea ? <p className="mt-3 text-xs text-zinc-400">Laen valitud piirkonna andmeid...</p> : null}
+        {areaError ? <p className="mt-3 text-xs text-rose-200">{areaError}</p> : null}
 
         {/* A) Summary cards */}
         <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-12">
@@ -506,19 +565,31 @@ export function PriceViewClient({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Päeva min</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.min, vat) : "—"}</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                {statsToday ? fmtSnt(statsToday.min, vat) : "—"}
+                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+              </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Päeva max</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.max, vat) : "—"}</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                {statsToday ? fmtSnt(statsToday.max, vat) : "—"}
+                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+              </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Päeva keskmine</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsToday ? fmtSnt(statsToday.mean, vat) : "—"}</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                {statsToday ? fmtSnt(statsToday.mean, vat) : "—"}
+                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+              </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Homme keskmine</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">{statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"}</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                {statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"}
+                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+              </div>
             </div>
           </div>
         </div>
@@ -538,7 +609,6 @@ export function PriceViewClient({
             </div>
           </div>
           <div className="-mx-1 sm:mx-0">
-            <HeatRow points={visiblePoints} vat={vat} />
             <AreaChart points={visiblePoints} vat={vat} nowTs={nowTs} />
           </div>
         </div>
@@ -566,8 +636,8 @@ export function PriceViewClient({
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:col-span-5">
-            <SlotTable title="Odavaimad 3 perioodi" points={topSlots.cheapest} vat={vat} intervalMinutes={intervalMinutes} />
-            <SlotTable title="Kalleimad 3 perioodi" points={topSlots.priciest} vat={vat} intervalMinutes={intervalMinutes} />
+            <SlotTable title="Odavaimad 3 perioodi" points={topSlots.cheapest} vat={vat} intervalMinutes={effectiveInterval} />
+            <SlotTable title="Kalleimad 3 perioodi" points={topSlots.priciest} vat={vat} intervalMinutes={effectiveInterval} />
           </div>
         </div>
 

@@ -14,6 +14,7 @@ export function MiniCashflowChart({
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = Math.max(max - min, 1e-9);
+  const isFlatSeries = Math.abs(max - min) < 1e-6;
   const [hover, setHover] = useState<number | null>(null);
   const axisTicks = useMemo(() => [max, min + span * 0.5, min], [max, min, span]);
 
@@ -42,8 +43,8 @@ export function MiniCashflowChart({
           </div>
           <div className="relative mt-0.5 flex items-end gap-1" style={{ height }}>
             {values.map((v, i) => {
-              const t = (v - min) / span;
-              const h = Math.max(2, Math.round(t * (height - 6)));
+              const t = isFlatSeries ? 0.68 : (v - min) / span;
+              const h = Math.max(8, Math.round(t * (height - 8)));
               const positive = v >= 0;
               const color = positive
                 ? "from-emerald-400/85 to-teal-300/75"

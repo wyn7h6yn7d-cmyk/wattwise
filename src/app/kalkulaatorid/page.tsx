@@ -3,6 +3,12 @@ import { FEATURES } from "@/lib/features";
 
 const cards = [
   {
+    title: "Energiaprognoos",
+    desc: "Ilm, päikesekiirgus ja börsihind ühes tunnipõhises dashboardis.",
+    href: "/energiaprognoos",
+    icon: <path d="M4 18h16M7 14l3-4 3 2 4-6m-5 12v-5m0 0 2 2m-2-2-2 2" />,
+  },
+  {
     title: "Päikesejaama tasuvus",
     desc: "Sääst, omatarve, rahavoog ja tasuvusaeg Eesti tingimustel.",
     href: "/kalkulaatorid/paikesejaam",

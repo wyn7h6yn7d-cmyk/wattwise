@@ -3,10 +3,13 @@
 import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
+import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
+import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { useMemo, useState } from "react";
 import {
   chargingCost,
   chargingTimeHours,
+  CHARGER_STEPS_KW,
   mainFusePower1fKw,
   mainFusePower3fKw,
   pickChargerStepKw,
@@ -26,23 +29,49 @@ export function EvLaadiminePageClient() {
   const { projectId, unlock, purchaseBusy, startCheckout, checkPaymentStatus, message, setMessage } =
     useProjectUnlock();
 
-  const [batteryKwh, setBatteryKwh] = useState("60");
-  const [energyToChargeKwh, setEnergyToChargeKwh] = useState("30");
-  const [chargerKw, setChargerKw] = useState("11");
-  const [priceEurKwh, setPriceEurKwh] = useState("0,16");
+  const [mode, setMode] = useState<"quick" | "advanced">("quick");
+  const [batteryKwh, setBatteryKwh] = useState("");
+  const [energyToChargeKwh, setEnergyToChargeKwh] = useState("");
+  const [chargerKw, setChargerKw] = useState("");
+  const [priceEurKwh, setPriceEurKwh] = useState("");
   const [phase, setPhase] = useState<"1" | "3">("3");
-  const [mainFuseA, setMainFuseA] = useState("25");
-  const [reserveKw, setReserveKw] = useState("2"); // muu koormus majas
+  const [mainFuseA, setMainFuseA] = useState("");
+  const [reserveKw, setReserveKw] = useState(""); // muu koormus majas
+  const [startSocPct, setStartSocPct] = useState("");
+  const [targetSocPct, setTargetSocPct] = useState("");
+  const [chargingLossPct, setChargingLossPct] = useState("8");
+  const [chargerEfficiencyPct, setChargerEfficiencyPct] = useState("92");
+  const [startTime, setStartTime] = useState("22:00");
+  const [endTime, setEndTime] = useState("07:00");
+  const [useSpotPrice, setUseSpotPrice] = useState(false);
+  const [nightCharging, setNightCharging] = useState(true);
+  const [spotState, setSpotState] = useState<{ loading: boolean; note: string; cheapest: string | null }>({
+    loading: false,
+    note: "",
+    cheapest: null,
+  });
+  const hasValue = (v: string) => v.trim().length > 0;
 
   const result = useMemo(() => {
-    const energy = Math.max(toNumber(energyToChargeKwh), 0);
+    const battery = Math.max(toNumber(batteryKwh), 0);
+    const startSoc = Math.min(Math.max(toNumber(startSocPct), 0), 100);
+    const targetSoc = Math.min(Math.max(toNumber(targetSocPct), 0), 100);
+    const quickEnergy = Math.max(toNumber(energyToChargeKwh), 0);
+    const chargeableEnergy =
+      mode === "advanced"
+        ? Math.max((battery * Math.max(targetSoc - startSoc, 0)) / 100, 0)
+        : quickEnergy;
+    const chargerEff = Math.min(Math.max(toNumber(chargerEfficiencyPct), 1), 100) / 100;
+    const lossFactor = 1 + Math.min(Math.max(toNumber(chargingLossPct), 0), 40) / 100;
+    const gridEnergy = chargeableEnergy > 0 ? (chargeableEnergy / chargerEff) * lossFactor : 0;
+
     const power = Math.max(toNumber(chargerKw), 0.1);
     const price = Math.max(toNumber(priceEurKwh), 0);
     const fuseA = Math.max(toNumber(mainFuseA), 0);
     const reserve = Math.max(toNumber(reserveKw), 0);
 
-    const timeH = chargingTimeHours(energy, power);
-    const cost = chargingCost(energy, price);
+    const timeH = chargingTimeHours(gridEnergy, power);
+    const cost = chargingCost(gridEnergy, price);
 
     // peakaitsme_kW:
     // 1f_kW = 230 * A / 1000
@@ -55,6 +84,13 @@ export function EvLaadiminePageClient() {
 
     const rec1 = pickChargerStepKw(p1);
     const rec3 = pickChargerStepKw(p3);
+    const activeMax = phase === "1" ? p1 : p3;
+    const recommended = pickChargerStepKw(activeMax);
+
+    const fits11 = activeMax >= 11 - 1e-6;
+    const fits22 = activeMax >= 22 - 1e-6;
+    const smallFuseWarning = activeMax < 2.3;
+    const needsLoadManagement = power > Math.max(activeMax, 0) || reserve > 3;
 
     const note =
       phase === "1"
@@ -70,8 +106,134 @@ export function EvLaadiminePageClient() {
         ? "22 kW ei ole selle peakaitsme ja reserviga realistlik. Enamasti sobib 11 kW või madalam."
         : null;
 
-    return { timeH, cost, rec1, rec3, p1, p3, note, warning22kw };
-  }, [chargerKw, energyToChargeKwh, mainFuseA, phase, priceEurKwh, reserveKw]);
+    return {
+      timeH,
+      cost,
+      rec1,
+      rec3,
+      p1,
+      p3,
+      note,
+      warning22kw,
+      chargeableEnergy,
+      gridEnergy,
+      recommended,
+      fits11,
+      fits22,
+      smallFuseWarning,
+      needsLoadManagement,
+    };
+  }, [
+    mode,
+    batteryKwh,
+    startSocPct,
+    targetSocPct,
+    chargerEfficiencyPct,
+    chargingLossPct,
+    chargerKw,
+    energyToChargeKwh,
+    mainFuseA,
+    phase,
+    priceEurKwh,
+    reserveKw,
+  ]);
+
+  const findCheapestSpotWindow = async () => {
+    setSpotState({ loading: true, note: "Laen Eleringi hindu...", cheapest: null });
+    try {
+      const now = new Date();
+      const startIso = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+      const endIso = new Date(now.getTime() + 36 * 60 * 60 * 1000).toISOString();
+      const res = await fetch(`/api/elering/nps?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}&area=ee`);
+      if (!res.ok) throw new Error("Eleringi päring ebaõnnestus");
+      const data = (await res.json()) as { points?: Array<{ ts: number; price_eur_per_kwh: number }> };
+      const points = data.points ?? [];
+      if (!points.length) throw new Error("Hindu ei leitud");
+
+      const parseHm = (hm: string) => {
+        const [h, m] = hm.split(":").map(Number);
+        return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+      };
+      const startMin = parseHm(startTime);
+      const endMin = parseHm(endTime);
+      const durationH = Math.max(result.timeH, 0.25);
+      const stepsNeeded = Math.max(1, Math.ceil(durationH)); // hindame tunniandmetel
+
+      const eligible = points.filter((p) => {
+        const d = new Date(p.ts * 1000);
+        const mins = d.getHours() * 60 + d.getMinutes();
+        if (!nightCharging) return true;
+        if (startMin <= endMin) return mins >= startMin && mins < endMin;
+        return mins >= startMin || mins < endMin;
+      });
+      if (eligible.length < stepsNeeded) {
+        setSpotState({ loading: false, note: "Valitud aknas pole piisavalt hindu.", cheapest: null });
+        return;
+      }
+
+      let bestIdx = 0;
+      let bestAvg = Number.POSITIVE_INFINITY;
+      for (let i = 0; i <= eligible.length - stepsNeeded; i += 1) {
+        const slice = eligible.slice(i, i + stepsNeeded);
+        const avg = slice.reduce((s, p) => s + p.price_eur_per_kwh, 0) / slice.length;
+        if (avg < bestAvg) {
+          bestAvg = avg;
+          bestIdx = i;
+        }
+      }
+      const from = new Date(eligible[bestIdx].ts * 1000);
+      const to = new Date(eligible[bestIdx + stepsNeeded - 1].ts * 1000 + 60 * 60 * 1000);
+      setSpotState({
+        loading: false,
+        note: `Odavaim keskmine hind: ${bestAvg.toFixed(3).replace(".", ",")} €/kWh`,
+        cheapest: `${from.toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" })}–${to.toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" })}`,
+      });
+    } catch {
+      setSpotState({ loading: false, note: "Odavaimat akent ei saanud leida.", cheapest: null });
+    }
+  };
+
+  const assumptionsInfo = useMemo(() => {
+    const userInputs: string[] = [];
+    if (mode === "advanced" && toNumber(batteryKwh) > 0) userInputs.push(`Aku maht: ${batteryKwh} kWh`);
+    if (toNumber(energyToChargeKwh) > 0 && mode === "quick") userInputs.push(`Laaditav energia: ${energyToChargeKwh} kWh`);
+    if (toNumber(chargerKw) > 0) userInputs.push(`Laadija võimsus: ${chargerKw} kW`);
+    if (toNumber(mainFuseA) > 0) userInputs.push(`Peakaitse: ${mainFuseA} A (${phase}f)`);
+    if (toNumber(priceEurKwh) > 0) userInputs.push(`Elektrihind: ${priceEurKwh} €/kWh`);
+
+    const defaultAssumptions: string[] = [];
+    if (mode === "quick") defaultAssumptions.push("Laadimiskaod ja efektiivsus võeti konservatiivse üldhinnanguna.");
+    if (mode === "advanced" && toNumber(chargingLossPct) === 8) defaultAssumptions.push("Laadimiskaod: 8%.");
+    if (mode === "advanced" && toNumber(chargerEfficiencyPct) === 92) defaultAssumptions.push("Laadija efektiivsus: 92%.");
+
+    const apiValues = useSpotPrice
+      ? [spotState.note || "Eleringi hinnad kasutusel odavaima akna leidmiseks."]
+      : [];
+
+    return {
+      userInputs,
+      defaultAssumptions,
+      apiValues,
+      mostInfluentialInputs: [
+        "Laadija võimsus",
+        "Elektrihind",
+        "Laaditava energia kogus",
+        "Peakaitse ja muu tarbimise reserv",
+      ],
+    };
+  }, [
+    mode,
+    batteryKwh,
+    energyToChargeKwh,
+    chargerKw,
+    mainFuseA,
+    phase,
+    priceEurKwh,
+    chargingLossPct,
+    chargerEfficiencyPct,
+    useSpotPrice,
+    spotState.note,
+  ]);
 
   return (
     <div className="grid gap-6">
@@ -96,43 +258,121 @@ export function EvLaadiminePageClient() {
         <p className="mt-2 text-sm text-zinc-400">
           Hinda laadimise aega ja kulu ning vaata, millist laadija võimsust peakaitse tõenäoliselt kannatab.
         </p>
+        <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              mode === "quick" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+            }`}
+            onClick={() => setMode("quick")}
+          >
+            Kiire hinnang
+          </button>
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              mode === "advanced" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+            }`}
+            onClick={() => setMode("advanced")}
+          >
+            Täpsem arvutus
+          </button>
+        </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="field-label">
-                <span className="field-label-text">Auto aku maht (kWh)</span>
-                <input className="input" value={batteryKwh} inputMode="decimal" onChange={(e) => setBatteryKwh(e.target.value)} />
-                <span className="field-hint">Aku kogu mahutavus.</span>
-              </label>
+              {mode === "advanced" ? (
+                <div className="sm:col-span-2 flex justify-end">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => {
+                      setChargingLossPct("8");
+                      setChargerEfficiencyPct("92");
+                      setStartTime("22:00");
+                      setEndTime("07:00");
+                      setUseSpotPrice(false);
+                      setNightCharging(true);
+                    }}
+                  >
+                    Taasta vaikimisi
+                  </button>
+                </div>
+              ) : null}
+              {mode === "advanced" ? (
+                <div className="sm:col-span-2">
+                  <AdvancedInputAccordion title="1) Põhiandmed" defaultOpen>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="field-label">
+                        <span className="field-label-text">Auto aku maht (kWh)</span>
+                        <input className="input" value={batteryKwh} inputMode="decimal" onChange={(e) => setBatteryKwh(e.target.value)} placeholder="nt 60" />
+                        <span className="field-hint">Aku kogu mahutavus.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Aku algne tase (%)</span>
+                        <input className="input" value={startSocPct} inputMode="decimal" onChange={(e) => setStartSocPct(e.target.value)} placeholder="nt 20" />
+                        <span className="field-hint">Laadimise alguse SoC.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Soovitud lõpptase (%)</span>
+                        <input className="input" value={targetSocPct} inputMode="decimal" onChange={(e) => setTargetSocPct(e.target.value)} placeholder="nt 80" />
+                        <span className="field-hint">Laadimise lõpu SoC.</span>
+                      </label>
+                    </div>
+                  </AdvancedInputAccordion>
+                </div>
+              ) : null}
               <label className="field-label">
                 <span className="field-label-text">Laaditav energia (kWh)</span>
                 <input
-                  className={`input ${toNumber(energyToChargeKwh) <= 0 ? "input-warning" : ""}`}
+                  className={`input ${hasValue(energyToChargeKwh) && toNumber(energyToChargeKwh) <= 0 ? "input-warning" : ""}`}
                   value={energyToChargeKwh}
                   inputMode="decimal"
                   onChange={(e) => setEnergyToChargeKwh(e.target.value)}
+                  placeholder="nt 30"
+                  disabled={mode === "advanced"}
                 />
                 <span className="field-hint">Kui palju energiat soovid juurde laadida.</span>
               </label>
+              {mode === "advanced" ? (
+                <div className="sm:col-span-2">
+                  <AdvancedInputAccordion title="3) Tehnilised eeldused">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="field-label">
+                        <span className="field-label-text">Laadimiskaod (%)</span>
+                        <input className="input" value={chargingLossPct} inputMode="decimal" onChange={(e) => setChargingLossPct(e.target.value)} placeholder="nt 8" />
+                        <span className="field-hint">Kaod juhtmes ja süsteemis.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Laadija efektiivsus (%)</span>
+                        <input className="input" value={chargerEfficiencyPct} inputMode="decimal" onChange={(e) => setChargerEfficiencyPct(e.target.value)} placeholder="nt 92" />
+                        <span className="field-hint">AC/DC ja laadija kasutegur.</span>
+                      </label>
+                    </div>
+                  </AdvancedInputAccordion>
+                </div>
+              ) : null}
               <label className="field-label">
                 <span className="field-label-text">Laadija võimsus (kW)</span>
                 <input
-                  className={`input ${toNumber(chargerKw) <= 0 ? "input-error" : ""}`}
+                  className={`input ${hasValue(chargerKw) && toNumber(chargerKw) <= 0 ? "input-error" : ""}`}
                   value={chargerKw}
                   inputMode="decimal"
                   onChange={(e) => setChargerKw(e.target.value)}
+                  placeholder="nt 11"
                 />
                 <span className="field-hint">Valitud laadija nimivõimsus.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Elektrihind (€/kWh)</span>
                 <input
-                  className={`input ${toNumber(priceEurKwh) <= 0 ? "input-warning" : ""}`}
+                  className={`input ${hasValue(priceEurKwh) && toNumber(priceEurKwh) <= 0 ? "input-warning" : ""}`}
                   value={priceEurKwh}
                   inputMode="decimal"
                   onChange={(e) => setPriceEurKwh(e.target.value)}
+                  placeholder="nt 0,16"
                 />
                 <span className="field-hint">Eeldatav laadimise hind kWh kohta.</span>
               </label>
@@ -147,19 +387,69 @@ export function EvLaadiminePageClient() {
               <label className="field-label">
                 <span className="field-label-text">Peakaitse (A)</span>
                 <input
-                  className={`input ${toNumber(mainFuseA) <= 0 ? "input-error" : ""}`}
+                  className={`input ${hasValue(mainFuseA) && toNumber(mainFuseA) <= 0 ? "input-error" : ""}`}
                   value={mainFuseA}
                   inputMode="numeric"
                   onChange={(e) => setMainFuseA(e.target.value)}
+                  placeholder="nt 25"
                 />
                 <span className="field-hint">Maja peakaitse amperites.</span>
               </label>
               <label className="field-label sm:col-span-2">
                 <span className="field-label-text">Muud koormused majas (reserv, kW)</span>
-                <input className="input" value={reserveKw} inputMode="decimal" onChange={(e) => setReserveKw(e.target.value)} />
+                <input
+                  className="input"
+                  value={reserveKw}
+                  inputMode="decimal"
+                  onChange={(e) => setReserveKw(e.target.value)}
+                  placeholder="nt 2"
+                />
                 <span className="field-hint">Jäta EV laadimisest eraldi varu maja teistele tarbijatele.</span>
               </label>
+              {mode === "advanced" ? (
+                <div className="sm:col-span-2">
+                  <AdvancedInputAccordion title="4) Täpsemad seaded">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="field-label">
+                        <span className="field-label-text">Laadimise algusaeg</span>
+                        <input className="input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                        <span className="field-hint">Akna algus odavaima aja leidmiseks.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Laadimise lõppaeg</span>
+                        <input className="input" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                        <span className="field-hint">Akna lõpp odavaima aja leidmiseks.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Kasuta börsihinda</span>
+                        <select className="input" value={useSpotPrice ? "jah" : "ei"} onChange={(e) => setUseSpotPrice(e.target.value === "jah")}>
+                          <option value="ei">Ei</option>
+                          <option value="jah">Jah</option>
+                        </select>
+                        <span className="field-hint">Aktiivne: kasutab Eleringi hindu.</span>
+                      </label>
+                      <label className="field-label">
+                        <span className="field-label-text">Öine laadimine</span>
+                        <select className="input" value={nightCharging ? "jah" : "ei"} onChange={(e) => setNightCharging(e.target.value === "jah")}>
+                          <option value="jah">Jah</option>
+                          <option value="ei">Ei</option>
+                        </select>
+                        <span className="field-hint">Piirab otsingu valitud ajavahemikku.</span>
+                      </label>
+                    </div>
+                  </AdvancedInputAccordion>
+                </div>
+              ) : null}
             </div>
+            {mode === "advanced" && useSpotPrice ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <button type="button" className="btn-ghost" onClick={findCheapestSpotWindow} disabled={spotState.loading}>
+                  {spotState.loading ? "Laen hindu..." : "Leia odavaim laadimisaken"}
+                </button>
+                {spotState.note ? <p className="mt-2 text-sm text-zinc-300">{spotState.note}</p> : null}
+                {spotState.cheapest ? <p className="text-sm text-emerald-200">Soovituslik aken: {spotState.cheapest}</p> : null}
+              </div>
+            ) : null}
           </article>
 
           <article className="card">
@@ -183,6 +473,28 @@ export function EvLaadiminePageClient() {
                   <span className="metric-unit">EUR</span>
                 </div>
                 <p className="metric-help">Arvutus põhineb hinnal ja laaditaval energial.</p>
+              </div>
+              <div className="metric-card metric-card-accent-teal">
+                <p className="metric-label">Soovitatav laadija suurus</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.recommended || CHARGER_STEPS_KW[0]}</strong>
+                  <span className="metric-unit">kW</span>
+                </div>
+                <p className="metric-help">Ümardatud sammud: 2.3, 3.7, 7.4, 11, 22 kW.</p>
+              </div>
+              <div className="metric-card metric-card-accent-emerald">
+                <p className="metric-label">Kas 11 kW sobib</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.fits11 ? "Jah" : "Ei"}</strong>
+                </div>
+                <p className="metric-help">Põhineb peakaitsme kasutataval võimsusel ja reservil.</p>
+              </div>
+              <div className="metric-card metric-card-accent-emerald">
+                <p className="metric-label">Kas 22 kW sobib</p>
+                <div className="metric-main">
+                  <strong className="metric-value">{result.fits22 ? "Jah" : "Ei"}</strong>
+                </div>
+                <p className="metric-help">Enamasti vajab suuremat liitumist/koormusjuhtimist.</p>
               </div>
               <div className="metric-card metric-card-accent-teal sm:col-span-2">
                 <p className="metric-label">Soovituslik 1-faasiline laadija</p>
@@ -208,12 +520,21 @@ export function EvLaadiminePageClient() {
               <p className="mt-2 text-xs text-zinc-400">
                 Eeldatav “EV jaoks vaba võimsus”: 1-faasiline ~{result.p1.toFixed(1)} kW, 3-faasiline ~{result.p3.toFixed(1)} kW.
               </p>
+              {result.smallFuseWarning ? (
+                <p className="mt-2 rounded-lg border border-rose-300/30 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
+                  Peakaitse on EV laadimiseks väga väike. Kontrolli liitumise suurendamist või vähenda laadimisvõimsust.
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs text-zinc-300">
+                Koormusjuhtimine: {result.needsLoadManagement ? "soovitatav" : "võib olla mitte vajalik"}.
+              </p>
               {result.warning22kw ? (
                 <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
                   {result.warning22kw}
                 </p>
               ) : null}
             </div>
+            <UsedAssumptionsBlock {...assumptionsInfo} />
           </article>
         </div>
       </section>

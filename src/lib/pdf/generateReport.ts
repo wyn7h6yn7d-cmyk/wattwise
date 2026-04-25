@@ -7,7 +7,7 @@ import {
   drawMetricGrid,
   drawAssumptionsTable,
   drawRecommendationBox,
-  drawDisclaimerBlock,
+  drawDisclaimerBlockWithText,
   drawKeyValueTable,
   calcSubtitle,
   defaultRecommendation,
@@ -17,6 +17,17 @@ import { drawCashflowChart } from "@/lib/pdf/charts";
 import type { PdfReportPayload } from "@/lib/pdf/types";
 
 export async function generatePremiumReport(payload: PdfReportPayload) {
+  const analysisBasisText =
+    payload.analysisBasis === "advanced"
+      ? "Tulemus põhineb kasutaja sisestatud täpsematel andmetel."
+      : "See tulemus kasutab osaliselt vaikimisi eeldusi.";
+  const formulas = payload.formulas ?? [
+    { label: "Valemid", value: "Põhinäitajad arvutatakse sisendite põhjal; täpne valem sõltub kalkulaatori tüübist." },
+  ];
+  const risksAndLimits = payload.risksAndLimits ?? [
+    { label: "Riskid", value: "Tegelik tulemus võib erineda turutingimuste, kasutusprofiili ja tehniliste piirangute tõttu." },
+  ];
+
   const pdf = await PDFDocument.create();
   const fonts = {
     regular: await pdf.embedFont(StandardFonts.Helvetica),
@@ -45,7 +56,9 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     const primary = payload.metrics[0] ?? { label: "Peamine tulemus", value: "—" };
     drawSummaryCard(page, fonts, { x: pdfTheme.margin, y: 560, w: A4.width - pdfTheme.margin * 2, h: 180 }, {
       headline: "Kokkuvõte",
-      note: "Tegu on sisestatud andmete ja valitud eelduste põhjal koostatud informatiivse analüüsiga.",
+      note:
+        payload.summary ??
+        `Tegu on sisestatud andmete ja valitud eelduste põhjal koostatud informatiivse analüüsiga. ${analysisBasisText}`,
       primaryLabel: primary.label,
       primaryValue: primary.value,
       secondary: payload.metrics.slice(1, 5).map((m) => [m.label, m.value]),
@@ -73,9 +86,9 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
       page,
       fonts,
       { x: pdfTheme.margin, y: 118, w: A4.width - pdfTheme.margin * 2, h: 100 },
-      payload.assumptions ?? [
+      [{ label: "Arvutuse alus", value: analysisBasisText }, ...(payload.assumptions ?? [
         { label: "Märkus", value: "Eeldused on valitud konservatiivselt ja võivad erineda tegelikkusest." },
-      ],
+      ])],
       "Eeldused (kokkuvõte)",
     );
 
@@ -128,19 +141,9 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     const rec = payload.recommendation ?? defaultRecommendation(payload.calculatorType);
     drawRecommendationBox(page, fonts, { x: pdfTheme.margin, y: 520, w: A4.width - pdfTheme.margin * 2, h: 220 }, rec.title, rec.bullets);
 
-    drawAssumptionsTable(
-      page,
-      fonts,
-      { x: pdfTheme.margin, y: 300, w: A4.width - pdfTheme.margin * 2, h: 200 },
-      [
-        { label: "Võtmetegurid", value: "Elektrihind, omatarve, investeering, tootmine/tulu eeldus." },
-        { label: "Riskid", value: "Hinna kõikumine, sisendite ebatäpsus, tehnilised piirangud, regulatiivsed muutused." },
-        { label: "Järgmine samm", value: "Tee üks alternatiivne stsenaarium ja võrdle, milline sisend mõjutab tulemust enim." },
-      ],
-      "Võtmetegurid ja riskid",
-    );
-
-    drawDisclaimerBlock(page, fonts, { x: pdfTheme.margin, y: 120, w: A4.width - pdfTheme.margin * 2, h: 160 });
+    drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 418, w: A4.width - pdfTheme.margin * 2, h: 102 }, formulas, "Valemite lühiselgitus");
+    drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 220, w: A4.width - pdfTheme.margin * 2, h: 188 }, risksAndLimits, "Riskid ja piirangud");
+    drawDisclaimerBlockWithText(page, fonts, { x: pdfTheme.margin, y: 80, w: A4.width - pdfTheme.margin * 2, h: 130 }, payload.disclaimer);
     drawFooter(page, fonts);
   }
 

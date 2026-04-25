@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   eurMWhToSntKWh,
   eurMWhToSntKWhWithVat,
+  eurMWhToEurKWh,
   formatSntKWh,
 } from "../elering";
 import { calculateComparison } from "../calculator";
 import type { CalculatorInput } from "../../types/calculator";
 import { mainFusePower3fKw } from "./ev";
 import { annualPeakShavingSavingsEur, possibleCutKw, requiredCutKw } from "./peak-shaving";
+import { toRatio } from "../units";
+import { calculateVppModel } from "./vpp";
+import { calculateElectricityPlan } from "./electricity-plan";
 
 function baseSolarInput(overrides: Partial<CalculatorInput> = {}): CalculatorInput {
   return {
@@ -45,11 +49,20 @@ function baseSolarInput(overrides: Partial<CalculatorInput> = {}): CalculatorInp
     selfConsumptionBoostWithBatteryPercent: 15,
     degradationPercent: 0.6,
     periodYears: 20,
+    location: "",
+    specificYieldKwhPerKw: 975,
+    inverterReplacementYear: 12,
+    inverterReplacementCostEur: 1200,
+    batteryEfficiencyPercent: 92,
     ...overrides,
   };
 }
 
 describe("unit conversions", () => {
+  it("100 €/MWh equals 0.10 €/kWh", () => {
+    expect(eurMWhToEurKWh(100)).toBeCloseTo(0.1, 6);
+  });
+
   it("100 €/MWh equals 10 snt/kWh", () => {
     expect(eurMWhToSntKWh(100)).toBeCloseTo(10, 6);
   });
@@ -64,6 +77,16 @@ describe("unit conversions", () => {
 });
 
 describe("solar calculator sanity", () => {
+  it("solar annual net benefit formula gives expected value", () => {
+    const result = calculateComparison(baseSolarInput());
+    expect(result.selected.annualNetBenefitEur).toBeCloseTo(914.56, 2);
+  });
+
+  it("self-consumption percent converts both 76 and 0.76 correctly", () => {
+    expect(toRatio(76)).toBeCloseTo(0.76, 6);
+    expect(toRatio(0.76)).toBeCloseTo(0.76, 6);
+  });
+
   it("12 kW solar setup does not produce million-euro annual savings", () => {
     const result = calculateComparison(baseSolarInput());
     expect(result.selected.annualSavingsEur).toBeLessThan(1_000_000);
@@ -97,5 +120,64 @@ describe("EV and peak shaving formulas", () => {
     expect(needCut).toBe(30);
     expect(possible).toBe(20);
     expect(annual).toBeCloseTo(1560, 6);
+  });
+
+  it("peak shaving identifies limiting factor through min-cut logic", () => {
+    const needCut = requiredCutKw(120, 90); // 30
+    const powerLimited = possibleCutKw(needCut, 20, 200, 1); // power limited
+    const energyLimited = possibleCutKw(needCut, 100, 10, 1); // energy limited
+    expect(powerLimited).toBe(20);
+    expect(energyLimited).toBe(10);
+  });
+});
+
+describe("VPP and electricity plan formulas", () => {
+  it("VPP scenario multipliers produce conservative/base/optimistic", () => {
+    const model = calculateVppModel({
+      capacityKwh: "100",
+      powerKw: "50",
+      investmentEur: "60000",
+      annualRevenueEur: "12000",
+      lifetimeYears: "10",
+      efficiencyPct: "92",
+      cyclesPerYear: "220",
+      degradationPct: "2",
+      annualOandMEur: "250",
+      minimumResidualPct: "10",
+      revenueType: "annual",
+      arbitrageSpreadEurMwh: "85",
+      revenuePerKwYear: "180",
+      financingCostPct: "6",
+      calculationPeriodYears: "10",
+      riskCoefficientPct: "100",
+      availabilityPct: "95",
+    });
+    const conservative = model.perScenario[0].netRevYear1;
+    const base = model.perScenario[1].netRevYear1;
+    const optimistic = model.perScenario[2].netRevYear1;
+    expect(conservative).toBeLessThan(base);
+    expect(optimistic).toBeGreaterThan(base);
+  });
+
+  it("electricity plan does not add VAT twice", () => {
+    const common = {
+      mode: "quick" as const,
+      monthlyBreakdown: Array.from({ length: 12 }, () => ""),
+      monthlyKwh: "400",
+      daySharePct: "55",
+      nightSharePct: "45",
+      spotEurKwh: "0.10",
+      fixedEurKwh: "0.12",
+      spotMarginEurKwh: "0.01",
+      gridFeeEurKwh: "0.04",
+      renewableFeeEurKwh: "0.001",
+      exciseEurKwh: "0.0015",
+      spotMonthlyFeeEur: "2",
+      fixedMonthlyFeeEur: "3",
+      networkMonthlyFeeEur: "4",
+    };
+    const withoutVatInPrices = calculateElectricityPlan({ ...common, pricesIncludeVat: false });
+    const withVatAlreadyInPrices = calculateElectricityPlan({ ...common, pricesIncludeVat: true });
+    expect(withoutVatInPrices.spotAnnualCost / withVatAlreadyInPrices.spotAnnualCost).toBeCloseTo(1.24, 2);
   });
 });

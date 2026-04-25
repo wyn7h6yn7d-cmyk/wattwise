@@ -7,6 +7,8 @@ import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
+import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
+import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
@@ -44,6 +46,11 @@ const defaults: CalculatorInput = {
   selfConsumptionBoostWithBatteryPercent: 15,
   degradationPercent: 0.6,
   periodYears: 20,
+  location: "",
+  specificYieldKwhPerKw: 975,
+  inverterReplacementYear: 12,
+  inverterReplacementCostEur: 1200,
+  batteryEfficiencyPercent: 92,
 };
 
 type NordPoolState = { loading: boolean; message: string; source: "live" | "fallback" | "none" };
@@ -90,6 +97,7 @@ function toNumber(value: string): number {
 }
 
 export function SolarCalculatorPage() {
+  const [mode, setMode] = useState<"quick" | "advanced">("quick");
   const calculatorRef = useRef<HTMLElement | null>(null);
   // Vormi ei salvestata brauserisse — iga külastus/uuendus on puhas sessioon (teised ei näe sinu numbreid kunagi serveri poolelt).
   const [input, setInput] = useState<CalculatorInput>(defaults);
@@ -149,13 +157,16 @@ export function SolarCalculatorPage() {
 
   const validationErrors = useMemo(() => {
     const list: string[] = [];
-    if (input.annualProductionKwh <= 0) list.push("Aastane tootmine peab olema suurem kui 0.");
+    if (input.pvPowerKw <= 0) list.push("Süsteemi võimsus peab olema suurem kui 0.");
     if (input.annualConsumptionKwh <= 0) list.push("Aastane tarbimine peab olema suurem kui 0.");
-    if (input.manualSpotPrice < 0) list.push("Elektri hind ei tohi olla negatiivne.");
+    if ((input.priceSource === "manual" ? input.manualSpotPrice : input.nordPoolAveragePrice) < 0)
+      list.push("Elektri hind ei tohi olla negatiivne.");
     if (input.hasBattery && input.batteryCapacityKwh <= 0)
       list.push("Akuga stsenaariumis lisa aku mahtuvus.");
+    if (mode === "advanced" && input.batteryEfficiencyPercent > 0 && input.batteryEfficiencyPercent > 100)
+      list.push("Aku efektiivsus peab olema vahemikus 0...100%.");
     return list;
-  }, [input]);
+  }, [input, mode]);
 
   const fetchNordPool = async () => {
     setNordPoolState({ loading: true, message: "Laen Nord Pool hinda...", source: "none" });
@@ -237,6 +248,9 @@ export function SolarCalculatorPage() {
           pdfSessionId: unlock.pdfSessionId,
           payload: {
             calculatorType: "paikesejaam",
+            summary:
+              "Kokkuvõte on koostatud sisestatud andmete ning valitud eelduste põhjal päikesejaama tasuvuse hindamiseks.",
+            analysisBasis: mode === "advanced" ? "advanced" : "defaults",
             inputs: [
               {
                 group: "Süsteem",
@@ -270,6 +284,37 @@ export function SolarCalculatorPage() {
               { label: "Diskontomäär", value: `${formatNum(input.discountRatePercent, 1)}%` },
               { label: "Degradatsioon", value: `${formatNum(input.degradationPercent, 1)}% / a` },
             ],
+            formulas: [
+              {
+                label: "Tootmine",
+                value:
+                  "Aastane tootmine = süsteemi võimsus * spetsiifiline tootlus * suuna/kalde tegur * (1 - varjutus).",
+              },
+              {
+                label: "Netokasu",
+                value: "Netokasu = aastane sääst + võrku müügitulu - hoolduskulu.",
+              },
+              {
+                label: "Tasuvusaeg",
+                value: "Tasuvusaeg = investeering / netokasu (kuvatakse vaid kui netokasu > 0).",
+              },
+            ],
+            risksAndLimits: [
+              {
+                label: "Elektrihind",
+                value: "Tulemus sõltub oluliselt elektrihinna arengust ja omatarbe osakaalust.",
+              },
+              {
+                label: "Tootlikkus",
+                value: "Ilmastik, varjutus ja tehniline seisukord võivad tegelikku tootmist muuta.",
+              },
+              {
+                label: "Piirang",
+                value: "Raport on informatiivne hinnang ega asenda detailprojekti.",
+              },
+            ],
+            disclaimer:
+              "Analüüs põhineb kasutaja sisestatud andmetel ja eeldustel. Tegu on informatiivse tööriistaga, mitte siduva finants- ega investeerimisnõuga.",
             metrics: [
               { label: "Hinnanguline aastane sääst", value: `${formatNum(result.selected.annualSavingsEur, 0)} €` },
               {
@@ -317,6 +362,37 @@ export function SolarCalculatorPage() {
   const fmtKwh = (value: number) => `${formatNum(value, 0)} kWh`;
   const isEmptyInputs =
     input.annualConsumptionKwh <= 0 || (input.annualProductionKwh <= 0 && input.pvPowerKw <= 0);
+  const assumptionsInfo = useMemo(() => {
+    const userInputs: string[] = [];
+    if (input.pvPowerKw > 0) userInputs.push(`Süsteemi võimsus: ${formatNum(input.pvPowerKw, 1)} kW`);
+    if (input.annualConsumptionKwh > 0) userInputs.push(`Aastane tarbimine: ${formatNum(input.annualConsumptionKwh, 0)} kWh`);
+    if (input.pvCostEur > 0) userInputs.push(`Investeering: ${formatNum(input.pvCostEur, 0)} €`);
+    if (input.selfConsumptionWithoutBatteryPercent > 0) userInputs.push(`Omatarve: ${formatNum(input.selfConsumptionWithoutBatteryPercent, 0)}%`);
+    if (mode === "advanced" && input.location.trim()) userInputs.push(`Asukoht: ${input.location}`);
+
+    const defaultsUsed: string[] = [];
+    if (mode === "quick") defaultsUsed.push("Tootluse eeldus: Eesti vaikimisi tootlikkus (900-1050 kWh/kW/a).");
+    if (!input.location.trim()) defaultsUsed.push("Asukoha täpsustus puudub, kasutati üldist Eesti eeldust.");
+    if (mode === "advanced" && input.degradationPercent === defaults.degradationPercent) defaultsUsed.push("Paneelide degradatsioon: 0,6% aastas.");
+    if (mode === "advanced" && input.discountRatePercent === defaults.discountRatePercent) defaultsUsed.push("Diskontomäär: 4%.");
+
+    const apiValues =
+      input.priceSource === "nordpool"
+        ? [`Nord Pool keskmine hind: ${formatNum(input.nordPoolAveragePrice, 3)} €/kWh`]
+        : [];
+
+    return {
+      userInputs,
+      defaultAssumptions: defaultsUsed,
+      apiValues,
+      mostInfluentialInputs: [
+        "Elektri ostuhind ja selle kasv",
+        "Süsteemi võimsus ja tootlikkus",
+        "Omatarbe osakaal",
+        "Investeeringu suurus",
+      ],
+    };
+  }, [input, mode]);
 
   return (
     <div className="glass-panel rounded-3xl p-6 sm:p-8">
@@ -358,7 +434,26 @@ export function SolarCalculatorPage() {
         >
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <h3 className="text-xl font-semibold text-zinc-50">Sisendid</h3>
-            <p className="text-sm text-zinc-400">Lihtsustatud vaade: ainult kõige olulisemad sisendid.</p>
+            <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+              <button
+                type="button"
+                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                  mode === "quick" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+                }`}
+                onClick={() => setMode("quick")}
+              >
+                Kiire hinnang
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                  mode === "advanced" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+                }`}
+                onClick={() => setMode("advanced")}
+              >
+                Täpsem arvutus
+              </button>
+            </div>
           </div>
 
           <form className="grid gap-6" onSubmit={onSubmit}>
@@ -378,20 +473,8 @@ export function SolarCalculatorPage() {
                     />
                   </Field>
                   <Field
-                    label="Aastane tootmine (kWh)"
-                    hint="Kui täpset toodangut ei tea, kasuta hinnangut 850–1000 kWh per kW aastas."
+                    label="Aastane elektritarbimine (kWh)"
                   >
-                    <input
-                      className="input"
-                      type="text"
-                      inputMode="numeric"
-                      value={numValue(input.annualProductionKwh)}
-                      onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setInput({ ...input, annualProductionKwh: toNumber(e.target.value) })}
-                      placeholder="nt 11000"
-                    />
-                  </Field>
-                  <Field label="Aastane elektritarbimine (kWh)">
                     <input
                       className="input"
                       type="text"
@@ -405,28 +488,73 @@ export function SolarCalculatorPage() {
                       placeholder="nt 9000"
                     />
                   </Field>
-                  <Field label="Aku olemasolu">
-                    <select className="input" value={input.hasBattery ? "jah" : "ei"} onChange={(e) => setInput({ ...input, hasBattery: e.target.value === "jah" })}>
-                      <option value="jah">Jah</option>
-                      <option value="ei">Ei</option>
-                    </select>
-                  </Field>
-                  <Field label="Aku mahtuvus (kWh)" hint="Täida ainult siis, kui aku on olemas.">
+                  <Field label="Elektri ostuhind (€/kWh)">
                     <input
                       className="input"
                       type="text"
                       inputMode="decimal"
-                      value={numValue(input.batteryCapacityKwh)}
+                      value={priceText.manualSpotPrice}
                       onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setInput({ ...input, batteryCapacityKwh: toNumber(e.target.value) })}
-                      placeholder="nt 10"
+                      onChange={(e) => setPriceField("manualSpotPrice", e.target.value)}
+                      onBlur={() =>
+                        setInput((prev) => ({ ...prev, manualSpotPrice: toNumber(priceText.manualSpotPrice) }))
+                      }
+                      placeholder="nt 0,12"
+                    />
+                  </Field>
+                  <Field label="Omatarbe protsent (%)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.selfConsumptionWithoutBatteryPercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) =>
+                        setInput({
+                          ...input,
+                          selfConsumptionWithoutBatteryPercent: toNumber(e.target.value),
+                        })
+                      }
+                      placeholder="nt 55"
+                    />
+                  </Field>
+                  <Field label="Investeering (€)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.pvCostEur)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, pvCostEur: toNumber(e.target.value) })}
+                      placeholder="nt 12000"
                     />
                   </Field>
                 </div>
               </article>
 
+              {mode === "advanced" ? (
               <article className="card">
-                <h4 className="section-title">2) Elektrihind</h4>
+                <div className="mb-3 flex justify-end">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() =>
+                      setInput((prev) => ({
+                        ...prev,
+                        specificYieldKwhPerKw: 975,
+                        degradationPercent: 0.6,
+                        annualPriceGrowthPercent: 3,
+                        discountRatePercent: 4,
+                        inverterReplacementYear: 12,
+                        inverterReplacementCostEur: 1200,
+                        batteryEfficiencyPercent: 92,
+                      }))
+                    }
+                  >
+                    Taasta vaikimisi
+                  </button>
+                </div>
+                <AdvancedInputAccordion title="2) Hinnad ja kulud" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Elektrihinna allikas">
                     <select className="input" value={input.priceSource} onChange={(e) => setInput({ ...input, priceSource: e.target.value as CalculatorInput["priceSource"] })}>
@@ -523,11 +651,68 @@ export function SolarCalculatorPage() {
                   Efektiivne ostuhind = börsihind + võrgutasu + margin. Praegu:{" "}
                   <span className="font-medium text-zinc-200">{formatNum(draftResult.effectiveEnergyPrice, 3)} €/kWh</span>
                 </p>
+                </AdvancedInputAccordion>
               </article>
+              ) : null}
 
+              {mode === "advanced" ? (
               <article className="card">
-                <h4 className="section-title">3) Investeering</h4>
+                <AdvancedInputAccordion title="1) Põhiandmed">
                 <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Asukoht / maakond">
+                    <input
+                      className="input"
+                      type="text"
+                      value={input.location}
+                      onChange={(e) => setInput({ ...input, location: e.target.value })}
+                      placeholder="nt Harjumaa"
+                    />
+                  </Field>
+                  <Field label="Spetsiifiline tootlus (kWh/kW/a)" hint="Vaikimisi Eesti vahemik 900-1050.">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.specificYieldKwhPerKw)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, specificYieldKwhPerKw: toNumber(e.target.value) })}
+                      placeholder="nt 975"
+                    />
+                  </Field>
+                </div>
+                </AdvancedInputAccordion>
+                <div className="mt-3" />
+                <AdvancedInputAccordion title="3) Tehnilised eeldused">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Katuse suund">
+                    <select className="input" value={input.panelDirection} onChange={(e) => setInput({ ...input, panelDirection: e.target.value as CalculatorInput["panelDirection"] })}>
+                      <option value="louna">Louna</option>
+                      <option value="ida-laas">Ida-laas</option>
+                      <option value="muu">Muu</option>
+                    </select>
+                  </Field>
+                  <Field label="Katuse kalle (kraadid)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.tiltDeg)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, tiltDeg: toNumber(e.target.value) })}
+                      placeholder="nt 35"
+                    />
+                  </Field>
+                  <Field label="Varjutus (%)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.shadingPercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, shadingPercent: toNumber(e.target.value) })}
+                      placeholder="nt 8"
+                    />
+                  </Field>
                   <Field label="PV süsteemi maksumus (€)">
                     <input
                       className="input"
@@ -591,12 +776,112 @@ export function SolarCalculatorPage() {
                       <option value={25}>25</option>
                     </select>
                   </Field>
+                  <Field label="Paneelide degradatsioon (%/a)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.degradationPercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, degradationPercent: toNumber(e.target.value) })}
+                      placeholder="nt 0,6"
+                    />
+                  </Field>
+                  <Field label="Elektrihinna kasv (%/a)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.annualPriceGrowthPercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, annualPriceGrowthPercent: toNumber(e.target.value) })}
+                      placeholder="nt 3"
+                    />
+                  </Field>
+                  <Field label="Diskontomäär (%)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.discountRatePercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, discountRatePercent: toNumber(e.target.value) })}
+                      placeholder="nt 4"
+                    />
+                  </Field>
+                </div>
+                </AdvancedInputAccordion>
+                <div className="mt-3" />
+                <AdvancedInputAccordion title="4) Täpsemad seaded">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Inverteri vahetuse aasta">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.inverterReplacementYear)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, inverterReplacementYear: toNumber(e.target.value) })}
+                      placeholder="nt 12"
+                    />
+                  </Field>
+                  <Field label="Inverteri vahetuse kulu (€)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.inverterReplacementCostEur)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, inverterReplacementCostEur: toNumber(e.target.value) })}
+                      placeholder="nt 1200"
+                    />
+                  </Field>
+                  <Field label="Aku olemasolu">
+                    <select className="input" value={input.hasBattery ? "jah" : "ei"} onChange={(e) => setInput({ ...input, hasBattery: e.target.value === "jah" })}>
+                      <option value="jah">Jah</option>
+                      <option value="ei">Ei</option>
+                    </select>
+                  </Field>
+                  <Field label="Aku maht (kWh)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.batteryCapacityKwh)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, batteryCapacityKwh: toNumber(e.target.value) })}
+                      placeholder="nt 10"
+                    />
+                  </Field>
+                  <Field label="Aku investeering (€)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      value={numValue(input.batteryCostEur)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, batteryCostEur: toNumber(e.target.value) })}
+                      placeholder="nt 6000"
+                    />
+                  </Field>
+                  <Field label="Aku efektiivsus (%)">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={numValue(input.batteryEfficiencyPercent)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setInput({ ...input, batteryEfficiencyPercent: toNumber(e.target.value) })}
+                      placeholder="nt 92"
+                    />
+                  </Field>
                 </div>
                 <p className="mt-3 text-xs text-zinc-400">
-                  Täpsemad tehnilised eeldused (suund, varjutus, kasutegur, degradatsioon, hinnakasv)
-                  on seadistatud konservatiivsete vaikimisi väärtustega.
+                  Vaikimisi kasutatakse Eesti tootlikkuse vahemikku (900-1050 kWh/kW/a), kui täpsem asukohapõhine tootlus puudub.
                 </p>
+                </AdvancedInputAccordion>
               </article>
+              ) : null}
             </div>
 
             {errors.length > 0 ? (
@@ -627,35 +912,38 @@ export function SolarCalculatorPage() {
             Efektiivne elektri hind arvutuses:{" "}
             <strong>{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
           </p>
+          {result.usedPriceUnit === "eur_per_mwh_converted" ? (
+            <p className="mt-2 text-sm text-amber-200">
+              Tuvastati sisend €/MWh kujul ja teisendati automaatselt €/kWh väärtuseks.
+            </p>
+          ) : null}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="metric-card metric-card-primary metric-card-accent-emerald">
-              <p className="metric-label">Olulisim: hinnanguline aastane sääst</p>
+              <p className="metric-label">Olulisim: aastane netokasu</p>
               <div className="metric-main">
                 <strong className="metric-value">
-                  {Math.round(result.selected.annualSavingsEur).toLocaleString("et-EE")}
+                  {Math.round(result.selected.annualNetBenefitEur).toLocaleString("et-EE")}
                 </strong>
                 <span className="metric-unit">EUR/a</span>
               </div>
-              <p className="metric-help">Aastane netosääst omatarbe, müügi ja tasude arvestusega.</p>
+              <p className="metric-help">Aastane sääst + müügitulu - hoolduskulu.</p>
             </div>
             <div className="metric-card metric-card-accent-teal">
-              <p className="metric-label">Lihtne tasuvusaeg</p>
+              <p className="metric-label">Aastane tootmine</p>
               <div className="metric-main">
-                <strong className="metric-value">
-                  {Number.isFinite(result.paybackYears) ? result.paybackYears.toFixed(1) : "—"}
-                </strong>
-                <span className="metric-unit">aastat</span>
+                <strong className="metric-value">{formatNum(result.selected.annualProductionKwh, 0)}</strong>
+                <span className="metric-unit">kWh</span>
               </div>
-              <p className="metric-help">Investeeringu hinnanguline tasuvus lihtsustatud mudelis.</p>
+              <p className="metric-help">Valemi põhjal arvutatud aastane tootlikkus.</p>
             </div>
             <div className="metric-card metric-card-accent-teal">
-              <p className="metric-label">Omakasutus</p>
+              <p className="metric-label">Aastane sääst</p>
               <div className="metric-main">
-                <strong className="metric-value">{formatNum(result.selected.selfConsumptionRatePercent, 1)}</strong>
-                <span className="metric-unit">%</span>
+                <strong className="metric-value">{formatNum(result.selected.annualSavingsEur, 0)}</strong>
+                <span className="metric-unit">EUR/a</span>
               </div>
-              <p className="metric-help">Toodangust kohapeal ära kasutatud osa.</p>
+              <p className="metric-help">Omatarbe osa rahaline mõju aastas.</p>
             </div>
             <div className="metric-card metric-card-accent-emerald">
               <p className="metric-label">Võrku müük</p>
@@ -666,24 +954,40 @@ export function SolarCalculatorPage() {
               <p className="metric-help">Aastane energia, mis läheb võrku tagasi.</p>
             </div>
             <div className="metric-card metric-card-accent-emerald">
-              <p className="metric-label">Kogutulu perioodis</p>
+              <p className="metric-label">Omatarve</p>
               <div className="metric-main">
-                <strong className="metric-value">
-                  {Math.round(result.selected.totalNetBenefitPeriodEur).toLocaleString("et-EE")}
-                </strong>
-                <span className="metric-unit">EUR</span>
+                <strong className="metric-value">{formatNum(result.selected.selfConsumptionRatePercent, 1)}</strong>
+                <span className="metric-unit">%</span>
               </div>
-              <p className="metric-help">Kumulatiivne netotulemus kogu valitud perioodil.</p>
+              <p className="metric-help">Toodangust kohapeal ära kasutatud osa.</p>
             </div>
             <div className="metric-card metric-card-accent-teal">
-              <p className="metric-label">Aku lisaväärtus</p>
+              <p className="metric-label">Lihtne tasuvusaeg</p>
               <div className="metric-main">
                 <strong className="metric-value">
-                  {Math.round(result.batteryAddedValuePeriodEur).toLocaleString("et-EE")}
+                  {Number.isFinite(result.paybackYears) ? result.paybackYears.toFixed(1) : "Tasuvus puudub"}
                 </strong>
+                <span className="metric-unit">a</span>
+              </div>
+              <p className="metric-help">Kui netokasu ≤ 0, tasuvusaega numbrina ei kuvata.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="metric-card metric-card-accent-emerald">
+              <p className="metric-label">NPV</p>
+              <div className="metric-main">
+                <strong className="metric-value">{formatNum(result.npvEur, 0)}</strong>
                 <span className="metric-unit">EUR</span>
               </div>
-              <p className="metric-help">Aku mõju kogu perioodi netotulemusele.</p>
+              <p className="metric-help">Diskonteeritud rahavoogude summa miinus alginvesteering.</p>
+            </div>
+            <div className="metric-card metric-card-accent-teal">
+              <p className="metric-label">Kogutulu perioodi jooksul</p>
+              <div className="metric-main">
+                <strong className="metric-value">{formatNum(result.totalRevenuePeriodEur, 0)}</strong>
+                <span className="metric-unit">EUR</span>
+              </div>
+              <p className="metric-help">Kumulatiivne netotulu ilma diskonteerimiseta.</p>
             </div>
           </div>
 
@@ -741,6 +1045,33 @@ export function SolarCalculatorPage() {
             </article>
 
             <article className="card">
+              <h4 className="section-title">Tundlikkus</h4>
+              <div className="grid gap-2 text-sm text-zinc-300">
+                <div className="compare-row">
+                  <span className="compare-label">Elektrihind -20% / +20%</span>
+                  <strong>
+                    {formatNum(result.sensitivity.electricityPriceMinus20, 0)} /{" "}
+                    {formatNum(result.sensitivity.electricityPricePlus20, 0)} EUR/a
+                  </strong>
+                </div>
+                <div className="compare-row">
+                  <span className="compare-label">Investeering -10% / +10%</span>
+                  <strong>
+                    {formatNum(result.sensitivity.investmentMinus10, 0)} /{" "}
+                    {formatNum(result.sensitivity.investmentPlus10, 0)} EUR
+                  </strong>
+                </div>
+                <div className="compare-row">
+                  <span className="compare-label">Tootlus -10% / +10%</span>
+                  <strong>
+                    {formatNum(result.sensitivity.yieldMinus10, 0)} /{" "}
+                    {formatNum(result.sensitivity.yieldPlus10, 0)} EUR/a
+                  </strong>
+                </div>
+              </div>
+            </article>
+
+            <article className="card">
               <h4 className="section-title">Energiavood</h4>
               <div className="mt-3 grid gap-2 text-sm">
                 <div>
@@ -775,6 +1106,7 @@ export function SolarCalculatorPage() {
               </div>
             </article>
           </div>
+          <UsedAssumptionsBlock {...assumptionsInfo} />
 
           <PaywallCard
             locked={!canViewFullAnalysis(unlock)}
@@ -821,11 +1153,20 @@ export function SolarCalculatorPage() {
                       Mobiilis: libista horisontaalselt, et näha kõiki aastaid.
                     </p>
                     <div className="relative mt-3 w-full">
+                      {(() => {
+                        const totalYears = result.selected.cashflowByYear.length;
+                        const tickStep =
+                          totalYears > 24 ? 4 : totalYears > 16 ? 3 : totalYears > 10 ? 2 : 1;
+                        return (
                       <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0 md:overflow-visible">
                         <div className="flex min-h-[13.5rem] min-w-max items-end gap-1.5 pb-1 sm:gap-2 md:min-h-0 md:min-w-0 md:w-full md:justify-between md:gap-2">
                           {result.selected.cashflowByYear.map((value, index) => {
                             const abs = Math.abs(value);
                             const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 6);
+                            const showTick =
+                              index === 0 ||
+                              index === totalYears - 1 ||
+                              index % tickStep === 0;
                             return (
                               <div
                                 key={`${value}-${index}`}
@@ -845,14 +1186,20 @@ export function SolarCalculatorPage() {
                                     title={`${formatNum(value, 0)} €`}
                                   />
                                 </div>
-                                <span className="text-center text-[10px] leading-none text-zinc-400 sm:text-[11px]">
-                                  {index + 1}
+                                <span
+                                  className={`text-center text-[10px] leading-none sm:text-[11px] ${
+                                    showTick ? "text-zinc-400" : "text-transparent"
+                                  }`}
+                                >
+                                  {showTick ? index + 1 : "."}
                                 </span>
                               </div>
                             );
                           })}
                         </div>
                       </div>
+                        );
+                      })()}
                     </div>
                   </>
                 )}

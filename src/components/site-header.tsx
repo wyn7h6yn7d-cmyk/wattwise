@@ -8,12 +8,18 @@ import Image from "next/image";
 const nav = [
   { href: "/", label: "Avaleht" },
   { href: "/kalkulaatorid", label: "Kalkulaatorid" },
+  { href: "/energiaprognoos", label: "Energiaprognoos" },
   { href: "/borsihind", label: "Börsihind" },
   { href: "/pricing", label: "Hinnad" },
   { href: "/kontakt", label: "Kontakt" },
 ];
 
 const calculatorLinks = [
+  {
+    href: "/energiaprognoos",
+    label: "Energiaprognoos",
+    description: "Ilm + kiirgus + börsihind ühes vaates.",
+  },
   {
     href: "/kalkulaatorid/paikesejaam",
     label: "Päikesejaam",
@@ -79,8 +85,13 @@ export function SiteHeader() {
               priority
             />
           </div>
-          <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
-            Energiakalkulaator
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
+              Energiakalkulaator
+            </div>
+            <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.18)]">
+              Beta
+            </span>
           </div>
         </Link>
 
@@ -166,7 +177,12 @@ function MobileMenu({
                   className="h-[92%] w-[92%] object-contain"
                 />
               </div>
-              <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-amber-100">
+                  Beta
+                </span>
+              </div>
             </div>
             <button type="button" className="btn-ghost shrink-0" onClick={onClose} aria-label="Sulge menüü">
               Sulge

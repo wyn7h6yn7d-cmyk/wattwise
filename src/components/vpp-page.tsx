@@ -6,6 +6,9 @@ import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
 import { MiniCashflowChart } from "@/components/charts/mini-cashflow-chart";
+import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
+import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
+import { calculateVppModel } from "@/lib/calculators/vpp";
 
 function num(v: string): number {
   const n = Number(v.replace(",", "."));
@@ -15,49 +18,93 @@ function num(v: string): number {
 const fmtEur = (value: number) =>
   new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(value) + " €";
 
+type RevenueType = "annual" | "arbitrage" | "per_kw_year";
+
 export function VppPageClient() {
   const { projectId, unlock, purchaseBusy, startCheckout, checkPaymentStatus, message, setMessage } =
     useProjectUnlock();
+  const [mode, setMode] = useState<"quick" | "advanced">("quick");
   const [capacityKwh, setCapacityKwh] = useState("");
   const [powerKw, setPowerKw] = useState("");
   const [investmentEur, setInvestmentEur] = useState("");
-  const [annualRevenueEur, setAnnualRevenueEur] = useState(""); // baas-stsenaarium
+  const [annualRevenueEur, setAnnualRevenueEur] = useState("");
   const [lifetimeYears, setLifetimeYears] = useState("10");
   const [efficiencyPct, setEfficiencyPct] = useState("92");
+  const [cyclesPerYear, setCyclesPerYear] = useState("220");
+  const [degradationPct, setDegradationPct] = useState("2");
   const [annualOandMEur, setAnnualOandMEur] = useState("250");
+  const [minimumResidualPct, setMinimumResidualPct] = useState("10");
+  const [revenueType, setRevenueType] = useState<RevenueType>("annual");
+  const [arbitrageSpreadEurMwh, setArbitrageSpreadEurMwh] = useState("85");
+  const [revenuePerKwYear, setRevenuePerKwYear] = useState("180");
+  const [financingCostPct, setFinancingCostPct] = useState("6");
+  const [calculationPeriodYears, setCalculationPeriodYears] = useState("10");
+  const [riskCoefficientPct, setRiskCoefficientPct] = useState("100");
+  const [availabilityPct, setAvailabilityPct] = useState("95");
 
-  const model = useMemo(() => {
-    const inv = Math.max(num(investmentEur), 0);
-    const baseRev = Math.max(num(annualRevenueEur), 0);
-    const eff = Math.min(Math.max(num(efficiencyPct), 50), 99) / 100;
-    const years = Math.max(Math.round(num(lifetimeYears)), 1);
-    const opex = Math.max(num(annualOandMEur), 0);
+  const model = useMemo(() => calculateVppModel({
+    capacityKwh,
+    powerKw,
+    investmentEur,
+    annualRevenueEur,
+    lifetimeYears,
+    efficiencyPct,
+    cyclesPerYear,
+    degradationPct,
+    annualOandMEur,
+    minimumResidualPct,
+    revenueType,
+    arbitrageSpreadEurMwh,
+    revenuePerKwYear,
+    financingCostPct,
+    calculationPeriodYears,
+    riskCoefficientPct,
+    availabilityPct,
+  }), [
+    annualOandMEur,
+    annualRevenueEur,
+    efficiencyPct,
+    investmentEur,
+    lifetimeYears,
+    capacityKwh,
+    powerKw,
+    cyclesPerYear,
+    degradationPct,
+    minimumResidualPct,
+    revenueType,
+    arbitrageSpreadEurMwh,
+    revenuePerKwYear,
+    financingCostPct,
+    calculationPeriodYears,
+    riskCoefficientPct,
+    availabilityPct,
+  ]);
 
-    const scenarios = [
-      { key: "konservatiivne", label: "Konservatiivne (70%)", rev: baseRev * 0.7 },
-      { key: "baas", label: "Baas", rev: baseRev },
-      { key: "optimistlik", label: "Optimistlik (130%)", rev: baseRev * 1.3 },
-    ] as const;
+  const assumptionsInfo = useMemo(() => {
+    const userInputs: string[] = [];
+    if (num(capacityKwh) > 0) userInputs.push(`Aku maht: ${capacityKwh} kWh`);
+    if (num(powerKw) > 0) userInputs.push(`Aku võimsus: ${powerKw} kW`);
+    if (num(investmentEur) > 0) userInputs.push(`Investeering: ${investmentEur} €`);
+    if (revenueType === "annual" && num(annualRevenueEur) > 0) userInputs.push(`Aastane tulu: ${annualRevenueEur} €`);
+    if (mode === "advanced") userInputs.push(`Tulu tüüp: ${revenueType}`);
 
-    const perScenario = scenarios.map((s) => {
-      // netotulu = tulupotentsiaal * efficiency - hooldus
-      const netRevenueYear = s.rev * eff - opex;
-      // tasuvusaeg = investeering / netotulu
-      const payback = netRevenueYear > 0 ? inv / netRevenueYear : null;
-      // kogukasum = netotulu * eluiga - investeering
-      const totalProfit = netRevenueYear * years - inv;
-      const cashflows = Array.from({ length: years }, () => netRevenueYear);
-      return {
-        ...s,
-        cashflows,
-        netRevYear1: netRevenueYear,
-        totalProfit,
-        paybackYears: payback,
-      };
-    });
+    const defaultAssumptions: string[] = [];
+    if (mode === "quick") defaultAssumptions.push("Riski, kättesaadavuse ja degradatsiooni vaikimisi väärtused.");
+    if (mode === "quick" || num(efficiencyPct) === 92) defaultAssumptions.push("Roundtrip efficiency: 92%.");
+    if (mode === "quick" || num(availabilityPct) === 95) defaultAssumptions.push("Kättesaadavus: 95%.");
 
-    return { inv, eff, years, opex, perScenario };
-  }, [annualOandMEur, annualRevenueEur, efficiencyPct, investmentEur, lifetimeYears]);
+    return {
+      userInputs,
+      defaultAssumptions,
+      apiValues: [],
+      mostInfluentialInputs: [
+        "Aastane brutotulu / tulu tüüp",
+        "Riskikoefitsient ja kättesaadavus",
+        "Investeeringu suurus",
+        "Finantseerimiskulu",
+      ],
+    };
+  }, [capacityKwh, powerKw, investmentEur, annualRevenueEur, revenueType, mode, efficiencyPct, availabilityPct]);
 
   const downloadPdf = async () => {
     if (!projectId) return;
@@ -71,6 +118,9 @@ export function VppPageClient() {
           pdfSessionId: unlock.pdfSessionId,
           payload: {
             calculatorType: "vpp",
+            summary:
+              "VPP raport koondab sisestatud akuparameetrid, tulueeldused ja riskikordajad, et hinnata tasuvust.",
+            analysisBasis: mode === "advanced" ? "advanced" : "defaults",
             inputs: [
               {
                 group: "Aku ja investeering",
@@ -83,7 +133,8 @@ export function VppPageClient() {
               {
                 group: "Tulud ja eluiga",
                 items: [
-                  { label: "Aastane tulupotentsiaal", value: annualRevenueEur ? `${annualRevenueEur} €` : "—" },
+                  { label: "Tulu tüüp", value: revenueType },
+                  { label: "Aastane brutotulu", value: fmtEur(model.grossRevenueYear) },
                   { label: "Eluiga", value: `${lifetimeYears} a` },
                   { label: "Efektiivsus", value: `${efficiencyPct}%` },
                 ],
@@ -92,22 +143,53 @@ export function VppPageClient() {
                 group: "Kulud ja eeldused",
                 items: [
                   { label: "Hooldus (€/a)", value: annualOandMEur ? `${annualOandMEur} €` : "—" },
-                  { label: "Round-trip efficiency", value: `${efficiencyPct}%` },
-                  { label: "Eluiga", value: `${lifetimeYears} a` },
+                  { label: "Tsüklid aastas", value: `${cyclesPerYear || "—"}` },
+                  { label: "Riskikoefitsient", value: `${riskCoefficientPct}%` },
+                  { label: "Kättesaadavus", value: `${availabilityPct}%` },
                 ],
               },
             ],
-            assumptions: [{ label: "Märkus", value: "Mudel tugineb sisestatud tulueeldustele. Turupõhine tegelik tulu võib erineda." }],
+            assumptions: [
+              {
+                label: "Märkus",
+                value:
+                  "VPP tegelik tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumistest.",
+              },
+            ],
+            formulas: [
+              {
+                label: "Brutotulu",
+                value: "Brutotulu sõltub valitud tulu tüübist: aastane tulu, €/kW/a või arbitraaži spread.",
+              },
+              {
+                label: "Netotulu",
+                value: "Netotulu = brutotulu * kättesaadavus * riskikoefitsient - hooldus - finantseerimiskulu.",
+              },
+              {
+                label: "Tasuvusaeg",
+                value: "Tasuvusaeg = investeering / netotulu (kui netotulu on positiivne).",
+              },
+            ],
+            risksAndLimits: [
+              { label: "Tururisk", value: "Börsihinna kõikumine ja turulepääsu tingimused mõjutavad tulu tugevalt." },
+              { label: "Tehniline risk", value: "Aku degradatsioon ja kättesaadavus võivad vähendada realiseeruvat tulu." },
+              { label: "Lepingurisk", value: "Lepingutingimused ja teenustasud võivad muuta netotulemust." },
+            ],
+            disclaimer:
+              "Tegu on informatiivse mudeliga. Tegelik VPP tulu sõltub turust, lepingutest ja tehnilisest kasutusest.",
             metrics: [
+              { label: "Aastane brutotulu", value: fmtEur(model.perScenario[1]?.grossRevenueYear ?? 0) },
               { label: "Baas: netotulu (aasta 1)", value: fmtEur(model.perScenario[1]?.netRevYear1 ?? 0) },
-              { label: "Baas: tasuvusaeg", value: model.perScenario[1]?.paybackYears ? `${model.perScenario[1].paybackYears.toFixed(1)} a` : "—" },
+              {
+                label: "Baas: tasuvusaeg",
+                value: model.perScenario[1]?.paybackYears ? `${model.perScenario[1].paybackYears.toFixed(1)} a` : "—",
+              },
               { label: "Baas: kogukasum", value: fmtEur(model.perScenario[1]?.totalProfit ?? 0) },
-              { label: "Efektiivsus", value: `${efficiencyPct}%` },
-              { label: "Eluiga", value: `${lifetimeYears} a` },
-              { label: "Investeering", value: investmentEur ? `${investmentEur} €` : "—" },
+              { label: "Peamine riskitegur", value: model.mainRiskFactor },
+              { label: "Arvutusperiood", value: `${calculationPeriodYears} a` },
             ],
             charts: {
-              cashflowByYear: (model.perScenario[1]?.cashflows ?? []).slice(1).map((v, idx) => ({
+              cashflowByYear: (model.perScenario[1]?.cashflows ?? []).map((v, idx) => ({
                 year: idx + 1,
                 cashflow: v,
               })),
@@ -157,6 +239,26 @@ export function VppPageClient() {
           Lihtne hinnang aku osalemisele paindlikkuse teenustes. Sisesta eeldused ja vaata, mis suurusjärgus
           võiks tulemus olla.
         </p>
+        <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              mode === "quick" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+            }`}
+            onClick={() => setMode("quick")}
+          >
+            Kiire hinnang
+          </button>
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              mode === "advanced" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+            }`}
+            onClick={() => setMode("advanced")}
+          >
+            Täpsem arvutus
+          </button>
+        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="field-label">
@@ -214,36 +316,134 @@ export function VppPageClient() {
             </select>
             <span className="field-hint">Arvutusperiood aastates.</span>
           </label>
-          <label className="field-label">
-            <span className="field-label-text">Round-trip efficiency (%)</span>
-            <input
-              className={`input ${num(efficiencyPct) < 70 ? "input-warning" : ""}`}
-              value={efficiencyPct}
-              inputMode="decimal"
-              onChange={(e) => setEfficiencyPct(e.target.value)}
-              placeholder="nt 92"
-            />
-            <span className="field-hint">Aku tsükli kasutegur.</span>
-          </label>
-          <label className="field-label">
-            <span className="field-label-text">Hooldus (€/a)</span>
-            <input
-              className="input"
-              value={annualOandMEur}
-              inputMode="numeric"
-              onChange={(e) => setAnnualOandMEur(e.target.value)}
-              placeholder="nt 250"
-            />
-            <span className="field-hint">Aastane hoolduskulu.</span>
-          </label>
+          {mode === "advanced" ? (
+            <div className="sm:col-span-2 grid gap-3">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    setEfficiencyPct("92");
+                    setCyclesPerYear("220");
+                    setDegradationPct("2");
+                    setAnnualOandMEur("250");
+                    setMinimumResidualPct("10");
+                    setRevenueType("annual");
+                    setArbitrageSpreadEurMwh("85");
+                    setRevenuePerKwYear("180");
+                    setFinancingCostPct("6");
+                    setCalculationPeriodYears("10");
+                    setRiskCoefficientPct("100");
+                    setAvailabilityPct("95");
+                  }}
+                >
+                  Taasta vaikimisi
+                </button>
+              </div>
+              <AdvancedInputAccordion title="1) Põhiandmed" defaultOpen>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field-label">
+                    <span className="field-label-text">Tulu tüüp</span>
+                    <select className="input" value={revenueType} onChange={(e) => setRevenueType(e.target.value as RevenueType)}>
+                      <option value="annual">Kasutaja sisestatud aastane tulu</option>
+                      <option value="arbitrage">Arbitraaž spread (€/MWh)</option>
+                      <option value="per_kw_year">Tulu €/kW/aastas</option>
+                    </select>
+                    <span className="field-hint">Vali, mille alusel brutotulu arvutatakse.</span>
+                  </label>
+                  {revenueType === "arbitrage" ? (
+                    <label className="field-label">
+                      <span className="field-label-text">Arbitraaž spread (€/MWh)</span>
+                      <input
+                        className="input"
+                        value={arbitrageSpreadEurMwh}
+                        inputMode="decimal"
+                        onChange={(e) => setArbitrageSpreadEurMwh(e.target.value)}
+                        placeholder="nt 85"
+                      />
+                      <span className="field-hint">Keskmine hinnaerinevus laadimise/tühjenduse vahel.</span>
+                    </label>
+                  ) : null}
+                  {revenueType === "per_kw_year" ? (
+                    <label className="field-label">
+                      <span className="field-label-text">Tulu (€/kW/aastas)</span>
+                      <input
+                        className="input"
+                        value={revenuePerKwYear}
+                        inputMode="decimal"
+                        onChange={(e) => setRevenuePerKwYear(e.target.value)}
+                        placeholder="nt 180"
+                      />
+                      <span className="field-hint">Lepinguline tulu võimsusühiku kohta aastas.</span>
+                    </label>
+                  ) : null}
+                </div>
+              </AdvancedInputAccordion>
+              <AdvancedInputAccordion title="2) Hinnad ja kulud">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field-label">
+                    <span className="field-label-text">Hoolduskulu (€/a)</span>
+                    <input className="input" value={annualOandMEur} inputMode="numeric" onChange={(e) => setAnnualOandMEur(e.target.value)} placeholder="nt 250" />
+                    <span className="field-hint">Aastane püsikulu, mis vähendab netotulu.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Finantseerimiskulu (%)</span>
+                    <input className="input" value={financingCostPct} inputMode="decimal" onChange={(e) => setFinancingCostPct(e.target.value)} placeholder="nt 6" />
+                    <span className="field-hint">Kapitali hind aastases arvestuses.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Minimaalne jääkväärtus (%)</span>
+                    <input className="input" value={minimumResidualPct} inputMode="decimal" onChange={(e) => setMinimumResidualPct(e.target.value)} placeholder="nt 10" />
+                    <span className="field-hint">Eeldatav väärtus perioodi lõpus investeeringust.</span>
+                  </label>
+                </div>
+              </AdvancedInputAccordion>
+              <AdvancedInputAccordion title="3) Tehnilised eeldused">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field-label">
+                    <span className="field-label-text">Roundtrip efficiency (%)</span>
+                    <input className={`input ${num(efficiencyPct) < 70 ? "input-warning" : ""}`} value={efficiencyPct} inputMode="decimal" onChange={(e) => setEfficiencyPct(e.target.value)} placeholder="nt 92" />
+                    <span className="field-hint">Mitu protsenti energiast jääb tsükli järel alles.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Tsüklite arv aastas</span>
+                    <input className="input" value={cyclesPerYear} inputMode="numeric" onChange={(e) => setCyclesPerYear(e.target.value)} placeholder="nt 220" />
+                    <span className="field-hint">Kui sageli aku aktiivselt turul osaleb.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Aku degradatsioon (%/a)</span>
+                    <input className="input" value={degradationPct} inputMode="decimal" onChange={(e) => setDegradationPct(e.target.value)} placeholder="nt 2" />
+                    <span className="field-hint">Tootlikkuse vähenemine aastate jooksul.</span>
+                  </label>
+                </div>
+              </AdvancedInputAccordion>
+              <AdvancedInputAccordion title="4) Täpsemad seaded">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field-label">
+                    <span className="field-label-text">Arvutusperiood (a)</span>
+                    <input className="input" value={calculationPeriodYears} inputMode="numeric" onChange={(e) => setCalculationPeriodYears(e.target.value)} placeholder="nt 10" />
+                    <span className="field-hint">Mitu aastat detailset rahavoogu hinnatakse.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Riskikoefitsient (%)</span>
+                    <input className="input" value={riskCoefficientPct} inputMode="decimal" onChange={(e) => setRiskCoefficientPct(e.target.value)} placeholder="nt 90" />
+                    <span className="field-hint">Vähendab brutotulu realistlikumale tasemele.</span>
+                  </label>
+                  <label className="field-label">
+                    <span className="field-label-text">Kättesaadavus (%)</span>
+                    <input className="input" value={availabilityPct} inputMode="decimal" onChange={(e) => setAvailabilityPct(e.target.value)} placeholder="nt 95" />
+                    <span className="field-hint">Seisakute mõju: 100% tähendab katkestusi pole.</span>
+                  </label>
+                </div>
+              </AdvancedInputAccordion>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-zinc-200">
           <strong className="block text-zinc-50">Märkus</strong>
           <p className="mt-1 text-zinc-300">
-            {FEATURES.paywallEnabled
-              ? "Detailsem VPP simulatsioon (stsenaariumid, risk ja rahavoog) on arenduses."
-              : "Beetaversioon: mudel on lihtsustatud ja tugineb sinu sisestatud tulueeldustele."}
+            VPP tegelik tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumistest.
           </p>
         </div>
       </section>
@@ -265,14 +465,24 @@ export function VppPageClient() {
         <h2 className="text-2xl font-semibold text-zinc-50">Tulemused</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="metric-card metric-card-primary metric-card-accent-emerald">
-            <p className="metric-label">Olulisim: baas netotulu (aasta 1)</p>
+            <p className="metric-label">Olulisim: aastane netotulu (baas)</p>
             <div className="metric-main">
               <strong className="metric-value">
                 {Math.round(model.perScenario[1]?.netRevYear1 ?? 0).toLocaleString("et-EE")}
               </strong>
               <span className="metric-unit">EUR/a</span>
             </div>
-            <p className="metric-help">Aastane netotulu pärast efektiivsuse ja hoolduse arvestamist.</p>
+            <p className="metric-help">Brutotulu * kättesaadavus * risk - hooldus - finantseerimiskulu.</p>
+          </div>
+          <div className="metric-card metric-card-accent-teal">
+            <p className="metric-label">Aastane brutotulu (baas)</p>
+            <div className="metric-main">
+              <strong className="metric-value">
+                {Math.round(model.perScenario[1]?.grossRevenueYear ?? 0).toLocaleString("et-EE")}
+              </strong>
+              <span className="metric-unit">EUR/a</span>
+            </div>
+            <p className="metric-help">Tulupõhine lähteväärtus enne kulusid ja riskikorrektuuri.</p>
           </div>
           <div className="metric-card metric-card-accent-teal">
             <p className="metric-label">Baas: tasuvusaeg</p>
@@ -299,8 +509,8 @@ export function VppPageClient() {
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
           <p className="font-medium text-zinc-100">Märkused</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Mudel tugineb sisestatud tulueeldustele; tegelik tulu sõltub turuolukorrast ja lepingust.</li>
-            <li>Efektiivsus, hooldus ja degradatsioon mõjutavad tulemusi oluliselt.</li>
+            <li>Brutotulu arvutus sõltub valitud tulu tüübist (aastane, arbitraaž või €/kW/a).</li>
+            <li>Netotulu arvestab kättesaadavust, riskikordajat, hoolduskulu ja finantseerimiskulu.</li>
             <li>Vaata kolme stsenaariumi ja vali konservatiivne eeldus, kui tulemus läheb otsuse aluseks.</li>
           </ul>
         </div>
@@ -321,7 +531,7 @@ export function VppPageClient() {
           </article>
           <article className="card">
             <h3 className="section-title">Rahavoog (baas)</h3>
-            <MiniCashflowChart cashflows={(model.perScenario[1]?.cashflows ?? []).slice(1)} />
+            <MiniCashflowChart cashflows={model.perScenario[1]?.cashflows ?? []} />
           </article>
         </div>
 
@@ -349,9 +559,7 @@ export function VppPageClient() {
                 </div>
               );
             })()}
-            <p className="mt-3 text-xs text-zinc-400">
-              VPP puhul mõjutab tulemust enim tulueeldus (€/a) ja aku kasutuskoormus.
-            </p>
+            <p className="mt-3 text-xs text-zinc-400">Peamine riskitegur: {model.mainRiskFactor}.</p>
           </article>
 
           <article className="card">
@@ -363,6 +571,7 @@ export function VppPageClient() {
             </ul>
           </article>
         </div>
+        <UsedAssumptionsBlock {...assumptionsInfo} />
 
         {FEATURES.paywallEnabled ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">

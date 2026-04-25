@@ -22,14 +22,15 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
     return () => mq.removeEventListener?.("change", update);
   }, []);
 
-  const particleCount = reducedMotion ? 0 : isMobile ? (intensity === "hero" ? 8 : 4) : intensity === "hero" ? 20 : 8;
-  const baseOpacity = intensity === "hero" ? 1.08 : 0.42;
+  const lowPerf = reducedMotion || isMobile;
+  const particleCount = lowPerf ? 0 : intensity === "hero" ? 12 : 4;
+  const baseOpacity = intensity === "hero" ? 0.86 : 0.3;
   const mobileFactor = isMobile ? 0.52 : 1;
   const motionFactor = reducedMotion ? 0.35 : 1;
   const k = baseOpacity * mobileFactor * motionFactor;
-  const strokeA = intensity === "hero" ? 2.5 : 1.25;
-  const strokeB = intensity === "hero" ? 2.05 : 1.05;
-  const strokeC = intensity === "hero" ? 1.75 : 0.95;
+  const strokeA = intensity === "hero" ? 2 : 1.1;
+  const strokeB = intensity === "hero" ? 1.7 : 0.95;
+  const strokeC = intensity === "hero" ? 1.4 : 0.85;
 
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${intensity === "hero" ? "energy-scene-hero" : "energy-scene-subtle"}`}>
@@ -80,7 +81,7 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
             <stop offset="1" stopColor="rgba(16,185,129,0.0)" />
           </linearGradient>
           <filter id={`blur_${seed}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation={2.2 * k} />
+            <feGaussianBlur stdDeviation={1.3 * k} />
           </filter>
         </defs>
 
@@ -99,7 +100,7 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
             strokeWidth={strokeB}
             fill="none"
           />
-          {intensity === "hero" && !isMobile ? (
+          {intensity === "hero" && !lowPerf ? (
             <path
               className="energy-line energy-line-3"
               d="M-80,410 C130,340 220,520 390,430 C560,340 710,450 880,380 C1040,315 1120,390 1270,330"
@@ -108,7 +109,7 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
               fill="none"
             />
           ) : null}
-          {intensity === "hero" && !reducedMotion ? (
+          {intensity === "hero" && !lowPerf ? (
             <path
               className="energy-line energy-line-4"
               d="M-90,120 C100,80 250,220 430,170 C580,130 760,210 900,160 C1030,120 1120,170 1260,130"

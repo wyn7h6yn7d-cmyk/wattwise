@@ -385,6 +385,23 @@ export function drawDisclaimerBlock(page: PDFPage, fonts: PdfFonts, box: Box) {
   });
 }
 
+export function drawDisclaimerBlockWithText(page: PDFPage, fonts: PdfFonts, box: Box, disclaimerText?: string) {
+  drawPanel(page, box, pdfTheme.colors.panel2);
+  const text =
+    disclaimerText ??
+    "Analüüs põhineb kasutaja sisestatud andmetel ja valitud eeldustel. Tegu on informatiivse tööriistaga ning raport ei ole finants-, investeerimis-, maksu- ega õigusnõu. Lõplike otsuste tegemisel soovitame vajadusel konsulteerida vastava ala spetsialistiga.";
+  drawText(page, "Disclaimer", { x: box.x + 14, y: box.y + box.h - 22, size: 10.5, font: fonts.bold, color: pdfTheme.colors.text });
+  drawText(page, text, { x: box.x + 14, y: box.y + box.h - 40, size: 9, font: fonts.regular, color: pdfTheme.colors.muted, maxWidth: box.w - 28 });
+  drawText(page, "Kontakt: Kenneth Alto · kennethalto95@gmail.com", {
+    x: box.x + 14,
+    y: box.y + 26,
+    size: 8.5,
+    font: fonts.regular,
+    color: pdfTheme.colors.muted,
+    maxWidth: box.w - 28,
+  });
+}
+
 export function calcSubtitle(type: string) {
   switch (type) {
     case "paikesejaam":

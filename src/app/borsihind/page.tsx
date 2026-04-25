@@ -69,7 +69,12 @@ export default async function BorsihindPage() {
         ) : null}
 
         {series && series.points.length > 0 ? (
-          <PriceViewClient points={series.points} intervalMinutes={series.intervalMinutes} nowTs={nowTs} />
+          <PriceViewClient
+            initialPoints={series.points}
+            initialIntervalMinutes={series.intervalMinutes}
+            nowTs={nowTs}
+            initialArea={series.area}
+          />
         ) : null}
       </main>
     </div>

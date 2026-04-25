@@ -39,6 +39,11 @@ export interface CalculatorInput {
   selfConsumptionBoostWithBatteryPercent: number;
   degradationPercent: number;
   periodYears: PeriodYears;
+  location: string;
+  specificYieldKwhPerKw: number;
+  inverterReplacementYear: number;
+  inverterReplacementCostEur: number;
+  batteryEfficiencyPercent: number;
 }
 
 export interface ScenarioResult {
@@ -65,4 +70,15 @@ export interface ComparisonResult {
   batteryAddedValuePeriodEur: number;
   interpretationKind: InterpretationKind;
   effectiveEnergyPrice: number;
+  npvEur: number;
+  totalRevenuePeriodEur: number;
+  sensitivity: {
+    electricityPriceMinus20: number;
+    electricityPricePlus20: number;
+    investmentMinus10: number;
+    investmentPlus10: number;
+    yieldMinus10: number;
+    yieldPlus10: number;
+  };
+  usedPriceUnit: "eur_per_kwh" | "eur_per_mwh_converted";
 }

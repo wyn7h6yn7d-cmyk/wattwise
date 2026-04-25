@@ -1239,8 +1239,8 @@ canvas {
   }
   .dashboard-pulse::before,
   .dashboard-pulse::after {
-    animation-duration: 12s;
-    opacity: 0.4;
+    animation: none;
+    opacity: 0.24;
   }
   .scene-horizon {
     left: 56%;
@@ -1302,6 +1302,40 @@ canvas {
       rgba(4, 8, 7, 0.42) 78%,
       rgba(4, 8, 7, 0) 94%
     );
+  }
+}
+
+@media (max-width: 1024px) {
+  .energy-aurora,
+  .energy-aurora-2,
+  .energy-grid,
+  .energy-glow-cloud,
+  .energy-pulse,
+  .scene-atmosphere,
+  .scene-ring-main,
+  .scene-ring-soft,
+  .scene-stars,
+  .scene-ridge,
+  .scene-panels,
+  .scene-energy-wash {
+    animation: none !important;
+  }
+
+  .energy-line,
+  .energy-line-2,
+  .energy-line-3,
+  .energy-line-4 {
+    animation-duration: 36s;
+  }
+
+  .glass-panel {
+    backdrop-filter: blur(12px);
+  }
+
+  .hero-reference-glow,
+  .dashboard-pulse::before,
+  .dashboard-pulse::after {
+    opacity: 0.2;
   }
 }
 
