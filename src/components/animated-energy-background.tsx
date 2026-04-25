@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-type Intensity = "hero" | "subtle";
+type AnimatedEnergyBackgroundProps = {
+  intensity?: "hero" | "subtle";
+};
 
-export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?: Intensity }) {
+export function AnimatedEnergyBackground({ intensity = "hero" }: AnimatedEnergyBackgroundProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const seed = intensity === "hero" ? 11 : 22;
+
   useEffect(() => {
-    const update = () => setIsMobile(window.matchMedia("(max-width: 640px)").matches);
+    const update = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
     update();
     window.addEventListener("resize", update, { passive: true });
     return () => window.removeEventListener("resize", update);
@@ -22,113 +24,55 @@ export function AnimatedEnergyBackground({ intensity = "subtle" }: { intensity?:
     return () => mq.removeEventListener?.("change", update);
   }, []);
 
-  const lowPerf = reducedMotion || isMobile;
-  const particleCount = reducedMotion ? 0 : isMobile ? (intensity === "hero" ? 4 : 2) : intensity === "hero" ? 10 : 8;
-  const baseOpacity = intensity === "hero" ? 0.86 : 0.3;
-  const mobileFactor = isMobile ? 0.52 : 1;
-  const motionFactor = reducedMotion ? 0.35 : 1;
-  const k = baseOpacity * mobileFactor * motionFactor;
-  const strokeA = intensity === "hero" ? 1.7 : 1;
-  const strokeB = intensity === "hero" ? 1.35 : 0.9;
-  const strokeC = intensity === "hero" ? 1.1 : 0.75;
-  const showLine2 = !reducedMotion;
-  const showLine3 = intensity === "hero" && !lowPerf;
-  const showLine4 = intensity === "hero" && !lowPerf && !isMobile;
+  const lineCount = isMobile ? 2 : 4;
+  const particleCount = isMobile ? 3 : 8;
+  const opacityFactor = intensity === "subtle" ? 0.72 : 1;
 
   return (
     <div
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${intensity === "hero" ? "energy-scene-hero" : "energy-scene-subtle"} ${reducedMotion ? "energy-scene-reduced" : ""}`}
+      className={`aeb-root ${reducedMotion ? "aeb-reduced" : ""}`}
       style={{ contain: "layout paint style" }}
+      aria-hidden="true"
     >
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(4,11,9,0.96) 0%, rgba(6,18,16,0.88) 58%, rgba(4,11,9,0.96) 100%)",
-          opacity: 0.96,
-        }}
-      />
-      <div className="absolute inset-0 energy-aurora" style={{ opacity: 0.7 * k }} />
-      {!reducedMotion ? (
-        <div className="absolute inset-0 energy-aurora energy-aurora-2" style={{ opacity: 0.45 * k }} />
-      ) : null}
-      <div className="absolute inset-0 energy-grid" style={{ opacity: 0.3 * k }} />
-      {!lowPerf ? (
-        <div className={`absolute inset-0 energy-pulse ${intensity === "hero" ? "energy-pulse-hero" : "energy-pulse-subtle"}`} style={{ opacity: 0.4 * k }} />
-      ) : null}
-      <div
-        className="absolute inset-0 energy-glow-cloud"
-        style={{ opacity: 0.35 * k }}
-      />
+      <div className="aeb-base" />
+      <div className="aeb-aurora aeb-aurora-a" style={{ opacity: 0.34 * opacityFactor }} />
+      <div className="aeb-aurora aeb-aurora-b" style={{ opacity: 0.3 * opacityFactor }} />
 
-      {particleCount > 0 ? (
-        <div className="absolute inset-0" style={{ opacity: 0.55 * k }}>
-          {Array.from({ length: particleCount }).map((_, i) => (
-            <span
-              // eslint-disable-next-line react/no-array-index-key
-              key={i}
-              className={`energy-dot energy-dot-${(i % 6) + 1}`}
-              style={{
-                left: `${(i * 7 + 13) % 92}%`,
-                top: `${(i * 11 + 17) % 78}%`,
-              }}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 1200 700"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
+      <svg className="aeb-lines" viewBox="0 0 1200 700" preserveAspectRatio="none" style={{ opacity: opacityFactor }}>
         <defs>
-          <linearGradient id={`g_${seed}`} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="aeb_line_grad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="rgba(16,185,129,0.0)" />
-            <stop offset="0.4" stopColor="rgba(16,185,129,0.35)" />
-            <stop offset="0.7" stopColor="rgba(20,184,166,0.28)" />
+            <stop offset="0.38" stopColor="rgba(16,185,129,0.65)" />
+            <stop offset="0.7" stopColor="rgba(45,212,191,0.6)" />
             <stop offset="1" stopColor="rgba(16,185,129,0.0)" />
           </linearGradient>
         </defs>
 
-        <g opacity={0.78 * k}>
-          <path
-            className="energy-line energy-line-1"
-            d="M-50,540 C180,430 240,610 420,520 C610,420 680,560 860,470 C1030,385 1100,470 1250,380"
-            stroke={`url(#g_${seed})`}
-            strokeWidth={strokeA}
-            fill="none"
-          />
-          {showLine2 ? (
-            <path
-              className="energy-line energy-line-2"
-              d="M-60,240 C130,190 260,310 410,250 C600,175 690,295 860,230 C1040,160 1100,260 1260,210"
-              stroke={`url(#g_${seed})`}
-              strokeWidth={strokeB}
-              fill="none"
-            />
+        <g>
+          <path className="aeb-line aeb-line-1" d="M-80,540 C180,450 260,600 460,500 C650,405 760,540 960,450 C1090,395 1160,420 1280,360" />
+          <path className="aeb-line aeb-line-2" d="M-70,250 C130,185 260,320 430,242 C590,170 760,292 910,220 C1070,155 1160,210 1280,180" />
+          {lineCount > 2 ? (
+            <path className="aeb-line aeb-line-3" d="M-90,410 C130,330 240,530 430,420 C620,322 760,452 940,372 C1075,320 1160,350 1280,300" />
           ) : null}
-          {showLine3 ? (
-            <path
-              className="energy-line energy-line-3"
-              d="M-80,410 C130,340 220,520 390,430 C560,340 710,450 880,380 C1040,315 1120,390 1270,330"
-              stroke={`url(#g_${seed})`}
-              strokeWidth={strokeC}
-              fill="none"
-            />
-          ) : null}
-          {showLine4 ? (
-            <path
-              className="energy-line energy-line-4"
-              d="M-90,120 C100,80 250,220 430,170 C580,130 760,210 900,160 C1030,120 1120,170 1260,130"
-              stroke={`url(#g_${seed})`}
-              strokeWidth={1.2}
-              fill="none"
-            />
+          {lineCount > 3 ? (
+            <path className="aeb-line aeb-line-4" d="M-100,130 C120,75 270,228 450,168 C620,115 790,230 960,162 C1080,122 1160,152 1280,122" />
           ) : null}
         </g>
       </svg>
+
+      <div className="aeb-particles" style={{ opacity: opacityFactor }}>
+        {Array.from({ length: particleCount }).map((_, i) => (
+          <span
+            // eslint-disable-next-line react/no-array-index-key
+            key={i}
+            className={`aeb-dot aeb-dot-${(i % 4) + 1}`}
+            style={{
+              left: `${(i * 11 + 12) % 92}%`,
+              top: `${(i * 13 + 18) % 74}%`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

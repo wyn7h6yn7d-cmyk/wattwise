@@ -110,6 +110,127 @@ canvas {
   transform: none;
 }
 
+.aeb-root {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aeb-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(3, 10, 8, 0.96) 0%, rgba(5, 14, 11, 0.93) 52%, rgba(2, 8, 7, 0.96) 100%);
+}
+
+.aeb-aurora {
+  position: absolute;
+  inset: -12%;
+  opacity: 0.34;
+  will-change: transform, opacity;
+}
+
+.aeb-aurora-a {
+  background: radial-gradient(52% 44% at 24% 28%, rgba(16, 185, 129, 0.5), transparent 72%);
+  transform: translate3d(0, 0, 0);
+  animation: aeb-aurora-a 11s ease-in-out infinite alternate;
+}
+
+.aeb-aurora-b {
+  background: radial-gradient(50% 42% at 76% 34%, rgba(45, 212, 191, 0.4), transparent 74%);
+  transform: translate3d(0, 0, 0);
+  animation: aeb-aurora-b 14s ease-in-out infinite alternate;
+}
+
+.aeb-lines {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.aeb-line {
+  fill: none;
+  stroke: url(#aeb_line_grad);
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-dasharray: 8 10;
+  stroke-dashoffset: 0;
+  opacity: 0.82;
+  animation: aeb-flow 3.4s linear infinite;
+}
+
+.aeb-line-2 { stroke-width: 1.2; animation-duration: 4.2s; opacity: 0.7; }
+.aeb-line-3 { stroke-width: 1.1; animation-duration: 4.8s; opacity: 0.62; }
+.aeb-line-4 { stroke-width: 1; animation-duration: 5.6s; opacity: 0.58; }
+
+.aeb-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.aeb-dot {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(167, 243, 208, 0.86);
+  opacity: 0.74;
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  animation: aeb-float 6.4s ease-in-out infinite;
+}
+
+.aeb-dot-2 { animation-duration: 7.2s; opacity: 0.65; }
+.aeb-dot-3 { animation-duration: 8s; opacity: 0.58; }
+.aeb-dot-4 { animation-duration: 8.8s; opacity: 0.7; }
+
+.aeb-reduced .aeb-aurora,
+.aeb-reduced .aeb-line,
+.aeb-reduced .aeb-dot {
+  animation: none !important;
+}
+
+@keyframes aeb-aurora-a {
+  0% { transform: translate3d(-2%, 1%, 0) scale(1); opacity: 0.26; }
+  100% { transform: translate3d(2%, -1%, 0) scale(1.03); opacity: 0.4; }
+}
+
+@keyframes aeb-aurora-b {
+  0% { transform: translate3d(2%, -1%, 0) scale(1); opacity: 0.2; }
+  100% { transform: translate3d(-2%, 1%, 0) scale(1.03); opacity: 0.34; }
+}
+
+@keyframes aeb-flow {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -72; }
+}
+
+@keyframes aeb-float {
+  0% { transform: translate3d(0, 0, 0); opacity: 0.34; }
+  50% { transform: translate3d(0, -8px, 0); opacity: 0.9; }
+  100% { transform: translate3d(0, 0, 0); opacity: 0.34; }
+}
+
+.hero-chart-line {
+  stroke-dasharray: 380;
+  stroke-dashoffset: 16;
+  animation: hero-chart-pulse 4.6s ease-in-out infinite alternate;
+}
+
+@keyframes hero-chart-pulse {
+  0% { stroke-dashoffset: 18; opacity: 0.88; }
+  100% { stroke-dashoffset: -6; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-chart-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 .premium-shell {
   position: relative;
 }
