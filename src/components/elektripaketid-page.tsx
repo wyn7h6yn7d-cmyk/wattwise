@@ -268,7 +268,7 @@ export function ElektripaketidPageClient() {
           Elektrimüüjate paketihinnad võivad muutuda. Kontrolli lõplik pakkumine alati müüja juures.
           Börsihinna andmed tulevad Eleringi turuandmetest.
           <div className="mt-2 text-zinc-400">
-            Näidispaketid on käsitsi hallatavad (`src/data/electricity-plans.ts`) ja viimati uuendatud:{" "}
+            Näidispakettide info on viimati uuendatud:{" "}
             <span className="text-zinc-200">{ELECTRICITY_PLANS_UPDATED_AT}</span>.
           </div>
         </div>
