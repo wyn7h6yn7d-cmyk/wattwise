@@ -42,6 +42,8 @@ export function VppPageClient() {
   const [calculationPeriodYears, setCalculationPeriodYears] = useState("");
   const [riskCoefficientPct, setRiskCoefficientPct] = useState("");
   const [availabilityPct, setAvailabilityPct] = useState("");
+  const [hasCalculated, setHasCalculated] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const model = useMemo(() => calculateVppModel({
     capacityKwh,
@@ -80,7 +82,12 @@ export function VppPageClient() {
     riskCoefficientPct,
     availabilityPct,
   ]);
-  const hasRequiredInputs = num(capacityKwh) > 0 && num(powerKw) > 0 && num(investmentEur) > 0;
+  const hasRequiredInputs =
+    num(capacityKwh) > 0 &&
+    num(powerKw) > 0 &&
+    num(investmentEur) > 0 &&
+    num(annualRevenueEur) > 0 &&
+    num(lifetimeYears) > 0;
 
   const assumptionsInfo = useMemo(() => {
     const userInputs: string[] = [];
@@ -91,9 +98,11 @@ export function VppPageClient() {
     if (mode === "advanced") userInputs.push(`Tulu tüüp: ${revenueType}`);
 
     const defaultAssumptions: string[] = [];
-    if (mode === "quick") defaultAssumptions.push("Riski, kättesaadavuse ja degradatsiooni vaikimisi väärtused.");
-    if (mode === "quick" || num(efficiencyPct) === 92) defaultAssumptions.push("Roundtrip efficiency: 92%.");
-    if (mode === "quick" || num(availabilityPct) === 95) defaultAssumptions.push("Kättesaadavus: 95%.");
+    defaultAssumptions.push(`Kättesaadavus: ${num(availabilityPct) > 0 ? num(availabilityPct) : 95}%`);
+    defaultAssumptions.push(`Efektiivsus: ${num(efficiencyPct) > 0 ? num(efficiencyPct) : 90}%`);
+    defaultAssumptions.push(`Riskikorrektuur: ${100 - (num(riskCoefficientPct) > 0 ? num(riskCoefficientPct) : 85)}%`);
+    defaultAssumptions.push(`Hoolduskulu: ${num(annualOandMEur) > 0 ? annualOandMEur : "0"} €/a`);
+    defaultAssumptions.push(`Eluiga: ${num(lifetimeYears) > 0 ? lifetimeYears : "—"} a`);
 
     return {
       userInputs,
@@ -105,7 +114,51 @@ export function VppPageClient() {
         "Investeeringu suurus",
       ],
     };
-  }, [capacityKwh, powerKw, investmentEur, annualRevenueEur, revenueType, mode, efficiencyPct, availabilityPct]);
+  }, [
+    capacityKwh,
+    powerKw,
+    investmentEur,
+    annualRevenueEur,
+    revenueType,
+    mode,
+    efficiencyPct,
+    availabilityPct,
+    riskCoefficientPct,
+    annualOandMEur,
+    lifetimeYears,
+  ]);
+
+  const handleCalculate = () => {
+    if (!hasRequiredInputs) {
+      setValidationMessage("Täida vajalikud väljad enne arvutamist.");
+      setHasCalculated(false);
+      return;
+    }
+    setValidationMessage(null);
+    setHasCalculated(true);
+  };
+
+  const handleReset = () => {
+    setCapacityKwh("");
+    setPowerKw("");
+    setInvestmentEur("");
+    setAnnualRevenueEur("");
+    setLifetimeYears("");
+    setEfficiencyPct("");
+    setCyclesPerYear("");
+    setDegradationPct("");
+    setAnnualOandMEur("");
+    setMinimumResidualPct("");
+    setRevenueType("annual");
+    setArbitrageSpreadEurMwh("");
+    setRevenuePerKwYear("");
+    setFinancingCostPct("");
+    setCalculationPeriodYears("");
+    setRiskCoefficientPct("");
+    setAvailabilityPct("");
+    setValidationMessage(null);
+    setHasCalculated(false);
+  };
 
   const sanityWarnings = useMemo(() => {
     const warnings: string[] = [];
@@ -322,6 +375,7 @@ export function VppPageClient() {
           <label className="field-label">
             <span className="field-label-text">Aku eluiga (a)</span>
             <select className="input" value={lifetimeYears} onChange={(e) => setLifetimeYears(e.target.value)}>
+              <option value="">Vali</option>
               <option value="5">5</option>
               <option value="7">7</option>
               <option value="10">10</option>
@@ -393,7 +447,7 @@ export function VppPageClient() {
                   ) : null}
                 </div>
               </AdvancedInputAccordion>
-              <AdvancedInputAccordion title="2) Hinnad ja kulud">
+              <AdvancedInputAccordion title="2) Hinnad ja kulud" defaultOpen>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field-label">
                     <span className="field-label-text">Hoolduskulu (€/a)</span>
@@ -412,7 +466,7 @@ export function VppPageClient() {
                   </label>
                 </div>
               </AdvancedInputAccordion>
-              <AdvancedInputAccordion title="3) Tehnilised eeldused">
+              <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field-label">
                     <span className="field-label-text">Roundtrip efficiency (%)</span>
@@ -431,7 +485,7 @@ export function VppPageClient() {
                   </label>
                 </div>
               </AdvancedInputAccordion>
-              <AdvancedInputAccordion title="4) Täpsemad seaded">
+              <AdvancedInputAccordion title="4) Täpsemad seaded" defaultOpen>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field-label">
                     <span className="field-label-text">Arvutusperiood (a)</span>
@@ -460,6 +514,19 @@ export function VppPageClient() {
             VPP tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumisest.
           </p>
         </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
+            Arvuta tulemus
+          </button>
+          <button type="button" className="btn-ghost w-full sm:w-auto" onClick={handleReset}>
+            Lähtesta
+          </button>
+        </div>
+        {validationMessage ? (
+          <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+            {validationMessage}
+          </p>
+        ) : null}
       </section>
 
       <PaywallCard
@@ -481,13 +548,12 @@ export function VppPageClient() {
           Mida see tähendab? Vaata esmalt baastsenaariumi netotulu ja tasuvusaega, seejärel võrdle konservatiivset
           ning optimistlikku vaadet.
         </p>
-        {!hasRequiredInputs ? (
+        {!hasCalculated ? (
           <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
-            <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
-            <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+            <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
           </div>
         ) : null}
-        {sanityWarnings.length > 0 ? (
+        {hasCalculated && sanityWarnings.length > 0 ? (
           <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
             <p className="font-medium">Kontrolli sisendeid enne otsust</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -497,7 +563,7 @@ export function VppPageClient() {
             </ul>
           </div>
         ) : null}
-        {hasRequiredInputs ? (
+        {hasCalculated && hasRequiredInputs ? (
           <>
         <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(20,184,166,0.12)]">
           <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
@@ -518,7 +584,7 @@ export function VppPageClient() {
               </strong>
               <span className="metric-unit">EUR/a</span>
             </div>
-            <p className="metric-help">Brutotulu * kättesaadavus * risk - hooldus - finantseerimiskulu.</p>
+            <p className="metric-help">Aastane brutotulu pärast eelduste arvestamist ja hoolduskulu mahaarvamist.</p>
           </div>
           <div className="metric-card metric-card-accent-teal">
             <p className="metric-label">Aastane brutotulu (baas)</p>

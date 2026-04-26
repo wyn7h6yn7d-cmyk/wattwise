@@ -112,6 +112,7 @@ export function SolarCalculatorPage() {
   }));
   const [errors, setErrors] = useState<string[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [hasCalculated, setHasCalculated] = useState(false);
   const [highlightCalculator, setHighlightCalculator] = useState(false);
   const [nordPoolState, setNordPoolState] = useState<NordPoolState>({
     loading: false,
@@ -227,10 +228,14 @@ export function SolarCalculatorPage() {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     setErrors(validationErrors);
-    if (validationErrors.length > 0) return;
+    if (validationErrors.length > 0) {
+      setHasCalculated(false);
+      return;
+    }
     setIsCalculating(true);
     window.setTimeout(() => {
       setResult(draftResult);
+      setHasCalculated(true);
       setIsCalculating(false);
     }, 700);
   };
@@ -670,7 +675,7 @@ export function SolarCalculatorPage() {
 
               {mode === "advanced" ? (
               <article className="card">
-                <AdvancedInputAccordion title="1) Põhiandmed">
+                <AdvancedInputAccordion title="1) Põhiandmed" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Asukoht / maakond">
                     <input
@@ -695,7 +700,7 @@ export function SolarCalculatorPage() {
                 </div>
                 </AdvancedInputAccordion>
                 <div className="mt-3" />
-                <AdvancedInputAccordion title="3) Tehnilised eeldused">
+                <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Katuse suund">
                     <select className="input" value={input.panelDirection} onChange={(e) => setInput({ ...input, panelDirection: e.target.value as CalculatorInput["panelDirection"] })}>
@@ -825,7 +830,7 @@ export function SolarCalculatorPage() {
                 </div>
                 </AdvancedInputAccordion>
                 <div className="mt-3" />
-                <AdvancedInputAccordion title="4) Täpsemad seaded">
+                <AdvancedInputAccordion title="4) Täpsemad seaded" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Inverteri vahetuse aasta">
                     <input
@@ -914,7 +919,7 @@ export function SolarCalculatorPage() {
               </div>
             ) : null}
             <button type="submit" className="btn-glow w-fit">
-              {isCalculating ? "Arvutan..." : "Uuenda tulemused"}
+              {isCalculating ? "Arvutan..." : "Arvuta tulemus"}
             </button>
             {isCalculating ? (
               <div
@@ -934,17 +939,18 @@ export function SolarCalculatorPage() {
             Mida see tähendab? Allolevad näitajad annavad kiire pildi, kui suur võiks olla aastane rahaline võit ja
             kui kiiresti investeering võiks tagasi tulla.
           </p>
-          {!hasRequiredInputs ? (
+          {!hasCalculated ? (
             <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
-              <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
-              <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+              <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
             </div>
           ) : null}
+          {hasCalculated ? (
           <p className="mt-2 text-zinc-300">
             Efektiivne elektri hind arvutuses:{" "}
             <strong>{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
           </p>
-          {sanityWarnings.length > 0 ? (
+          ) : null}
+          {hasCalculated && sanityWarnings.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
               <p className="font-medium">Kontrolli sisendeid enne otsust</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -954,12 +960,12 @@ export function SolarCalculatorPage() {
               </ul>
             </div>
           ) : null}
-          {result.usedPriceUnit === "eur_per_mwh_converted" ? (
+          {hasCalculated && result.usedPriceUnit === "eur_per_mwh_converted" ? (
             <p className="mt-2 text-sm text-amber-200">
               Tuvastati sisend €/MWh kujul ja teisendati automaatselt €/kWh väärtuseks.
             </p>
           ) : null}
-          {hasRequiredInputs ? (
+          {hasCalculated && hasRequiredInputs ? (
             <>
           <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
             <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>

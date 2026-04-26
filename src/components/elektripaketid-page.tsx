@@ -49,6 +49,8 @@ export function ElektripaketidPageClient() {
     loading: false,
     note: "",
   });
+  const [hasCalculated, setHasCalculated] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const hasValue = (v: string) => v.trim().length > 0;
 
@@ -128,6 +130,35 @@ export function ElektripaketidPageClient() {
     return warnings;
   }, [spotEurKwh, fixedEurKwh, monthlyKwh]);
   const hasRequiredInputs = toNumber(monthlyKwh) > 0 && toNumber(spotEurKwh) > 0 && toNumber(fixedEurKwh) > 0;
+
+  const handleCalculate = () => {
+    if (!hasRequiredInputs) {
+      setValidationMessage("Täida vajalikud väljad enne arvutamist.");
+      setHasCalculated(false);
+      return;
+    }
+    setValidationMessage(null);
+    setHasCalculated(true);
+  };
+
+  const handleReset = () => {
+    setMonthlyKwh("");
+    setMonthlyBreakdown(Array.from({ length: 12 }, () => ""));
+    setDaySharePct("");
+    setNightSharePct("");
+    setSpotEurKwh("");
+    setFixedEurKwh("");
+    setSpotMarginEurKwh("");
+    setGridFeeEurKwh("");
+    setRenewableFeeEurKwh("");
+    setExciseEurKwh("");
+    setSpotMonthlyFeeEur("");
+    setFixedMonthlyFeeEur("");
+    setNetworkMonthlyFeeEur("");
+    setSelectedTemplateId("");
+    setValidationMessage(null);
+    setHasCalculated(false);
+  };
 
   const applyTemplate = (id: string) => {
     const tpl = ELECTRICITY_PLAN_TEMPLATES.find((item) => item.id === id);
@@ -409,6 +440,19 @@ export function ElektripaketidPageClient() {
                 automaatselt kWh-põhisesse vaatesse.
               </p>
             ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
+                Arvuta tulemus
+              </button>
+              <button type="button" className="btn-ghost w-full sm:w-auto" onClick={handleReset}>
+                Lähtesta
+              </button>
+            </div>
+            {validationMessage ? (
+              <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+                {validationMessage}
+              </p>
+            ) : null}
           </article>
 
           <article className="card">
@@ -416,13 +460,12 @@ export function ElektripaketidPageClient() {
             <p className="mb-4 text-sm text-zinc-300">
               Mida see tähendab? Võrdle aastakulu vahet ja murdepunkti - nii näed, millise hinna juures valik muutub.
             </p>
-            {!hasRequiredInputs ? (
+            {!hasCalculated ? (
               <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
-                <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
-                <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+                <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
               </div>
             ) : null}
-            {sanityWarnings.length > 0 ? (
+            {hasCalculated && sanityWarnings.length > 0 ? (
               <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
                 <p className="font-medium">Kontrolli sisendeid enne otsust</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -432,7 +475,7 @@ export function ElektripaketidPageClient() {
                 </ul>
               </div>
             ) : null}
-            {hasRequiredInputs ? (
+            {hasCalculated && hasRequiredInputs ? (
               <>
             <div className="mb-5 rounded-2xl border border-teal-300/30 bg-teal-400/15 p-5 shadow-[0_0_30px_rgba(20,184,166,0.12)]">
               <p className="text-xs uppercase tracking-wide text-teal-100/80">Peamine tulemus</p>

@@ -69,22 +69,28 @@ export function calculateVppCore(input: VppCoreInput): VppCoreResult {
 }
 
 export function calculateVppModel(input: VppInput) {
+  const read = (value: string, fallback: number) => {
+    const raw = value.trim();
+    if (!raw) return fallback;
+    const parsed = toNumber(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
   const cap = Math.max(toNumber(input.capacityKwh), 0);
   const pwr = Math.max(toNumber(input.powerKw), 0);
   const inv = Math.max(toNumber(input.investmentEur), 0);
   const userRevenue = Math.max(toNumber(input.annualRevenueEur), 0);
-  const eff = Math.min(Math.max(toNumber(input.efficiencyPct), 50), 99.9) / 100;
-  const cycles = Math.max(toNumber(input.cyclesPerYear), 0);
+  const eff = Math.min(Math.max(read(input.efficiencyPct, 90), 50), 99.9) / 100;
+  const cycles = Math.max(read(input.cyclesPerYear, 0), 0);
   const degr = Math.min(Math.max(toNumber(input.degradationPct), 0), 25) / 100;
   const years = Math.max(Math.round(toNumber(input.lifetimeYears)), 1);
-  const calcYears = Math.max(Math.round(toNumber(input.calculationPeriodYears)), 1);
-  const opex = Math.max(toNumber(input.annualOandMEur), 0);
+  const calcYears = Math.max(Math.round(read(input.calculationPeriodYears, years)), 1);
+  const opex = Math.max(read(input.annualOandMEur, 0), 0);
   const residual = Math.min(Math.max(toNumber(input.minimumResidualPct), 0), 100) / 100;
   const spread = Math.max(toNumber(input.arbitrageSpreadEurMwh), 0);
   const perKwYear = Math.max(toNumber(input.revenuePerKwYear), 0);
-  const riskDiscountPct = Math.min(Math.max(100 - toNumber(input.riskCoefficientPct), 0), 100);
-  const availabilityPct = Math.min(Math.max(toNumber(input.availabilityPct), 0), 100);
-  const efficiencyPct = Math.min(Math.max(toNumber(input.efficiencyPct), 0), 100);
+  const riskDiscountPct = Math.min(Math.max(100 - read(input.riskCoefficientPct, 85), 0), 100);
+  const availabilityPct = Math.min(Math.max(read(input.availabilityPct, 95), 0), 100);
+  const efficiencyPct = Math.min(Math.max(read(input.efficiencyPct, 90), 0), 100);
 
   let annualRevenuePotential = 0;
   if (input.revenueType === "annual") annualRevenuePotential = userRevenue;

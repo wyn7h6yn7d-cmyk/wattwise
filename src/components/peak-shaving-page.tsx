@@ -41,6 +41,8 @@ export function PeakShavingPageClient() {
   const [annualMaintenanceEur, setAnnualMaintenanceEur] = useState("");
   const [demandFeeGrowthPct, setDemandFeeGrowthPct] = useState("");
   const [periodYears, setPeriodYears] = useState("");
+  const [hasCalculated, setHasCalculated] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const hasValue = (v: string) => v.trim().length > 0;
 
   const result = useMemo(() => {
@@ -208,6 +210,37 @@ export function PeakShavingPageClient() {
     toNumber(batteryKw) > 0 &&
     toNumber(demandFeeEurPerKwMonth) > 0;
 
+  const handleCalculate = () => {
+    if (!hasRequiredInputs) {
+      setValidationMessage("Täida vajalikud väljad enne arvutamist.");
+      setHasCalculated(false);
+      return;
+    }
+    setValidationMessage(null);
+    setHasCalculated(true);
+  };
+
+  const handleReset = () => {
+    setCurrentPeakKw("");
+    setTargetLimitKw("");
+    setBatteryKwh("");
+    setBatteryKw("");
+    setPeakHours("");
+    setDemandFeeEurPerKwMonth("");
+    setPeaksPerMonth("");
+    setAvgPeakDurationHours("");
+    setMinSocPct("");
+    setMaxUsableSocPct("");
+    setBatteryEfficiencyPct("");
+    setBatteryDegradationPct("");
+    setInvestmentEur("");
+    setAnnualMaintenanceEur("");
+    setDemandFeeGrowthPct("");
+    setPeriodYears("");
+    setValidationMessage(null);
+    setHasCalculated(false);
+  };
+
   return (
     <div className="grid gap-6">
       {message ? (
@@ -365,7 +398,7 @@ export function PeakShavingPageClient() {
                       </label>
                     </div>
                   </AdvancedInputAccordion>
-                  <AdvancedInputAccordion title="2) Hinnad ja kulud">
+                  <AdvancedInputAccordion title="2) Hinnad ja kulud" defaultOpen>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="field-label">
                         <span className="field-label-text">Investeering (€)</span>
@@ -384,7 +417,7 @@ export function PeakShavingPageClient() {
                       </label>
                     </div>
                   </AdvancedInputAccordion>
-                  <AdvancedInputAccordion title="3) Tehnilised eeldused">
+                  <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="field-label">
                         <span className="field-label-text">Aku minimaalne SOC (%)</span>
@@ -408,7 +441,7 @@ export function PeakShavingPageClient() {
                       </label>
                     </div>
                   </AdvancedInputAccordion>
-                  <AdvancedInputAccordion title="4) Täpsemad seaded">
+                  <AdvancedInputAccordion title="4) Täpsemad seaded" defaultOpen>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="field-label">
                         <span className="field-label-text">Arvutusperiood (a)</span>
@@ -420,6 +453,19 @@ export function PeakShavingPageClient() {
                 </div>
               ) : null}
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
+                Arvuta tulemus
+              </button>
+              <button type="button" className="btn-ghost w-full sm:w-auto" onClick={handleReset}>
+                Lähtesta
+              </button>
+            </div>
+            {validationMessage ? (
+              <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+                {validationMessage}
+              </p>
+            ) : null}
           </article>
 
           <article className="card">
@@ -428,13 +474,12 @@ export function PeakShavingPageClient() {
               Mida see tähendab? Kontrolli esmalt, kas soovitud lõige on realistlik, ja seejärel vaata hinnangulist
               aastast säästu.
             </p>
-            {!hasRequiredInputs ? (
+            {!hasCalculated ? (
               <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
-                <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
-                <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+                <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
               </div>
             ) : null}
-            {sanityWarnings.length > 0 ? (
+            {hasCalculated && sanityWarnings.length > 0 ? (
               <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
                 <p className="font-medium">Kontrolli sisendeid enne otsust</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -444,7 +489,7 @@ export function PeakShavingPageClient() {
                 </ul>
               </div>
             ) : null}
-            {hasRequiredInputs ? (
+            {hasCalculated && hasRequiredInputs ? (
               <>
             <div className="mb-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
               <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
