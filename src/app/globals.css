@@ -810,6 +810,10 @@ canvas {
   transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
+.input::placeholder {
+  color: rgb(148 163 184 / 0.6);
+}
+
 .input:focus-visible {
   outline: none;
   border-color: rgba(45, 212, 191, 0.78);

@@ -28,15 +28,15 @@ export function ElektripaketidPageClient() {
     useProjectUnlock();
 
   const [mode, setMode] = useState<Mode>("quick");
-  const [monthlyKwh, setMonthlyKwh] = useState("400");
+  const [monthlyKwh, setMonthlyKwh] = useState("");
   const [monthlyBreakdown, setMonthlyBreakdown] = useState(Array.from({ length: 12 }, () => ""));
-  const [daySharePct, setDaySharePct] = useState("55");
-  const [nightSharePct, setNightSharePct] = useState("45");
+  const [daySharePct, setDaySharePct] = useState("");
+  const [nightSharePct, setNightSharePct] = useState("");
 
-  const [spotEurKwh, setSpotEurKwh] = useState("0.12");
-  const [fixedEurKwh, setFixedEurKwh] = useState("0.16");
-  const [spotMarginEurKwh, setSpotMarginEurKwh] = useState("0.01");
-  const [gridFeeEurKwh, setGridFeeEurKwh] = useState("0.04");
+  const [spotEurKwh, setSpotEurKwh] = useState("");
+  const [fixedEurKwh, setFixedEurKwh] = useState("");
+  const [spotMarginEurKwh, setSpotMarginEurKwh] = useState("");
+  const [gridFeeEurKwh, setGridFeeEurKwh] = useState("");
   const [renewableFeeEurKwh, setRenewableFeeEurKwh] = useState("");
   const [exciseEurKwh, setExciseEurKwh] = useState("");
 
@@ -127,6 +127,7 @@ export function ElektripaketidPageClient() {
     }
     return warnings;
   }, [spotEurKwh, fixedEurKwh, monthlyKwh]);
+  const hasRequiredInputs = toNumber(monthlyKwh) > 0 && toNumber(spotEurKwh) > 0 && toNumber(fixedEurKwh) > 0;
 
   const applyTemplate = (id: string) => {
     const tpl = ELECTRICITY_PLAN_TEMPLATES.find((item) => item.id === id);
@@ -415,6 +416,12 @@ export function ElektripaketidPageClient() {
             <p className="mb-4 text-sm text-zinc-300">
               Mida see tähendab? Võrdle aastakulu vahet ja murdepunkti - nii näed, millise hinna juures valik muutub.
             </p>
+            {!hasRequiredInputs ? (
+              <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+                <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
+                <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+              </div>
+            ) : null}
             {sanityWarnings.length > 0 ? (
               <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
                 <p className="font-medium">Kontrolli sisendeid enne otsust</p>
@@ -425,6 +432,8 @@ export function ElektripaketidPageClient() {
                 </ul>
               </div>
             ) : null}
+            {hasRequiredInputs ? (
+              <>
             <div className="mb-5 rounded-2xl border border-teal-300/30 bg-teal-400/15 p-5 shadow-[0_0_30px_rgba(20,184,166,0.12)]">
               <p className="text-xs uppercase tracking-wide text-teal-100/80">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -504,12 +513,13 @@ export function ElektripaketidPageClient() {
             <p className="mt-3 text-xs text-zinc-400">
               Tulemus arvestab sisestatud tarbimist, energiahinda, võrgutasu, kuutasusid ja KM käsitlust.
             </p>
-            {toNumber(monthlyKwh) <= 0 ? (
-              <p className="mt-2 text-sm text-amber-200">
-                Tulemust ei saa usaldusväärselt arvutada, sest kuutarbimine on puudu või 0.
-              </p>
-            ) : null}
             <UsedAssumptionsBlock {...assumptionsInfo} />
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                Näidisväärtused on toodud placeholderina, mitte arvutuses kasutatava väärtusena.
+              </p>
+            )}
           </article>
         </div>
       </section>

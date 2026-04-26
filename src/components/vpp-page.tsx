@@ -25,23 +25,23 @@ export function VppPageClient() {
   const { projectId, unlock, purchaseBusy, startCheckout, checkPaymentStatus, message, setMessage } =
     useProjectUnlock();
   const [mode, setMode] = useState<"quick" | "advanced">("quick");
-  const [capacityKwh, setCapacityKwh] = useState("100");
-  const [powerKw, setPowerKw] = useState("50");
-  const [investmentEur, setInvestmentEur] = useState("60000");
-  const [annualRevenueEur, setAnnualRevenueEur] = useState("12000");
-  const [lifetimeYears, setLifetimeYears] = useState("10");
-  const [efficiencyPct, setEfficiencyPct] = useState("92");
-  const [cyclesPerYear, setCyclesPerYear] = useState("220");
-  const [degradationPct, setDegradationPct] = useState("2");
-  const [annualOandMEur, setAnnualOandMEur] = useState("250");
-  const [minimumResidualPct, setMinimumResidualPct] = useState("10");
+  const [capacityKwh, setCapacityKwh] = useState("");
+  const [powerKw, setPowerKw] = useState("");
+  const [investmentEur, setInvestmentEur] = useState("");
+  const [annualRevenueEur, setAnnualRevenueEur] = useState("");
+  const [lifetimeYears, setLifetimeYears] = useState("");
+  const [efficiencyPct, setEfficiencyPct] = useState("");
+  const [cyclesPerYear, setCyclesPerYear] = useState("");
+  const [degradationPct, setDegradationPct] = useState("");
+  const [annualOandMEur, setAnnualOandMEur] = useState("");
+  const [minimumResidualPct, setMinimumResidualPct] = useState("");
   const [revenueType, setRevenueType] = useState<RevenueType>("annual");
-  const [arbitrageSpreadEurMwh, setArbitrageSpreadEurMwh] = useState("85");
-  const [revenuePerKwYear, setRevenuePerKwYear] = useState("180");
-  const [financingCostPct, setFinancingCostPct] = useState("6");
-  const [calculationPeriodYears, setCalculationPeriodYears] = useState("10");
-  const [riskCoefficientPct, setRiskCoefficientPct] = useState("100");
-  const [availabilityPct, setAvailabilityPct] = useState("95");
+  const [arbitrageSpreadEurMwh, setArbitrageSpreadEurMwh] = useState("");
+  const [revenuePerKwYear, setRevenuePerKwYear] = useState("");
+  const [financingCostPct, setFinancingCostPct] = useState("");
+  const [calculationPeriodYears, setCalculationPeriodYears] = useState("");
+  const [riskCoefficientPct, setRiskCoefficientPct] = useState("");
+  const [availabilityPct, setAvailabilityPct] = useState("");
 
   const model = useMemo(() => calculateVppModel({
     capacityKwh,
@@ -80,6 +80,7 @@ export function VppPageClient() {
     riskCoefficientPct,
     availabilityPct,
   ]);
+  const hasRequiredInputs = num(capacityKwh) > 0 && num(powerKw) > 0 && num(investmentEur) > 0;
 
   const assumptionsInfo = useMemo(() => {
     const userInputs: string[] = [];
@@ -480,6 +481,12 @@ export function VppPageClient() {
           Mida see tähendab? Vaata esmalt baastsenaariumi netotulu ja tasuvusaega, seejärel võrdle konservatiivset
           ning optimistlikku vaadet.
         </p>
+        {!hasRequiredInputs ? (
+          <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+            <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
+            <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+          </div>
+        ) : null}
         {sanityWarnings.length > 0 ? (
           <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
             <p className="font-medium">Kontrolli sisendeid enne otsust</p>
@@ -490,6 +497,8 @@ export function VppPageClient() {
             </ul>
           </div>
         ) : null}
+        {hasRequiredInputs ? (
+          <>
         <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(20,184,166,0.12)]">
           <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
           <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -636,6 +645,12 @@ export function VppPageClient() {
               </button>
             </div>
           </div>
+        )}
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-400">
+            Näidisväärtused on toodud placeholderina, mitte arvutuses kasutatava väärtusena.
+          </p>
         )}
       </PaywallCard>
     </div>

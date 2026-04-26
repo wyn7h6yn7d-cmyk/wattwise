@@ -30,19 +30,19 @@ export function EvLaadiminePageClient() {
     useProjectUnlock();
 
   const [mode, setMode] = useState<"quick" | "advanced">("quick");
-  const [batteryKwh, setBatteryKwh] = useState("60");
-  const [energyToChargeKwh, setEnergyToChargeKwh] = useState("30");
-  const [chargerKw, setChargerKw] = useState("11");
-  const [priceEurKwh, setPriceEurKwh] = useState("0.16");
+  const [batteryKwh, setBatteryKwh] = useState("");
+  const [energyToChargeKwh, setEnergyToChargeKwh] = useState("");
+  const [chargerKw, setChargerKw] = useState("");
+  const [priceEurKwh, setPriceEurKwh] = useState("");
   const [phase, setPhase] = useState<"1" | "3">("3");
-  const [mainFuseA, setMainFuseA] = useState("25");
-  const [reserveKw, setReserveKw] = useState("2"); // muu koormus majas
+  const [mainFuseA, setMainFuseA] = useState("");
+  const [reserveKw, setReserveKw] = useState(""); // muu koormus majas
   const [startSocPct, setStartSocPct] = useState("");
   const [targetSocPct, setTargetSocPct] = useState("");
-  const [chargingLossPct, setChargingLossPct] = useState("8");
-  const [chargerEfficiencyPct, setChargerEfficiencyPct] = useState("92");
-  const [startTime, setStartTime] = useState("22:00");
-  const [endTime, setEndTime] = useState("07:00");
+  const [chargingLossPct, setChargingLossPct] = useState("");
+  const [chargerEfficiencyPct, setChargerEfficiencyPct] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [useSpotPrice, setUseSpotPrice] = useState(false);
   const [nightCharging, setNightCharging] = useState(true);
   const [spotState, setSpotState] = useState<{ loading: boolean; note: string; cheapest: string | null }>({
@@ -244,6 +244,7 @@ export function EvLaadiminePageClient() {
     }
     return warnings;
   }, [priceEurKwh, mainFuseA, result.timeH]);
+  const hasRequiredInputs = toNumber(energyToChargeKwh) > 0 && toNumber(chargerKw) > 0 && toNumber(priceEurKwh) > 0;
 
   return (
     <div className="grid gap-6">
@@ -486,6 +487,12 @@ export function EvLaadiminePageClient() {
               Mida see tähendab? Esmalt vaata laadimise aega, seejärel kontrolli, kas valitud laadija sobib sinu
               peakaitsmega.
             </p>
+            {!hasRequiredInputs ? (
+              <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+                <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
+                <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+              </div>
+            ) : null}
             {sanityWarnings.length > 0 ? (
               <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
                 <p className="font-medium">Kontrolli sisendeid enne otsust</p>
@@ -496,6 +503,8 @@ export function EvLaadiminePageClient() {
                 </ul>
               </div>
             ) : null}
+            {hasRequiredInputs ? (
+              <>
             <div className="mb-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
               <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -595,6 +604,12 @@ export function EvLaadiminePageClient() {
               </p>
             ) : null}
             <UsedAssumptionsBlock {...assumptionsInfo} />
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                Näidisväärtused on toodud placeholderina, mitte arvutuses kasutatava väärtusena.
+              </p>
+            )}
           </article>
         </div>
       </section>

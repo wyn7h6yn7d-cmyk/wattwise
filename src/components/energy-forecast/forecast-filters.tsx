@@ -77,7 +77,12 @@ export function ForecastFilters({ location, latitude, longitude, hours, historyY
       </label>
       <label className="field-label">
         <span className="field-label-text">Paikesejaama voimsus (kW)</span>
-        <input name="systemKw" defaultValue={String(input.systemKw)} className="input" />
+        <input
+          name="systemKw"
+          defaultValue={input.systemKw > 0 ? String(input.systemKw) : ""}
+          className="input"
+          placeholder="nt 12"
+        />
         <span className="field-hint">Inverteri voi susteemi nimivoimsus.</span>
       </label>
       <label className="field-label">
@@ -93,12 +98,22 @@ export function ForecastFilters({ location, latitude, longitude, hours, historyY
       </label>
       <label className="field-label">
         <span className="field-label-text">Paneelide kalle (°)</span>
-        <input name="panelTiltDeg" defaultValue={String(input.panelTiltDeg)} className="input" />
+        <input
+          name="panelTiltDeg"
+          defaultValue={input.panelTiltDeg > 0 ? String(input.panelTiltDeg) : ""}
+          className="input"
+          placeholder="nt 35"
+        />
         <span className="field-hint">Eestis tootab sageli 30-40 kraadi.</span>
       </label>
       <label className="field-label">
         <span className="field-label-text">Susteemikaod (%)</span>
-        <input name="systemLossesPercent" defaultValue={String(input.systemLossesPercent)} className="input" />
+        <input
+          name="systemLossesPercent"
+          defaultValue={input.systemLossesPercent > 0 ? String(input.systemLossesPercent) : ""}
+          className="input"
+          placeholder="nt 14"
+        />
         <span className="field-hint">Sisaldab inverteri, juhtmete ja muu susteemi kaod.</span>
       </label>
       <label className="field-label">

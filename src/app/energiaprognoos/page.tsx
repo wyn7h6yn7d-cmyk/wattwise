@@ -152,12 +152,26 @@ export default async function EnergiaprognoosPage({
     pricePoints = demo.prices;
   }
 
-  const { rows, summary } = buildEnergyForecast({
-    input,
-    weatherPoints,
-    pricePoints,
-    intervalHours: 1,
-  });
+  let rows: Awaited<ReturnType<typeof buildEnergyForecast>>["rows"] = [];
+  let summary: Awaited<ReturnType<typeof buildEnergyForecast>>["summary"] = {
+    bestSolarHour: null,
+    lowestPriceHour: null,
+    bestChargingWindow: null,
+    estimatedPvTomorrowKwh: 0,
+  };
+  try {
+    const forecast = buildEnergyForecast({
+      input,
+      weatherPoints,
+      pricePoints,
+      intervalHours: 1,
+    });
+    rows = forecast.rows;
+    summary = forecast.summary;
+  } catch {
+    errorText = "Prognoosi andmeid ei saanud hetkel laadida. Proovi hiljem uuesti.";
+    rows = [];
+  }
 
   let historicalError: string | null = null;
   let historicalFallback = false;
@@ -240,7 +254,7 @@ export default async function EnergiaprognoosPage({
         ) : null}
         {historicalError ? (
           <section className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-xs text-amber-100">
-            Ajaloolise analüüsi API viga: {historicalError}. Kuvan ajutiselt varuandmed.
+            Ajaloolise analüüsi andmeid ei saanud hetkel laadida. Kuvan ajutiselt varuandmed.
           </section>
         ) : null}
 

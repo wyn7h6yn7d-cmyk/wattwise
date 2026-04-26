@@ -25,22 +25,22 @@ export function PeakShavingPageClient() {
     useProjectUnlock();
 
   const [mode, setMode] = useState<"quick" | "advanced">("quick");
-  const [currentPeakKw, setCurrentPeakKw] = useState("120");
-  const [targetLimitKw, setTargetLimitKw] = useState("90");
-  const [batteryKwh, setBatteryKwh] = useState("150");
-  const [batteryKw, setBatteryKw] = useState("60");
-  const [peakHours, setPeakHours] = useState("1");
-  const [demandFeeEurPerKwMonth, setDemandFeeEurPerKwMonth] = useState("6.5");
-  const [peaksPerMonth, setPeaksPerMonth] = useState("4");
-  const [avgPeakDurationHours, setAvgPeakDurationHours] = useState("1");
-  const [minSocPct, setMinSocPct] = useState("15");
-  const [maxUsableSocPct, setMaxUsableSocPct] = useState("90");
-  const [batteryEfficiencyPct, setBatteryEfficiencyPct] = useState("92");
-  const [batteryDegradationPct, setBatteryDegradationPct] = useState("2");
+  const [currentPeakKw, setCurrentPeakKw] = useState("");
+  const [targetLimitKw, setTargetLimitKw] = useState("");
+  const [batteryKwh, setBatteryKwh] = useState("");
+  const [batteryKw, setBatteryKw] = useState("");
+  const [peakHours, setPeakHours] = useState("");
+  const [demandFeeEurPerKwMonth, setDemandFeeEurPerKwMonth] = useState("");
+  const [peaksPerMonth, setPeaksPerMonth] = useState("");
+  const [avgPeakDurationHours, setAvgPeakDurationHours] = useState("");
+  const [minSocPct, setMinSocPct] = useState("");
+  const [maxUsableSocPct, setMaxUsableSocPct] = useState("");
+  const [batteryEfficiencyPct, setBatteryEfficiencyPct] = useState("");
+  const [batteryDegradationPct, setBatteryDegradationPct] = useState("");
   const [investmentEur, setInvestmentEur] = useState("");
   const [annualMaintenanceEur, setAnnualMaintenanceEur] = useState("");
-  const [demandFeeGrowthPct, setDemandFeeGrowthPct] = useState("3");
-  const [periodYears, setPeriodYears] = useState("10");
+  const [demandFeeGrowthPct, setDemandFeeGrowthPct] = useState("");
+  const [periodYears, setPeriodYears] = useState("");
   const hasValue = (v: string) => v.trim().length > 0;
 
   const result = useMemo(() => {
@@ -201,6 +201,12 @@ export function PeakShavingPageClient() {
     }
     return warnings;
   }, [demandFeeEurPerKwMonth, result.needCut, result.targetRealistic, result.netSavings]);
+  const hasRequiredInputs =
+    toNumber(currentPeakKw) > 0 &&
+    toNumber(targetLimitKw) > 0 &&
+    toNumber(batteryKwh) > 0 &&
+    toNumber(batteryKw) > 0 &&
+    toNumber(demandFeeEurPerKwMonth) > 0;
 
   return (
     <div className="grid gap-6">
@@ -422,6 +428,12 @@ export function PeakShavingPageClient() {
               Mida see tähendab? Kontrolli esmalt, kas soovitud lõige on realistlik, ja seejärel vaata hinnangulist
               aastast säästu.
             </p>
+            {!hasRequiredInputs ? (
+              <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+                <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
+                <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+              </div>
+            ) : null}
             {sanityWarnings.length > 0 ? (
               <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
                 <p className="font-medium">Kontrolli sisendeid enne otsust</p>
@@ -432,6 +444,8 @@ export function PeakShavingPageClient() {
                 </ul>
               </div>
             ) : null}
+            {hasRequiredInputs ? (
+              <>
             <div className="mb-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
               <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -526,6 +540,12 @@ export function PeakShavingPageClient() {
               </p>
             ) : null}
             <UsedAssumptionsBlock {...assumptionsInfo} />
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                Näidisväärtused on toodud placeholderina, mitte arvutuses kasutatava väärtusena.
+              </p>
+            )}
           </article>
         </div>
       </section>

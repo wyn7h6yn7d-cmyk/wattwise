@@ -643,10 +643,14 @@ export function PriceViewClient({
             </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
               <div className="text-xs text-zinc-400">Homme keskmine</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">
-                {statsTomorrow ? fmtSnt(statsTomorrow.mean, vat) : "—"}
-                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
-              </div>
+              {statsTomorrow ? (
+                <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                  {fmtSnt(statsTomorrow.mean, vat)}
+                  <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-sm font-medium text-zinc-300">Homsed hinnad pole veel avaldatud</div>
+              )}
             </div>
           </div>
         </div>

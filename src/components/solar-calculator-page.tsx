@@ -13,7 +13,7 @@ import { ChartCard } from "@/components/charts/ChartCard";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
-  pvPowerKw: 12,
+  pvPowerKw: 0,
   annualProductionKwh: 0,
   inverterPowerKw: 0,
   panelDirection: "louna",
@@ -27,23 +27,23 @@ const defaults: CalculatorInput = {
   batteryRoundTripPercent: 92,
   batteryInvestmentEur: 0,
   batteryCostEur: 0,
-  annualConsumptionKwh: 9000,
-  dailyConsumptionKwh: 24.66,
+  annualConsumptionKwh: 0,
+  dailyConsumptionKwh: 0,
   consumptionProfile: "tool-ohtul",
   seasonalMultiplierPercent: 100,
   priceSource: "manual",
-  manualSpotPrice: 0.12,
-  nordPoolAveragePrice: 0.1,
-  gridFeePrice: 0.05,
-  sellBackPrice: 0.06,
-  marginPrice: 0.01,
+  manualSpotPrice: 0,
+  nordPoolAveragePrice: 0,
+  gridFeePrice: 0,
+  sellBackPrice: 0,
+  marginPrice: 0,
   annualPriceGrowthPercent: 3,
   discountRatePercent: 4,
-  pvCostEur: 12000,
+  pvCostEur: 0,
   extraInstallCostEur: 0,
   supportEur: 0,
   annualMaintenanceEur: 0,
-  selfConsumptionWithoutBatteryPercent: 55,
+  selfConsumptionWithoutBatteryPercent: 0,
   selfConsumptionBoostWithBatteryPercent: 15,
   degradationPercent: 0.6,
   periodYears: 20,
@@ -168,6 +168,10 @@ export function SolarCalculatorPage() {
       list.push("Aku efektiivsus peab olema vahemikus 0...100%.");
     return list;
   }, [input, mode]);
+  const hasRequiredInputs =
+    input.pvPowerKw > 0 &&
+    input.annualConsumptionKwh > 0 &&
+    (input.priceSource === "manual" ? input.manualSpotPrice > 0 : input.nordPoolAveragePrice > 0);
 
   const fetchNordPool = async () => {
     setNordPoolState({ loading: true, message: "Laen Nord Pool hinda...", source: "none" });
@@ -930,6 +934,12 @@ export function SolarCalculatorPage() {
             Mida see tähendab? Allolevad näitajad annavad kiire pildi, kui suur võiks olla aastane rahaline võit ja
             kui kiiresti investeering võiks tagasi tulla.
           </p>
+          {!hasRequiredInputs ? (
+            <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+              <p className="font-medium text-zinc-100">Sisesta andmed, et näha tulemust.</p>
+              <p className="mt-1">Täida põhiandmed ja arvutame hinnangu.</p>
+            </div>
+          ) : null}
           <p className="mt-2 text-zinc-300">
             Efektiivne elektri hind arvutuses:{" "}
             <strong>{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
@@ -949,6 +959,8 @@ export function SolarCalculatorPage() {
               Tuvastati sisend €/MWh kujul ja teisendati automaatselt €/kWh väärtuseks.
             </p>
           ) : null}
+          {hasRequiredInputs ? (
+            <>
           <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
             <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
             <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -1266,6 +1278,12 @@ export function SolarCalculatorPage() {
               </ul>
             </article>
           </PaywallCard>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-400">
+              Näidisväärtused on toodud placeholderina, mitte arvutuses kasutatava väärtusena.
+            </p>
+          )}
 
         </section>
       </div>
