@@ -222,6 +222,9 @@ export function EnergyForecastDashboard({
   hasEv: boolean;
   hasBattery: boolean;
 }) {
+  const [showFullTable, setShowFullTable] = useState(false);
+  const visibleRows = useMemo(() => (showFullTable ? rows : rows.slice(0, 24)), [rows, showFullTable]);
+
   return (
     <section className="mt-8 grid gap-6 overflow-x-hidden">
       <div className="glass-panel rounded-3xl p-5 sm:p-8">
@@ -271,11 +274,25 @@ export function EnergyForecastDashboard({
       </div>
 
       <div className="glass-panel rounded-3xl p-5 sm:p-8">
-        <h3 className="section-title">Tunnipõhine tabel</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="section-title">Tunnipõhine tabel</h3>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-zinc-400">
+              Naitan {visibleRows.length} / {rows.length} rida
+            </p>
+            <button
+              type="button"
+              className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-white/[0.08]"
+              onClick={() => setShowFullTable((v) => !v)}
+            >
+              {showFullTable ? "Naita lyhemat tabelit" : "Naita koik read"}
+            </button>
+          </div>
+        </div>
         <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/35">
           <div className="max-h-[560px] overflow-auto">
             <table className="min-w-[860px] w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-zinc-950/90 text-zinc-200 backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-zinc-950 text-zinc-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Kellaaeg</th>
                   <th className="px-4 py-3 text-right font-medium">Hind KM-ga (snt/kWh)</th>
@@ -286,7 +303,7 @@ export function EnergyForecastDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {rows.map((r) => (
+                {visibleRows.map((r) => (
                   <tr key={r.ts} className={`${rowBg(r.score)} hover:bg-white/[0.05]`}>
                     <td className="px-4 py-2.5 text-zinc-100">{fmtHour(r.ts)}</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-zinc-50">{fmt1(r.priceSntWithVat)}</td>
