@@ -307,6 +307,19 @@ export function VppPageClient() {
         </div>
 
         <h3 className="mt-6 text-xl font-semibold text-zinc-50">Sisendid</h3>
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+          <p className="font-medium text-zinc-100">Kust andmed leida?</p>
+          <p className="mt-2">
+            Kui sul ei ole kõiki andmeid kohe käepärast, alusta hinnanguga. Täpsemad sisendid annavad täpsema
+            tulemuse.
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+            <li>Aku maht ja võimsus: aku/inverteri andmeleht või paigaldaja pakkumine.</li>
+            <li>Investeering: aku, inverteri, paigalduse ja liitumise kogukulu.</li>
+            <li>Tulupotentsiaal: agregaatori või teenusepakkuja hinnang, vajadusel konservatiivne eeldus.</li>
+            <li>Kui täpset numbrit ei tea, sisesta realistlik vahemik ja võrdle mitut stsenaariumi.</li>
+          </ul>
+        </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="field-label">
             <span className="field-label-text">Aku maht (kWh)</span>
@@ -317,7 +330,7 @@ export function VppPageClient() {
               onChange={(e) => setCapacityKwh(e.target.value)}
               placeholder="nt 100"
             />
-            <span className="field-hint">Aku nimimaht.</span>
+            <span className="field-hint">Leiad aku tehnilisest pakkumisest või seadme andmelehelt. See näitab, kui palju energiat aku mahutab.</span>
           </label>
           <label className="field-label">
             <span className="field-label-text">Aku võimsus (kW)</span>
@@ -328,7 +341,7 @@ export function VppPageClient() {
               onChange={(e) => setPowerKw(e.target.value)}
               placeholder="nt 50"
             />
-            <span className="field-hint">Max laadimis/tühjendusvõimsus.</span>
+            <span className="field-hint">Leiad inverteri või aku tehnilistest andmetest. See näitab, kui kiiresti saab akut laadida või tühjendada.</span>
           </label>
           <label className="field-label">
             <span className="field-label-text">Investeering (€)</span>
@@ -339,7 +352,7 @@ export function VppPageClient() {
               onChange={(e) => setInvestmentEur(e.target.value)}
               placeholder="nt 60000"
             />
-            <span className="field-hint">Koguinvesteering eurodes.</span>
+            <span className="field-hint">Kasuta aku, inverteri, paigalduse ja liitumise kogukulu. Kui täpset pakkumist pole, sisesta ligikaudne eelarve.</span>
           </label>
           <label className="field-label">
             <span className="field-label-text">Aastane tulupotentsiaal (€)</span>
@@ -350,7 +363,7 @@ export function VppPageClient() {
               onChange={(e) => setAnnualRevenueEur(e.target.value)}
               placeholder="nt 12000"
             />
-            <span className="field-hint">Aastane brutotulu eeldus.</span>
+            <span className="field-hint">Kasuta teenusepakkuja, agregaatori või projekti hinnangut. Kui seda pole, sisesta konservatiivne hinnang ja testi mitut stsenaariumi.</span>
           </label>
           <label className="field-label">
             <span className="field-label-text">Aku eluiga (a)</span>
@@ -362,7 +375,7 @@ export function VppPageClient() {
               <option value="12">12</option>
               <option value="15">15</option>
             </select>
-            <span className="field-hint">Arvutusperiood aastates.</span>
+            <span className="field-hint">Leiad aku tootja andmetest või garantiitingimustest. Sageli hinnatakse eluiga aastates või tsüklite arvuna.</span>
           </label>
           {mode === "advanced" ? (
             <div className="sm:col-span-2 grid gap-3">
@@ -449,9 +462,9 @@ export function VppPageClient() {
               <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field-label">
-                    <span className="field-label-text">Roundtrip efficiency (%)</span>
+                    <span className="field-label-text">Efektiivsus (%)</span>
                     <input className={`input ${num(efficiencyPct) < 70 ? "input-warning" : ""}`} value={efficiencyPct} inputMode="decimal" onChange={(e) => setEfficiencyPct(e.target.value)} placeholder="nt 92" />
-                    <span className="field-hint">Mitu protsenti energiast jääb tsükli järel alles.</span>
+                    <span className="field-hint">Näitab, kui suur osa salvestatud energiast jõuab hiljem kasutusse tagasi. Kui ei tea, kasuta ligikaudset väärtust.</span>
                   </label>
                   <label className="field-label">
                     <span className="field-label-text">Tsüklite arv aastas</span>
@@ -475,12 +488,12 @@ export function VppPageClient() {
                   <label className="field-label">
                     <span className="field-label-text">Riskikoefitsient (%)</span>
                     <input className="input" value={riskCoefficientPct} inputMode="decimal" onChange={(e) => setRiskCoefficientPct(e.target.value)} placeholder="nt 90" />
-                    <span className="field-hint">Vähendab brutotulu realistlikumale tasemele.</span>
+                    <span className="field-hint">Kasuta seda ebakindluse arvestamiseks. Suurem riskikorrektuur teeb tulemuse ettevaatlikumaks.</span>
                   </label>
                   <label className="field-label">
                     <span className="field-label-text">Kättesaadavus (%)</span>
                     <input className="input" value={availabilityPct} inputMode="decimal" onChange={(e) => setAvailabilityPct(e.target.value)} placeholder="nt 95" />
-                    <span className="field-hint">Seisakute mõju: 100% tähendab katkestusi pole.</span>
+                    <span className="field-hint">Näitab, kui suure osa ajast on aku teenuse pakkumiseks valmis. Kui ei tea, kasuta konservatiivset hinnangut.</span>
                   </label>
                 </div>
               </AdvancedInputAccordion>

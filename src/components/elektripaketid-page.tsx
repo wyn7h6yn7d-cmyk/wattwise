@@ -296,6 +296,19 @@ export function ElektripaketidPageClient() {
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+              <p className="font-medium text-zinc-100">Kust andmed leida?</p>
+              <p className="mt-2">
+                Kui sul ei ole kõiki andmeid kohe käepärast, alusta hinnanguga. Täpsemad sisendid annavad täpsema
+                tulemuse.
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+                <li>Kuutarbimine: elektrimüüja või võrguettevõtte iseteenindus, viimase 12 kuu keskmine.</li>
+                <li>Spot/fikseeritud hind: pakkumine või kehtiv leping.</li>
+                <li>Võrgutasu ja kuutasud: võrguettevõtte hinnakiri või arve.</li>
+                <li>Kui täpset väärtust ei tea, sisesta realistlik keskmine ja võrdle variante.</li>
+              </ul>
+            </div>
             <div className="mb-4 grid gap-3 sm:grid-cols-2">
               <label className="field-label">
                 <span className="field-label-text">Näidispakett configist</span>
@@ -335,7 +348,7 @@ export function ElektripaketidPageClient() {
                   onChange={(e) => setMonthlyKwh(e.target.value)}
                   placeholder="nt 400"
                 />
-                <span className="field-hint">Keskmine tarbimine kuus.</span>
+                <span className="field-hint">Leiad selle elektrimüüja või võrguettevõtte iseteenindusest. Kui tarbimine kõigub, kasuta viimase 12 kuu keskmist.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Spot keskmine (€/kWh)</span>
@@ -346,7 +359,7 @@ export function ElektripaketidPageClient() {
                   onChange={(e) => setSpotEurKwh(e.target.value)}
                   placeholder="nt 0,12"
                 />
-                <span className="field-hint">Prognoositav keskmine spot hind.</span>
+                <span className="field-hint">Kui võrdled börsipaketti, kasuta viimase perioodi keskmist börsihinda või sisesta oma hinnang.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Fikseeritud (€/kWh)</span>
@@ -357,7 +370,7 @@ export function ElektripaketidPageClient() {
                   onChange={(e) => setFixedEurKwh(e.target.value)}
                   placeholder="nt 0,16"
                 />
-                <span className="field-hint">Paketis fikseeritud energiahind.</span>
+                <span className="field-hint">Leiad selle elektrimüüja pakkumisest või kehtivast lepingust. Kontrolli, kas hind sisaldab käibemaksu.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Börsipaketi marginaal (€/kWh)</span>
@@ -368,7 +381,7 @@ export function ElektripaketidPageClient() {
                   onChange={(e) => setSpotMarginEurKwh(e.target.value)}
                   placeholder="nt 0,01"
                 />
-                <span className="field-hint">Müüja lisatasu spot paketil.</span>
+                <span className="field-hint">Börsipaketi marginaal on elektrimüüja lisatasu börsihinnale. Leiad selle lepingust või hinnakirjast.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Võrgutasu (€/kWh)</span>
@@ -379,7 +392,7 @@ export function ElektripaketidPageClient() {
                   onChange={(e) => setGridFeeEurKwh(e.target.value)}
                   placeholder="nt 0,04"
                 />
-                <span className="field-hint">Võrguenergia tasu kWh kohta.</span>
+                <span className="field-hint">Leiad võrguteenuse arvelt või võrguettevõtte hinnakirjast. See võib erineda päevase ja öise tarbimise puhul.</span>
               </label>
               {mode === "advanced" ? (
                 <>
@@ -392,7 +405,7 @@ export function ElektripaketidPageClient() {
                       onChange={(e) => setSpotMonthlyFeeEur(e.target.value)}
                       placeholder="nt 1,99"
                     />
-                    <span className="field-hint">Spot paketiga seotud kuutasu.</span>
+                    <span className="field-hint">Leiad selle elektrimüüja või võrguteenuse pakkuja hinnakirjast. Lisa ainult need kuutasud, mida soovid võrdluses arvestada.</span>
                   </label>
                   <label className="field-label">
                     <span className="field-label-text">Fikseeritud kuutasu (€)</span>
@@ -403,7 +416,7 @@ export function ElektripaketidPageClient() {
                       onChange={(e) => setFixedMonthlyFeeEur(e.target.value)}
                       placeholder="nt 2,99"
                     />
-                    <span className="field-hint">Fikseeritud paketiga seotud kuutasu.</span>
+                    <span className="field-hint">Leiad selle elektrimüüja või võrguteenuse pakkuja hinnakirjast. Lisa ainult need kuutasud, mida soovid võrdluses arvestada.</span>
                   </label>
                   <label className="field-label">
                     <span className="field-label-text">Võrgupaketi kuutasu (€)</span>
@@ -414,7 +427,7 @@ export function ElektripaketidPageClient() {
                       onChange={(e) => setNetworkMonthlyFeeEur(e.target.value)}
                       placeholder="nt 4,5"
                     />
-                    <span className="field-hint">Lisandub mõlemale paketile.</span>
+                    <span className="field-hint">Leiad selle elektrimüüja või võrguteenuse pakkuja hinnakirjast. Lisa ainult need kuutasud, mida soovid võrdluses arvestada.</span>
                   </label>
                   <label className="field-label">
                     <span className="field-label-text">Päevase tarbimise osakaal (%)</span>
@@ -477,6 +490,9 @@ export function ElektripaketidPageClient() {
                 <span className="yes-no-text">Jah</span>
               </div>
             </label>
+            <p className="mt-2 text-xs text-zinc-400">
+              Kontrolli, kas sisestatud hinnad sisaldavad käibemaksu. Kui ei ole kindel, vaata arvel olevat lõppsummat.
+            </p>
             {result.mwhWarning ? (
               <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
                 Tuvastasin suure hinnasisendi. Tõenäoliselt sisestasid hinna MWh-põhises ühikus; teisendan selle

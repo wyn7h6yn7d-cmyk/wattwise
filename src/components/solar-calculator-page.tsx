@@ -650,11 +650,27 @@ export function SolarCalculatorPage() {
           </div>
 
           <form className="grid gap-6" onSubmit={onSubmit}>
+            <article className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+              <h4 className="font-medium text-zinc-100">Kust andmed leida?</h4>
+              <p className="mt-2">
+                Kui sul ei ole kõiki andmeid kohe käepärast, alusta hinnanguga. Täpsemad sisendid annavad täpsema
+                tulemuse.
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+                <li>Tarbimine ja hind: elektrimüüja või võrguettevõtte iseteenindus, viimase 12 kuu arved.</li>
+                <li>PV võimsus ja investeering: paigaldaja hinnapakkumine või projekti eelarve.</li>
+                <li>Asukoht ja suund/kalle: kinnistu aadress, kaart või ligikaudne hinnang.</li>
+                <li>Kui täpseid numbreid ei tea, alusta konservatiivse hinnanguga ja testi mitu varianti.</li>
+              </ul>
+            </article>
             <div className="card-grid">
               <article className="card">
                 <h4 className="section-title">1) Süsteem ja tarbimine</h4>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Päikesepargi võimsus (kW)">
+                  <Field
+                    label="Päikesepargi võimsus (kW)"
+                    hint="Kui sul on pakkumine olemas, leiad süsteemi võimsuse pakkumisest. Kui alles hindad võimalust, kasuta ligikaudset soovitud pargi suurust."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -667,6 +683,7 @@ export function SolarCalculatorPage() {
                   </Field>
                   <Field
                     label="Aastane elektritarbimine (kWh)"
+                    hint="Leiad selle elektrimüüja või võrguettevõtte iseteenindusest. Vaata viimase 12 kuu tarbimist."
                   >
                     <input
                       className="input"
@@ -681,7 +698,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt 9000"
                     />
                   </Field>
-                  <Field label="Elektri ostuhind (€/kWh)">
+                  <Field
+                    label="Elektri ostuhind (€/kWh)"
+                    hint="Vaata elektriarvelt energia, võrgutasude ja maksude kogumõju. Kui täpset hinda ei tea, võid kasutada ligikaudset keskmist hinda."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -695,7 +715,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt 0,12"
                     />
                   </Field>
-                  <Field label="Omatarbe protsent (%)">
+                  <Field
+                    label="Omatarbe protsent (%)"
+                    hint="Näitab, kui palju toodetud elektrist kasutad ise ära. Kui ei tea, alusta hinnanguga. Kodudes jääb see sageli vahemikku umbes 30–70%."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -711,7 +734,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt 55"
                     />
                   </Field>
-                  <Field label="Investeering (€)">
+                  <Field
+                    label="Investeering (€)"
+                    hint="Kasuta paigaldaja hinnapakkumise kogusummat koos seadmete ja paigaldusega. Kui pakkumist pole, sisesta ligikaudne eelarve."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -852,7 +878,10 @@ export function SolarCalculatorPage() {
               <article className="card">
                 <AdvancedInputAccordion title="1) Põhiandmed" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Asukoht / maakond">
+                  <Field
+                    label="Asukoht / maakond"
+                    hint="Kasuta kinnistu või hoone asukohta. Kui täpseid koordinaate ei tea, vali lähim linn."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -861,7 +890,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt Harjumaa"
                     />
                   </Field>
-                  <Field label="Asukoha valik">
+                  <Field
+                    label="Asukoha valik"
+                    hint="Vali lähim linn või sisesta koordinaadid käsitsi."
+                  >
                     <select
                       className="input"
                       value={presetLocation}
@@ -888,7 +920,7 @@ export function SolarCalculatorPage() {
                   </Field>
                   {presetLocation === "manual" ? (
                     <>
-                      <Field label="Laiuskraad">
+                      <Field label="Laiuskraad" hint="Kui tead koordinaate, lisa need kaardirakendusest (nt Google Maps).">
                         <input
                           className="input"
                           type="text"
@@ -898,7 +930,7 @@ export function SolarCalculatorPage() {
                           placeholder="nt 59.437"
                         />
                       </Field>
-                      <Field label="Pikkuskraad">
+                      <Field label="Pikkuskraad" hint="Kui tead koordinaate, lisa need kaardirakendusest (nt Google Maps).">
                         <input
                           className="input"
                           type="text"
@@ -926,14 +958,20 @@ export function SolarCalculatorPage() {
                 <div className="mt-3" />
                 <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Paneelide suund">
+                  <Field
+                    label="Paneelide suund"
+                    hint="Lõunasuund annab tavaliselt suurima tootluse. Kui ei tea täpset suunda, vali lähim ilmakaar või sisesta hinnang."
+                  >
                     <select className="input" value={input.panelDirection} onChange={(e) => setInput({ ...input, panelDirection: e.target.value as CalculatorInput["panelDirection"] })}>
                       <option value="louna">Louna</option>
                       <option value="ida-laas">Ida-laas</option>
                       <option value="muu">Muu</option>
                     </select>
                   </Field>
-                  <Field label="Paneelide kalle kraadides">
+                  <Field
+                    label="Paneelide kalle kraadides"
+                    hint="Katuse kalde saad teada ehitusprojektist, katuse andmetest või hinnanguliselt visuaalselt. Kui ei tea, kasuta ligikaudset väärtust."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -943,7 +981,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt 35"
                     />
                   </Field>
-                  <Field label="Paneelide suund">
+                  <Field
+                    label="Paneelide suund"
+                    hint="Sisesta suund kraadides (0 = lõuna), kui soovid täpsemat orientatsiooni."
+                  >
                     <input
                       className="input"
                       type="text"
@@ -964,7 +1005,10 @@ export function SolarCalculatorPage() {
                       placeholder="nt 35"
                     />
                   </Field>
-                  <Field label="Süsteemikaod %">
+                  <Field
+                    label="Süsteemikaod %"
+                    hint="Kui täpset väärtust ei tea, alusta 14% hinnanguga ja korrigeeri hiljem pakkumise andmetega."
+                  >
                     <input
                       className="input"
                       type="text"

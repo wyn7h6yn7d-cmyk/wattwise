@@ -383,6 +383,19 @@ export function EvLaadiminePageClient() {
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300 sm:col-span-2">
+              <p className="font-medium text-zinc-100">Kust andmed leida?</p>
+              <p className="mt-2">
+                Kui sul ei ole kõiki andmeid kohe käepärast, alusta hinnanguga. Täpsemad sisendid annavad täpsema
+                tulemuse.
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+                <li>Aku maht ja laadija võimsus: auto/laadija tehnilised andmed.</li>
+                <li>Elektrihind: arve lõpphind või börsihind koos võrgutasude ja maksudega.</li>
+                <li>Peakaitse ja süsteem: elektrikilp või liitumisleping.</li>
+                <li>Kui ei tea täpset väärtust, kasuta konservatiivset hinnangut ja võrdle.</li>
+              </ul>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {mode === "advanced" ? (
                 <div className="sm:col-span-2 flex justify-end">
@@ -435,7 +448,7 @@ export function EvLaadiminePageClient() {
                   placeholder="nt 30"
                   disabled={mode === "advanced"}
                 />
-                <span className="field-hint">Kui palju energiat soovid juurde laadida.</span>
+                <span className="field-hint">Kui tead, mitu kWh soovid lisada, sisesta see. Kui mitte, arvuta ligikaudu aku mahu ja soovitud laadimistaseme järgi.</span>
               </label>
               {mode === "advanced" ? (
                 <div className="sm:col-span-2">
@@ -464,7 +477,7 @@ export function EvLaadiminePageClient() {
                   onChange={(e) => setChargerKw(e.target.value)}
                   placeholder="nt 11"
                 />
-                <span className="field-hint">Valitud laadija nimivõimsus.</span>
+                <span className="field-hint">Leiad laadija tehnilistest andmetest. Kodulaadijad on sageli 3,7 kW, 7,4 kW, 11 kW või 22 kW.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Elektrihind (€/kWh)</span>
@@ -475,7 +488,7 @@ export function EvLaadiminePageClient() {
                   onChange={(e) => setPriceEurKwh(e.target.value)}
                   placeholder="nt 0,16"
                 />
-                <span className="field-hint">Eeldatav laadimise hind kWh kohta.</span>
+                <span className="field-hint">Kasuta oma elektriarve ligikaudset lõpphinda või börsihinna keskmist koos võrgutasude ja maksudega.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Süsteem</span>
@@ -483,7 +496,7 @@ export function EvLaadiminePageClient() {
                   <option value="1">1-faasiline</option>
                   <option value="3">3-faasiline</option>
                 </select>
-                <span className="field-hint">Vali kodu elektrisüsteemi faaside arv.</span>
+                <span className="field-hint">Kui kodus on tavaline 3-faasiline liitumine, vali 3-faasiline. Kui ei tea, kontrolli elektrikilpi või liitumislepingut.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Peakaitse (A)</span>
@@ -494,7 +507,7 @@ export function EvLaadiminePageClient() {
                   onChange={(e) => setMainFuseA(e.target.value)}
                   placeholder="nt 25"
                 />
-                <span className="field-hint">Maja peakaitse amperites.</span>
+                <span className="field-hint">Leiad peakaitsme suuruse elektrikilbilt, võrguettevõtte lepingust või Elektrilevi/Enefiti iseteenindusest.</span>
               </label>
               <label className="field-label sm:col-span-2">
                 <span className="field-label-text">Muud koormused majas (reserv, kW)</span>
@@ -505,7 +518,7 @@ export function EvLaadiminePageClient() {
                   onChange={(e) => setReserveKw(e.target.value)}
                   placeholder="nt 2"
                 />
-                <span className="field-hint">Jäta EV laadimisest eraldi varu maja teistele tarbijatele.</span>
+                <span className="field-hint">Sisesta ligikaudne varu muudele tarbijatele, näiteks boiler, pliit, soojuspump või muu suur tarbija.</span>
               </label>
               {mode === "advanced" ? (
                 <div className="sm:col-span-2">

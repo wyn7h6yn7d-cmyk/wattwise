@@ -368,6 +368,19 @@ export function PeakShavingPageClient() {
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <article className="card">
             <h3 className="section-title">Sisendid</h3>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+              <p className="font-medium text-zinc-100">Kust andmed leida?</p>
+              <p className="mt-2">
+                Kui sul ei ole kõiki andmeid kohe käepärast, alusta hinnanguga. Täpsemad sisendid annavad täpsema
+                tulemuse.
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+                <li>Tipukoormus: võrguettevõtte mõõteandmed, arve või energiahalduse süsteem.</li>
+                <li>Aku maht ja võimsus: aku/inverteri andmeleht või pakkumine.</li>
+                <li>Tiputunni kestus: ajalooline koormusprofiil, vajadusel 1–2h hinnang.</li>
+                <li>Võimsustasu: võrguleping või arve.</li>
+              </ul>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {mode === "advanced" ? (
                 <div className="sm:col-span-2 flex justify-end">
@@ -398,7 +411,7 @@ export function PeakShavingPageClient() {
                   onChange={(e) => setCurrentPeakKw(e.target.value)}
                   placeholder="nt 120"
                 />
-                <span className="field-hint">Praegune kõrgeim võimsus.</span>
+                <span className="field-hint">Leiad selle võrguettevõtte mõõteandmetest, elektriarvelt või ettevõtte energiaseire süsteemist. Kasuta viimase perioodi kõrgeimat koormust.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Soovitud piir (kW)</span>
@@ -413,7 +426,7 @@ export function PeakShavingPageClient() {
                   onChange={(e) => setTargetLimitKw(e.target.value)}
                   placeholder="nt 90"
                 />
-                <span className="field-hint">Sihttase, millest üle ei soovita minna.</span>
+                <span className="field-hint">Sisesta sihttase, milleni soovid tipukoormust vähendada. See peab olema realistlik võrreldes praeguse tipuga.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Aku suurus (kWh)</span>
@@ -424,7 +437,7 @@ export function PeakShavingPageClient() {
                   onChange={(e) => setBatteryKwh(e.target.value)}
                   placeholder="nt 150"
                 />
-                <span className="field-hint">Aku energiamaht.</span>
+                <span className="field-hint">Leiad aku pakkumisest või tehnilisest andmelehelt. See näitab, kui kaua saab aku koormust toetada.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Aku võimsus (kW)</span>
@@ -435,7 +448,7 @@ export function PeakShavingPageClient() {
                   onChange={(e) => setBatteryKw(e.target.value)}
                   placeholder="nt 60"
                 />
-                <span className="field-hint">Aku maksimaalne hetkeline võimsus.</span>
+                <span className="field-hint">Leiad aku või inverteri tehnilistest andmetest. See piirab, kui suurt tipukoormust saab korraga vähendada.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Tiputunni kestus (h)</span>
@@ -447,7 +460,7 @@ export function PeakShavingPageClient() {
                   placeholder="nt 1"
                   disabled={mode === "advanced"}
                 />
-                <span className="field-hint">Kui kaua tippkoormus tavaliselt kestab.</span>
+                <span className="field-hint">Hinda, kui kaua kõrge koormus tavaliselt kestab. Kui ei tea, alusta 1–2 tunniga ja testi erinevaid variante.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Võimsustasu (€/kW/kuu)</span>
@@ -460,7 +473,7 @@ export function PeakShavingPageClient() {
                   onChange={(e) => setDemandFeeEurPerKwMonth(e.target.value)}
                   placeholder="nt 6,5"
                 />
-                <span className="field-hint">Võrgu võimsuskomponendi tasu.</span>
+                <span className="field-hint">Leiad võrgulepingust või elektriarvelt. See näitab, kui palju maksab kokkulepitud või mõõdetud võimsus kuus.</span>
               </label>
               {mode === "advanced" ? (
                 <div className="sm:col-span-2 grid gap-3">
