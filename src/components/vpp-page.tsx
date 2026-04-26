@@ -228,13 +228,6 @@ export function VppPageClient() {
           value: "VPP tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumisest.",
         },
       ],
-      formulas: [
-        {
-          label: "Arvutuse metoodika",
-          value:
-            "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
-        },
-      ],
       risksAndLimits: [
         { label: "Tururisk", value: "Börsihinna kõikumine ja turulepääsu tingimused mõjutavad tulu tugevalt." },
         { label: "Tehniline risk", value: "Aku degradatsioon ja kättesaadavus võivad vähendada realiseeruvat tulu." },

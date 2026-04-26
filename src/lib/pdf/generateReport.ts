@@ -16,14 +16,17 @@ import {
 import { drawCashflowChart } from "@/lib/pdf/charts";
 import type { PdfReportPayload } from "@/lib/pdf/types";
 
+const SHARED_DISCLAIMER =
+  "Raport on informatiivne hinnang ja põhineb kasutaja sisestatud andmetel ning valitud eeldustel. Tulemused võivad erineda tegelikest tulemustest sõltuvalt turuhindadest, seadmete tehnilistest omadustest, kasutusprofiilist, ilmast, võrgu- ja lepingutingimustest ning muudest teguritest. Raport ei ole finants-, investeerimis-, maksu-, õigus- ega tehniline nõustamine. Küsimused ja tagasiside: kennethalto95@gmail.com";
+
 export async function generatePremiumReport(payload: PdfReportPayload) {
   const analysisBasisText =
     payload.analysisBasis === "advanced"
       ? "Tulemus põhineb kasutaja sisestatud täpsematel andmetel."
       : "See tulemus kasutab osaliselt vaikimisi eeldusi.";
-  const methodology = payload.formulas ?? [
+  const methodology = [
     {
-      label: "Arvutuse metoodika",
+      label: "Metoodika",
       value:
         "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
     },
@@ -45,6 +48,9 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     g.items.map((it) => ({ group: g.group, label: it.label, value: it.value })),
   );
   const resultRows = payload.metrics.map((m) => ({ label: m.label, value: m.value }));
+  const disclaimerText = payload.disclaimer
+    ? `${payload.disclaimer} ${SHARED_DISCLAIMER}`
+    : SHARED_DISCLAIMER;
 
   // Page 1 — Title / Summary
   {
@@ -147,7 +153,12 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
 
     drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 418, w: A4.width - pdfTheme.margin * 2, h: 102 }, methodology, "Arvutuse metoodika");
     drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 220, w: A4.width - pdfTheme.margin * 2, h: 188 }, risksAndLimits, "Riskid ja piirangud");
-    drawDisclaimerBlockWithText(page, fonts, { x: pdfTheme.margin, y: 80, w: A4.width - pdfTheme.margin * 2, h: 130 }, payload.disclaimer);
+    drawDisclaimerBlockWithText(
+      page,
+      fonts,
+      { x: pdfTheme.margin, y: 80, w: A4.width - pdfTheme.margin * 2, h: 130 },
+      disclaimerText,
+    );
     drawFooter(page, fonts);
   }
 

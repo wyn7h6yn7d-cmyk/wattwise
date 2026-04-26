@@ -12,7 +12,6 @@ export type PdfReportPayload = {
   // “inputs” ja “summary” on struktureeritud key-value blokid (mitte raw JSON dump).
   inputs: Array<{ group: string; items: Array<{ label: string; value: string }> }>;
   assumptions?: Array<{ label: string; value: string }>;
-  formulas?: Array<{ label: string; value: string }>;
   risksAndLimits?: Array<{ label: string; value: string }>;
   analysisBasis?: "defaults" | "advanced";
   disclaimer?: string;

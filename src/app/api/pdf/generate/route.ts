@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { getStripeServer } from "@/lib/stripe";
 import { generatePremiumReport } from "@/lib/pdf/generateReport";
 import type { PdfReportPayload } from "@/lib/pdf/types";
-import { formatDateEt } from "@/lib/pdf/layout";
 import { FEATURES } from "@/lib/features";
+
+function toIsoDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -48,14 +54,9 @@ export async function POST(request: Request) {
 
   try {
     const bytes = await generatePremiumReport(body.payload);
-    const date = formatDateEt(new Date());
+    const date = toIsoDate(new Date());
     const type = body.payload.calculatorType ?? "analuus";
-    const name = body.payload.projectName
-      ? body.payload.projectName.trim().toLowerCase().replace(/[^a-z0-9äöüõ\- ]/gi, "").replace(/\s+/g, "-").slice(0, 48)
-      : null;
-    const filename = name
-      ? `energiakalkulaator-${name}-${date}.pdf`
-      : `energiakalkulaator-${type}-analuus-${date}.pdf`;
+    const filename = `energiakalkulaator-${type}-${date}.pdf`;
 
     return new NextResponse(Buffer.from(bytes), {
       headers: {

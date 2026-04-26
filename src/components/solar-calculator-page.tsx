@@ -304,13 +304,6 @@ export function SolarCalculatorPage() {
         { label: "Diskontomäär", value: `${formatNum(input.discountRatePercent, 1)}%` },
         { label: "Degradatsioon", value: `${formatNum(input.degradationPercent, 1)}% / a` },
       ],
-      formulas: [
-        {
-          label: "Arvutuse metoodika",
-          value:
-            "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
-        },
-      ],
       risksAndLimits: [
         {
           label: "Elektrihind",

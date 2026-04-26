@@ -3,11 +3,22 @@
 import type { UnlockState } from "@/lib/unlock";
 import type { PdfReportPayload } from "@/lib/pdf/types";
 
+function toIsoDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildPdfFilename(calculatorType: PdfReportPayload["calculatorType"]): string {
+  return `energiakalkulaator-${calculatorType}-${toIsoDate(new Date())}.pdf`;
+}
+
 export async function clientDownloadPdf(
   projectId: string,
   unlock: UnlockState,
   payload: PdfReportPayload,
-  downloadFilename: string,
+  _downloadFilename: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!projectId.trim()) {
     return { ok: false, error: "Projekt puudub." };
@@ -30,7 +41,7 @@ export async function clientDownloadPdf(
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = downloadFilename;
+    a.download = buildPdfFilename(payload.calculatorType);
     document.body.appendChild(a);
     a.click();
     a.remove();
