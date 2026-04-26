@@ -97,7 +97,7 @@ export function ForecastFilters({ location, latitude, longitude, hours, historyY
         <span className="field-hint">Mojutab tootluse koefitsienti.</span>
       </label>
       <label className="field-label">
-        <span className="field-label-text">Paneelide kalle (°)</span>
+        <span className="field-label-text">Paneelide kalle (kraadid)</span>
         <input
           name="panelTiltDeg"
           defaultValue={input.panelTiltDeg > 0 ? String(input.panelTiltDeg) : ""}

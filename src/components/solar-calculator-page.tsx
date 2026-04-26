@@ -4,12 +4,15 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { calculateSolarComparison } from "@/lib/calculators/solar";
 import { CalculatorInput } from "@/types/calculator";
 import { canViewFullAnalysis } from "@/lib/unlock";
+import { clientDownloadPdf } from "@/lib/pdf/client-download";
+import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { ChartCard } from "@/components/charts/ChartCard";
+import { toNumber } from "@/lib/units";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
@@ -88,13 +91,6 @@ function Field({
 
 function numValue(value: number): string | number {
   return value === 0 ? "" : value;
-}
-
-function toNumber(value: string): number {
-  if (value.trim() === "") return 0;
-  const normalized = value.replace(",", ".");
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : 0;
 }
 
 export function SolarCalculatorPage() {
@@ -248,110 +244,85 @@ export function SolarCalculatorPage() {
 
   const downloadPdf = async () => {
     if (!projectId) return;
-    try {
-      const res = await fetch("/api/pdf/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          projectId,
-          fullAnalysisSessionId: unlock.fullAnalysisSessionId,
-          pdfSessionId: unlock.pdfSessionId,
-          payload: {
-            calculatorType: "paikesejaam",
-            summary:
-              "Kokkuvõte on koostatud sisestatud andmete ning valitud eelduste põhjal päikesejaama tasuvuse hindamiseks.",
-            analysisBasis: mode === "advanced" ? "advanced" : "defaults",
-            inputs: [
-              {
-                group: "Süsteem",
-                items: [
-                  { label: "Päikesepargi võimsus", value: `${input.pvPowerKw || "—"} kW` },
-                  { label: "Aastane tootmine", value: `${input.annualProductionKwh || "—"} kWh` },
-                  { label: "Aku", value: input.hasBattery ? "Jah" : "Ei" },
-                  { label: "Aku maht", value: input.hasBattery ? `${input.batteryCapacityKwh || "—"} kWh` : "—" },
-                ],
-              },
-              {
-                group: "Tarbimine ja hind",
-                items: [
-                  { label: "Aastane tarbimine", value: `${input.annualConsumptionKwh || "—"} kWh` },
-                  { label: "Efektiivne elektrihind", value: `${formatNum(result.effectiveEnergyPrice, 3)} €/kWh` },
-                  { label: "Võrku müügi hind", value: `${input.sellBackPrice || "—"} €/kWh` },
-                ],
-              },
-              {
-                group: "Investeering",
-                items: [
-                  { label: "PV maksumus", value: `${formatNum(input.pvCostEur, 0)} €` },
-                  { label: "Aku maksumus", value: `${formatNum(input.batteryCostEur, 0)} €` },
-                  { label: "Toetus", value: `${formatNum(input.supportEur, 0)} €` },
-                  { label: "Periood", value: `${input.periodYears} a` },
-                ],
-              },
-            ],
-            assumptions: [
-              { label: "Hinnakasv", value: `${formatNum(input.annualPriceGrowthPercent, 1)}% / a` },
-              { label: "Diskontomäär", value: `${formatNum(input.discountRatePercent, 1)}%` },
-              { label: "Degradatsioon", value: `${formatNum(input.degradationPercent, 1)}% / a` },
-            ],
-            formulas: [
-              {
-                label: "Arvutuse metoodika",
-                value:
-                  "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
-              },
-            ],
-            risksAndLimits: [
-              {
-                label: "Elektrihind",
-                value: "Tulemus sõltub oluliselt elektrihinna arengust ja omatarbe osakaalust.",
-              },
-              {
-                label: "Tootlikkus",
-                value: "Ilmastik, varjutus ja tehniline seisukord võivad tegelikku tootmist muuta.",
-              },
-              {
-                label: "Piirang",
-                value: "Raport on informatiivne hinnang ega asenda detailprojekti.",
-              },
-            ],
-            disclaimer:
-              "Analüüs põhineb kasutaja sisestatud andmetel ja eeldustel. Tegu on informatiivse tööriistaga, mitte siduva finants- ega investeerimisnõuga.",
-            metrics: [
-              { label: "Hinnanguline aastane sääst", value: `${formatNum(result.selected.annualSavingsEur, 0)} €` },
-              {
-                label: "Lihtne tasuvusaeg",
-                value: result.paybackYears !== null ? `${result.paybackYears.toFixed(1)} a` : "—",
-              },
-              { label: "Omakasutus", value: `${formatNum(result.selected.selfConsumptionRatePercent, 1)}%` },
-              { label: "Võrku müük", value: `${formatNum(result.selected.exportedKwh, 0)} kWh` },
-              { label: "Kogutulu perioodis", value: `${formatNum(result.selected.totalNetBenefitPeriodEur, 0)} €` },
-              { label: "Aku lisaväärtus", value: `${formatNum(result.batteryAddedValuePeriodEur, 0)} €` },
-              { label: "CO2 vähenemine", value: `${formatNum(result.selected.co2ReductionKgYear, 0)} kg/a` },
-              { label: "Tasuvuse hinnang", value: String(result.interpretationKind) },
-            ],
-            charts: {
-              cashflowByYear: result.selected.cashflowByYear,
-            },
-          },
-        }),
-      });
-      if (!res.ok) {
-        setMessage("PDF genereerimine ebaõnnestus.");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "energiakalkulaator-paikesejaama-analuus.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setMessage("PDF allalaadimine ebaõnnestus.");
-    }
+    const out = await clientDownloadPdf(projectId, unlock, {
+      calculatorType: "paikesejaam",
+      summary:
+        "Kokkuvõte on koostatud sisestatud andmete ning valitud eelduste põhjal päikesejaama tasuvuse hindamiseks.",
+      analysisBasis: mode === "advanced" ? "advanced" : "defaults",
+      inputs: [
+        {
+          group: "Süsteem",
+          items: [
+            { label: "Päikesepargi võimsus", value: `${input.pvPowerKw || "—"} kW` },
+            { label: "Aastane tootmine", value: `${input.annualProductionKwh || "—"} kWh` },
+            { label: "Aku", value: input.hasBattery ? "Jah" : "Ei" },
+            { label: "Aku maht", value: input.hasBattery ? `${input.batteryCapacityKwh || "—"} kWh` : "—" },
+          ],
+        },
+        {
+          group: "Tarbimine ja hind",
+          items: [
+            { label: "Aastane tarbimine", value: `${input.annualConsumptionKwh || "—"} kWh` },
+            { label: "Efektiivne elektrihind", value: `${formatNum(result.effectiveEnergyPrice, 3)} €/kWh` },
+            { label: "Võrku müügi hind", value: `${input.sellBackPrice || "—"} €/kWh` },
+          ],
+        },
+        {
+          group: "Investeering",
+          items: [
+            { label: "PV maksumus", value: `${formatNum(input.pvCostEur, 0)} €` },
+            { label: "Aku maksumus", value: `${formatNum(input.batteryCostEur, 0)} €` },
+            { label: "Toetus", value: `${formatNum(input.supportEur, 0)} €` },
+            { label: "Periood", value: `${input.periodYears} a` },
+          ],
+        },
+      ],
+      assumptions: [
+        { label: "Hinnakasv", value: `${formatNum(input.annualPriceGrowthPercent, 1)}% / a` },
+        { label: "Diskontomäär", value: `${formatNum(input.discountRatePercent, 1)}%` },
+        { label: "Degradatsioon", value: `${formatNum(input.degradationPercent, 1)}% / a` },
+      ],
+      formulas: [
+        {
+          label: "Arvutuse metoodika",
+          value:
+            "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
+        },
+      ],
+      risksAndLimits: [
+        {
+          label: "Elektrihind",
+          value: "Tulemus sõltub oluliselt elektrihinna arengust ja omatarbe osakaalust.",
+        },
+        {
+          label: "Tootlikkus",
+          value: "Ilmastik, varjutus ja tehniline seisukord võivad tegelikku tootmist muuta.",
+        },
+        {
+          label: "Piirang",
+          value: "Raport on informatiivne hinnang ega asenda detailprojekti.",
+        },
+      ],
+      disclaimer:
+        "Analüüs põhineb kasutaja sisestatud andmetel ja eeldustel. Tegu on informatiivse tööriistaga, mitte siduva finants- ega investeerimisnõuga.",
+      metrics: [
+        { label: "Hinnanguline aastane sääst", value: `${formatNum(result.selected.annualSavingsEur, 0)} €` },
+        {
+          label: "Lihtne tasuvusaeg",
+          value: result.paybackYears !== null ? `${result.paybackYears.toFixed(1)} a` : "—",
+        },
+        { label: "Omakasutus", value: `${formatNum(result.selected.selfConsumptionRatePercent, 1)}%` },
+        { label: "Võrku müük", value: `${formatNum(result.selected.exportedKwh, 0)} kWh` },
+        { label: "Kogutulu perioodis", value: `${formatNum(result.selected.totalNetBenefitPeriodEur, 0)} €` },
+        { label: "Aku lisaväärtus", value: `${formatNum(result.batteryAddedValuePeriodEur, 0)} €` },
+        { label: "CO2 vähenemine", value: `${formatNum(result.selected.co2ReductionKgYear, 0)} kg/a` },
+        { label: "Tasuvuse hinnang", value: String(result.interpretationKind) },
+      ],
+      charts: {
+        cashflowByYear: result.selected.cashflowByYear,
+      },
+    }, "energiakalkulaator-paikesejaama-analuus.pdf");
+    if (!out.ok) setMessage(out.error);
   };
 
   const chartTrackPx = 300; // suurem tulpdiagramm, et desktopis loetavus ei kaoks
@@ -702,14 +673,14 @@ export function SolarCalculatorPage() {
                 <div className="mt-3" />
                 <AdvancedInputAccordion title="3) Tehnilised eeldused" defaultOpen>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Katuse suund">
+                  <Field label="Paneelide suund">
                     <select className="input" value={input.panelDirection} onChange={(e) => setInput({ ...input, panelDirection: e.target.value as CalculatorInput["panelDirection"] })}>
                       <option value="louna">Louna</option>
                       <option value="ida-laas">Ida-laas</option>
                       <option value="muu">Muu</option>
                     </select>
                   </Field>
-                  <Field label="Katuse kalle (kraadid)">
+                  <Field label="Paneelide kalle (kraadid)">
                     <input
                       className="input"
                       type="text"
@@ -725,7 +696,7 @@ export function SolarCalculatorPage() {
                       className="input"
                       type="text"
                       inputMode="decimal"
-                      value={numValue(input.shadingPercent)}
+                      value={input.shadingPercent === 0 ? "0" : numValue(input.shadingPercent)}
                       onFocus={(e) => e.currentTarget.select()}
                       onChange={(e) => setInput({ ...input, shadingPercent: toNumber(e.target.value) })}
                       placeholder="nt 8"
@@ -1073,7 +1044,7 @@ export function SolarCalculatorPage() {
                     <button
                       type="button"
                       className="btn-glow"
-                      onClick={() => startCheckout("full_analysis")}
+                      onClick={() => startCheckout("full_analysis", { returnSlug: "paikesejaam" })}
                       disabled={purchaseBusy === "full_analysis"}
                     >
                       {purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
@@ -1083,30 +1054,18 @@ export function SolarCalculatorPage() {
                     </button>
                   </div>
                 </div>
-              ) : FEATURES.paywallEnabled && canViewFullAnalysis(unlock) ? (
-                <div className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
-                  <p className="text-sm text-zinc-100">
-                    Detailne vaade on selle projekti jaoks avatud.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" className="btn-glow" onClick={downloadPdf}>
-                      Laadi PDF alla
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-zinc-300">
-                    Projekt: <span className="font-medium text-zinc-100">{projectId}</span>
-                  </p>
-                </div>
-              ) : !FEATURES.paywallEnabled ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-zinc-300">Laadi alla kokkuvõtte PDF.</p>
-                    <button type="button" className="btn-glow" onClick={downloadPdf}>
-                      Laadi PDF alla
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+              ) : (
+                <CalculatorPdfActions
+                  className="mt-4"
+                  projectId={projectId}
+                  unlock={unlock}
+                  purchaseBusy={purchaseBusy}
+                  startCheckout={startCheckout}
+                  checkPaymentStatus={checkPaymentStatus}
+                  onDownload={downloadPdf}
+                  returnSlug="paikesejaam"
+                />
+              )}
             </article>
 
             <article className="card">
@@ -1179,7 +1138,7 @@ export function SolarCalculatorPage() {
             description="avab detailse rahavoo, lisagraafikud ja võrdlused selle projekti jaoks."
             ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
             secondaryLabel="Kontrolli ligipääsu staatust"
-            onCta={() => startCheckout("full_analysis")}
+            onCta={() => startCheckout("full_analysis", { returnSlug: "paikesejaam" })}
             onSecondary={checkPaymentStatus}
             footer={
               <>
@@ -1218,48 +1177,66 @@ export function SolarCalculatorPage() {
                 ) : (
                   <>
                     <p className="px-0 text-xs text-zinc-500">
-                      Graafik on täislaiuses. Kui aastaid on palju, saab mobiilis vajadusel graafiku sees horisontaalselt liikuda.
+                      Kui aastaid on palju, liiguta graafikut horisontaalselt (ka tahvlil); tulbad hoiavad lugemiseks ühtlase laiuse.
                     </p>
-                    <div className="relative mt-3 w-full">
+                    <div className="relative mt-3 w-full min-w-0">
                       {(() => {
                         const totalYears = result.selected.cashflowByYear.length;
                         const tickStep =
                           totalYears > 24 ? 4 : totalYears > 16 ? 3 : totalYears > 10 ? 2 : 1;
+                        const manyYears = totalYears > 10;
+                        const penultimateWouldCrowd =
+                          totalYears > 8 &&
+                          (totalYears - 2) % tickStep === 0 &&
+                          totalYears - 2 >= 0;
                         return (
-                          <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0 md:overflow-visible">
-                            <div className="flex min-h-[280px] min-w-max items-end gap-1.5 pb-1 sm:gap-2 md:min-h-[360px] md:min-w-0 md:w-full md:justify-between md:gap-2">
+                          <div className="-mx-1 overflow-x-auto overflow-y-visible px-1 pb-2 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:px-0">
+                            <div
+                              className={`flex min-h-[280px] items-end gap-2 pb-1 md:min-h-[360px] ${
+                                manyYears
+                                  ? "min-w-max"
+                                  : "min-w-max md:w-full md:min-w-0 md:justify-between"
+                              }`}
+                            >
                               {result.selected.cashflowByYear.map((value, index) => {
                                 const abs = Math.abs(value);
-                                const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 6);
+                                const barPx = Math.max(Math.round((abs / bestYear) * chartTrackPx), 8);
+                                const isFirst = index === 0;
+                                const isLast = index === totalYears - 1;
+                                const isStep = index % tickStep === 0;
+                                const skipPenultimateTick =
+                                  penultimateWouldCrowd && index === totalYears - 2;
                                 const showTick =
-                                  index === 0 ||
-                                  index === totalYears - 1 ||
-                                  index % tickStep === 0;
+                                  isFirst || isLast || (isStep && !skipPenultimateTick);
                                 return (
                                   <div
                                     key={`${value}-${index}`}
-                                    className="group relative flex w-7 shrink-0 flex-col items-stretch gap-1 md:min-w-0 md:flex-1"
+                                    className={`group relative flex flex-col items-stretch gap-1 ${
+                                      manyYears
+                                        ? "w-10 min-w-[2.5rem] shrink-0 sm:w-11 sm:min-w-[2.75rem]"
+                                        : "w-10 min-w-[2.5rem] shrink-0 md:min-w-0 md:flex-1 md:px-0.5"
+                                    }`}
                                   >
-                                    <div className="chart-tooltip pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100 sm:block">
+                                    <div className="chart-tooltip pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-zinc-900/95 px-2 py-1 text-[11px] font-medium text-zinc-100 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 sm:block">
                                       {formatNum(value, 0)} €
                                     </div>
                                     <div
-                                      className="box-border flex w-full flex-col justify-end rounded-md bg-white/[0.06] px-0.5 pt-1"
+                                      className="box-border flex w-full min-w-[10px] flex-col justify-end rounded-md bg-white/[0.06] px-1 pt-1"
                                       style={{ height: chartTrackPx }}
                                     >
                                       <div
-                                        className="w-full shrink-0 rounded bg-gradient-to-t from-emerald-500/80 to-teal-400/90"
+                                        className="w-full min-w-[10px] shrink-0 rounded-sm bg-gradient-to-t from-emerald-500/80 to-teal-400/90"
                                         style={{ height: barPx }}
                                         aria-label={`Aasta ${index + 1}`}
                                         title={`${formatNum(value, 0)} €`}
                                       />
                                     </div>
                                     <span
-                                      className={`text-center text-[10px] leading-none sm:text-[11px] ${
+                                      className={`block min-h-[1em] whitespace-nowrap text-center text-[10px] tabular-nums leading-none sm:text-[11px] ${
                                         showTick ? "text-zinc-400" : "text-transparent"
                                       }`}
                                     >
-                                      {showTick ? index + 1 : "."}
+                                      {showTick ? index + 1 : "\u00A0"}
                                     </span>
                                   </div>
                                 );

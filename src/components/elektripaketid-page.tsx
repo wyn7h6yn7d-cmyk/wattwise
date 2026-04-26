@@ -2,17 +2,14 @@
 
 import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
+import { clientDownloadPdf } from "@/lib/pdf/client-download";
+import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { PaywallCard } from "@/components/paywall-card";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { useMemo, useState } from "react";
 import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "@/lib/calculators/electricity-plan";
 import { ELECTRICITY_PLANS_UPDATED_AT, ELECTRICITY_PLAN_TEMPLATES } from "@/data/electricity-plans";
-
-function toNumber(value: string) {
-  if (!value.trim()) return 0;
-  const n = Number(value.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-}
+import { toNumber } from "@/lib/units";
 
 const fmtEur = (value: number) =>
   new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(value) + " €";
@@ -169,6 +166,52 @@ export function ElektripaketidPageClient() {
     setFixedMonthlyFeeEur(String(tpl.monthlyFeeEur));
     setGridFeeEurKwh(String(tpl.gridFeeEurKwh));
     setPricesIncludeVat(tpl.pricesIncludeVat);
+  };
+
+  const downloadPdf = async () => {
+    if (!projectId) return;
+    const out = await clientDownloadPdf(projectId, unlock, {
+      calculatorType: "elektripaketid",
+      summary: "Elektripaketi võrdlus koondab spot ja fikseeritud paketi aastakulu hinnangu sisestatud hindade põhjal.",
+      analysisBasis: mode === "advanced" ? "advanced" : "defaults",
+      inputs: [
+        {
+          group: "Tarbimine",
+          items: [
+            { label: "Kuutarbimine", value: `${monthlyKwh || "—"} kWh` },
+            { label: "Päeva/öö jaotus", value: `${daySharePct || "—"}% / ${nightSharePct || "—"}%` },
+            { label: "Režiim", value: mode === "advanced" ? "Täpsem arvutus" : "Kiire hinnang" },
+          ],
+        },
+        {
+          group: "Hinnad ja tasud",
+          items: [
+            { label: "Spot keskmine", value: `${spotEurKwh || "—"} €/kWh` },
+            { label: "Fikseeritud", value: `${fixedEurKwh || "—"} €/kWh` },
+            { label: "Spot marginaal", value: `${spotMarginEurKwh || "—"} €/kWh` },
+            { label: "Võrgutasu", value: `${gridFeeEurKwh || "—"} €/kWh` },
+            { label: "Hinnad sisaldavad KM-i", value: pricesIncludeVat ? "Jah" : "Ei" },
+          ],
+        },
+      ],
+      assumptions: [
+        { label: "Märkus", value: "Paketihinnad ja võrgutasud võivad muutuda; raport on ligikaudne võrdlus." },
+      ],
+      disclaimer:
+        "Võrdlus põhineb kasutaja sisestatud hindadel. Lõplik pakett tuleb kinnitada müüja juures.",
+      metrics: [
+        { label: "Aastane kulu vahe (spot − fixed)", value: `${result.annualDiff.toFixed(2).replace(".", ",")} €` },
+        { label: "Spot aastakulu", value: `${Math.round(result.spotAnnualCost).toLocaleString("et-EE")} €` },
+        { label: "Fixed aastakulu", value: `${Math.round(result.fixedAnnualCost).toLocaleString("et-EE")} €` },
+        { label: "Soodsam valik", value: result.cheaper },
+        { label: "Suhteline vahe", value: fmtPct(result.diffPercent) },
+        {
+          label: "Murdepunkti spot hind",
+          value: `${result.breakEvenSpotPrice.toFixed(3).replace(".", ",")} €/kWh`,
+        },
+      ],
+    }, "energiakalkulaator-elektripaketid-analuus.pdf");
+    if (!out.ok) setMessage(out.error);
   };
 
   const fetchSpotFromElering = async () => {
@@ -557,6 +600,15 @@ export function ElektripaketidPageClient() {
               Tulemus arvestab sisestatud tarbimist, energiahinda, võrgutasu, kuutasusid ja KM käsitlust.
             </p>
             <UsedAssumptionsBlock {...assumptionsInfo} />
+            <CalculatorPdfActions
+              projectId={projectId}
+              unlock={unlock}
+              purchaseBusy={purchaseBusy}
+              startCheckout={startCheckout}
+              checkPaymentStatus={checkPaymentStatus}
+              onDownload={downloadPdf}
+              returnSlug="elektripaketid"
+            />
               </>
             ) : (
               <p className="text-sm text-zinc-400">
@@ -573,7 +625,7 @@ export function ElektripaketidPageClient() {
         description="avab tunnipõhise simulatsiooni, CSV tarbimise impordi ja detailse võrdluse selle projekti jaoks."
         ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
         secondaryLabel="Kontrolli ligipääsu staatust"
-        onCta={() => startCheckout("full_analysis")}
+        onCta={() => startCheckout("full_analysis", { returnSlug: "elektripaketid" })}
         onSecondary={checkPaymentStatus}
         footer={
           <>

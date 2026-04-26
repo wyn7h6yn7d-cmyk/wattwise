@@ -24,7 +24,8 @@ export type PeakShavingInput = {
   peakDurationHours: number;
   demandChargeEurKwMonth: number;
   annualMaintenanceCost: number;
-  investment: number;
+  /** null kui kasutaja pole investeeringut sisestanud — tasuvust ei arvuta */
+  investment: number | null;
 };
 
 export type PeakShavingLimitingFactor =
@@ -56,7 +57,7 @@ export type PeakShavingProjectionInput = {
   demandFeeGrowthPercent: number;
   batteryDegradationPercent: number;
   periodYears: number;
-  investment: number;
+  investment: number | null;
 };
 
 export type PeakShavingProjectionResult = {
@@ -76,7 +77,7 @@ export function calculatePeakShavingProjection(input: PeakShavingProjectionInput
   const feeGrowth = Math.min(Math.max(input.demandFeeGrowthPercent, 0), 100) / 100;
   const degradation = Math.min(Math.max(input.batteryDegradationPercent, 0), 30) / 100;
   const years = Math.max(Math.round(input.periodYears), 1);
-  const investment = Math.max(input.investment, 0);
+  const investment = input.investment != null ? Math.max(input.investment, 0) : 0;
 
   let discountedNetEur = -investment;
   for (let year = 1; year <= years; year += 1) {
@@ -103,26 +104,40 @@ export function calculatePeakShaving(input: PeakShavingInput): PeakShavingResult
   const safePeakDurationHours = Math.max(input.peakDurationHours, 0.000001);
   // energyLimitedReductionKw = usableBatteryEnergyKwh / peakDurationHours
   const energyLimitedReductionKw = usableBatteryEnergyKwh / safePeakDurationHours;
+  const batteryPowerKw = Math.max(input.batteryPowerKw, 0);
+  const energyLim = Math.max(energyLimitedReductionKw, 0);
   // possibleReductionKw = min(requiredReductionKw, batteryPowerKw, energyLimitedReductionKw)
-  const possibleReductionKw = Math.max(
-    Math.min(requiredReductionKw, Math.max(input.batteryPowerKw, 0), Math.max(energyLimitedReductionKw, 0)),
-    0,
-  );
+  const possibleReductionKw = Math.max(Math.min(requiredReductionKw, batteryPowerKw, energyLim), 0);
   // annualSavings = possibleReductionKw * demandChargeEurKwMonth * 12
   const annualSavings = annualPeakShavingSavingsEur(possibleReductionKw, input.demandChargeEurKwMonth);
   // netSavings = annualSavings - annualMaintenanceCost
   const netSavings = annualSavings - Math.max(input.annualMaintenanceCost, 0);
-  // paybackYears = investment / netSavings
-  const paybackYears = netSavings > 0 ? Math.max(input.investment, 0) / netSavings : null;
+  const inv = input.investment != null ? Math.max(input.investment, 0) : null;
+  const paybackYears =
+    netSavings > 0 && inv != null && inv > 0 ? inv / netSavings : null;
 
-  const targetAchievable = requiredReductionKw <= 0 || possibleReductionKw >= requiredReductionKw - 1e-9;
-  let limitingFactor: PeakShavingLimitingFactor = "eesmärk saavutatud";
-  if (!targetAchievable) {
-    const batteryPowerKw = Math.max(input.batteryPowerKw, 0);
-    if (batteryPowerKw <= energyLimitedReductionKw + 1e-9) {
+  const eps = 1e-9;
+  let targetAchievable: boolean;
+  let limitingFactor: PeakShavingLimitingFactor;
+  if (requiredReductionKw <= eps) {
+    targetAchievable = true;
+    limitingFactor = "eesmärk saavutatud";
+  } else if (possibleReductionKw + eps >= requiredReductionKw) {
+    targetAchievable = true;
+    limitingFactor = "eesmärk saavutatud";
+  } else {
+    targetAchievable = false;
+    const r = requiredReductionKw;
+    const p = batteryPowerKw;
+    const e = energyLim;
+    if (p < r - eps && p <= e + eps) {
+      limitingFactor = "aku võimsus";
+    } else if (e < r - eps && e < p - eps) {
+      limitingFactor = "aku maht";
+    } else if (p <= e + eps) {
       limitingFactor = "aku võimsus";
     } else {
-      limitingFactor = input.peakDurationHours > 1.5 ? "tipu kestus" : "aku maht";
+      limitingFactor = "aku maht";
     }
   }
 

@@ -6,15 +6,13 @@ import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
 import { FEATURES } from "@/lib/features";
 import { MiniCashflowChart } from "@/components/charts/mini-cashflow-chart";
+import { clientDownloadPdf } from "@/lib/pdf/client-download";
+import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { calculateVppModel } from "@/lib/calculators/vpp";
 import { ChartCard } from "@/components/charts/ChartCard";
-
-function num(v: string): number {
-  const n = Number(v.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-}
+import { toNumber as num } from "@/lib/units";
 
 const fmtEur = (value: number) =>
   new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(value) + " €";
@@ -182,104 +180,76 @@ export function VppPageClient() {
 
   const downloadPdf = async () => {
     if (!projectId) return;
-    try {
-      const res = await fetch("/api/pdf/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          projectId,
-          fullAnalysisSessionId: unlock.fullAnalysisSessionId,
-          pdfSessionId: unlock.pdfSessionId,
-          payload: {
-            calculatorType: "vpp",
-            summary:
-              "VPP raport koondab sisestatud akuparameetrid, tulueeldused ja riskikordajad, et hinnata tasuvust.",
-            analysisBasis: mode === "advanced" ? "advanced" : "defaults",
-            inputs: [
-              {
-                group: "Aku ja investeering",
-                items: [
-                  { label: "Aku maht", value: capacityKwh ? `${capacityKwh} kWh` : "—" },
-                  { label: "Aku võimsus", value: powerKw ? `${powerKw} kW` : "—" },
-                  { label: "Investeering", value: investmentEur ? `${investmentEur} €` : "—" },
-                ],
-              },
-              {
-                group: "Tulud ja eluiga",
-                items: [
-                  { label: "Tulu tüüp", value: revenueType },
-                  { label: "Aastane brutotulu", value: fmtEur(model.grossRevenueYear) },
-                  { label: "Eluiga", value: `${lifetimeYears} a` },
-                  { label: "Efektiivsus", value: `${efficiencyPct}%` },
-                ],
-              },
-              {
-                group: "Kulud ja eeldused",
-                items: [
-                  { label: "Hooldus (€/a)", value: annualOandMEur ? `${annualOandMEur} €` : "—" },
-                  { label: "Tsüklid aastas", value: `${cyclesPerYear || "—"}` },
-                  { label: "Riskikoefitsient", value: `${riskCoefficientPct}%` },
-                  { label: "Kättesaadavus", value: `${availabilityPct}%` },
-                ],
-              },
-            ],
-            assumptions: [
-              {
-                label: "Märkus",
-                value:
-                  "VPP tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumisest.",
-              },
-            ],
-            formulas: [
-              {
-                label: "Arvutuse metoodika",
-                value:
-                  "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
-              },
-            ],
-            risksAndLimits: [
-              { label: "Tururisk", value: "Börsihinna kõikumine ja turulepääsu tingimused mõjutavad tulu tugevalt." },
-              { label: "Tehniline risk", value: "Aku degradatsioon ja kättesaadavus võivad vähendada realiseeruvat tulu." },
-              { label: "Lepingurisk", value: "Lepingutingimused ja teenustasud võivad muuta netotulemust." },
-            ],
-            disclaimer:
-              "Tegu on informatiivse mudeliga. Tegelik VPP tulu sõltub turust, lepingutest ja tehnilisest kasutusest.",
-            metrics: [
-              { label: "Aastane brutotulu", value: fmtEur(model.perScenario[1]?.grossRevenueYear ?? 0) },
-              { label: "Baas: netotulu (aasta 1)", value: fmtEur(model.perScenario[1]?.netRevYear1 ?? 0) },
-              {
-                label: "Baas: tasuvusaeg",
-                value: model.perScenario[1]?.paybackYears !== null ? `${model.perScenario[1].paybackYears.toFixed(1)} a` : "—",
-              },
-              { label: "Baas: kogukasum", value: fmtEur(model.perScenario[1]?.totalProfit ?? 0) },
-              { label: "Peamine riskitegur", value: model.mainRiskFactor },
-              { label: "Arvutusperiood", value: `${calculationPeriodYears} a` },
-            ],
-            charts: {
-              cashflowByYear: (model.perScenario[1]?.cashflows ?? []).map((v, idx) => ({
-                year: idx + 1,
-                cashflow: v,
-              })),
-            },
-          },
-        }),
-      });
-      if (!res.ok) {
-        setMessage("PDF genereerimine ebaõnnestus.");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "energiakalkulaator-vpp-analuus.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setMessage("PDF allalaadimine ebaõnnestus.");
-    }
+    const out = await clientDownloadPdf(projectId, unlock, {
+      calculatorType: "vpp",
+      summary:
+        "VPP raport koondab sisestatud akuparameetrid, tulueeldused ja riskikordajad, et hinnata tasuvust.",
+      analysisBasis: mode === "advanced" ? "advanced" : "defaults",
+      inputs: [
+        {
+          group: "Aku ja investeering",
+          items: [
+            { label: "Aku maht", value: capacityKwh ? `${capacityKwh} kWh` : "—" },
+            { label: "Aku võimsus", value: powerKw ? `${powerKw} kW` : "—" },
+            { label: "Investeering", value: investmentEur ? `${investmentEur} €` : "—" },
+          ],
+        },
+        {
+          group: "Tulud ja eluiga",
+          items: [
+            { label: "Tulu tüüp", value: revenueType },
+            { label: "Aastane brutotulu", value: fmtEur(model.grossRevenueYear) },
+            { label: "Eluiga", value: `${lifetimeYears} a` },
+            { label: "Efektiivsus", value: `${efficiencyPct}%` },
+          ],
+        },
+        {
+          group: "Kulud ja eeldused",
+          items: [
+            { label: "Hooldus (€/a)", value: annualOandMEur ? `${annualOandMEur} €` : "—" },
+            { label: "Tsüklid aastas", value: `${cyclesPerYear || "—"}` },
+            { label: "Riskikoefitsient", value: `${riskCoefficientPct}%` },
+            { label: "Kättesaadavus", value: `${availabilityPct}%` },
+          ],
+        },
+      ],
+      assumptions: [
+        {
+          label: "Märkus",
+          value: "VPP tulu sõltub turulepääsust, lepingutingimustest, aku kasutusest ja hinnakõikumisest.",
+        },
+      ],
+      formulas: [
+        {
+          label: "Arvutuse metoodika",
+          value:
+            "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
+        },
+      ],
+      risksAndLimits: [
+        { label: "Tururisk", value: "Börsihinna kõikumine ja turulepääsu tingimused mõjutavad tulu tugevalt." },
+        { label: "Tehniline risk", value: "Aku degradatsioon ja kättesaadavus võivad vähendada realiseeruvat tulu." },
+        { label: "Lepingurisk", value: "Lepingutingimused ja teenustasud võivad muuta netotulemust." },
+      ],
+      disclaimer:
+        "Tegu on informatiivse mudeliga. Tegelik VPP tulu sõltub turust, lepingutest ja tehnilisest kasutusest.",
+      metrics: [
+        { label: "Aastane brutotulu", value: fmtEur(model.perScenario[1]?.grossRevenueYear ?? 0) },
+        { label: "Baas: netotulu (aasta 1)", value: fmtEur(model.perScenario[1]?.netRevYear1 ?? 0) },
+        {
+          label: "Baas: tasuvusaeg",
+          value:
+            model.perScenario[1]?.paybackYears !== null ? `${model.perScenario[1].paybackYears.toFixed(1)} a` : "—",
+        },
+        { label: "Baas: kogukasum", value: fmtEur(model.perScenario[1]?.totalProfit ?? 0) },
+        { label: "Peamine riskitegur", value: model.mainRiskFactor },
+        { label: "Arvutusperiood", value: `${calculationPeriodYears} a` },
+      ],
+      charts: {
+        cashflowByYear: model.perScenario[1]?.cashflows ?? [],
+      },
+    }, "energiakalkulaator-vpp-analuus.pdf");
+    if (!out.ok) setMessage(out.error);
   };
 
   return (
@@ -535,7 +505,7 @@ export function VppPageClient() {
         description="avab VPP detailse simulatsiooni (stsenaariumid, risk, cashflow tabel, eksport) selle projekti jaoks."
         ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
         secondaryLabel="Kontrolli ligipääsu staatust"
-        onCta={() => startCheckout("full_analysis")}
+        onCta={() => startCheckout("full_analysis", { returnSlug: "vpp" })}
         onSecondary={checkPaymentStatus}
         footer={
           <>
@@ -693,25 +663,15 @@ export function VppPageClient() {
         </div>
         <UsedAssumptionsBlock {...assumptionsInfo} />
 
-        {FEATURES.paywallEnabled ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-            <p className="text-sm text-zinc-200">PDF raport on ajutiselt tasuta testimiseks allalaaditav.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="btn-glow" onClick={downloadPdf}>
-                Laadi PDF alla
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-zinc-300">Laadi alla kokkuvõtte PDF.</p>
-              <button type="button" className="btn-glow" onClick={downloadPdf}>
-                Laadi PDF alla
-              </button>
-            </div>
-          </div>
-        )}
+        <CalculatorPdfActions
+          projectId={projectId}
+          unlock={unlock}
+          purchaseBusy={purchaseBusy}
+          startCheckout={startCheckout}
+          checkPaymentStatus={checkPaymentStatus}
+          onDownload={downloadPdf}
+          returnSlug="vpp"
+        />
           </>
         ) : (
           <p className="mt-3 text-sm text-zinc-400">

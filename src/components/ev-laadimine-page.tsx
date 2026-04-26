@@ -2,28 +2,26 @@
 
 import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
+import { clientDownloadPdf } from "@/lib/pdf/client-download";
+import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { PaywallCard } from "@/components/paywall-card";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   calculateEvCharging,
   calculateEvChargeableEnergy,
   CHARGER_STEPS_KW,
+  formatChargingDurationHm,
   mainFusePower1fKw,
   mainFusePower3fKw,
   pickChargerStepKw,
   usableChargingPowerKw,
 } from "@/lib/calculators/ev";
-
-function toNumber(value: string) {
-  if (!value.trim()) return 0;
-  const n = Number(value.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-}
+import { toNumber } from "@/lib/units";
 
 const fmtEur = (value: number) =>
-  new Intl.NumberFormat("et-EE", { maximumFractionDigits: 2 }).format(value) + " €";
+  new Intl.NumberFormat("et-EE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + " €";
 
 export function EvLaadiminePageClient() {
   const { projectId, unlock, purchaseBusy, startCheckout, checkPaymentStatus, message, setMessage } =
@@ -134,6 +132,51 @@ export function EvLaadiminePageClient() {
     priceEurKwh,
     reserveKw,
   ]);
+
+  const downloadPdf = async () => {
+    if (!projectId) return;
+    const out = await clientDownloadPdf(projectId, unlock, {
+      calculatorType: "ev-laadimine",
+      summary: "EV laadimise analüüs koondab laadimisaja, hinnangulise kulu ja peakaitse sobivuse.",
+      analysisBasis: mode === "advanced" ? "advanced" : "defaults",
+      inputs: [
+        {
+          group: "Laadimine ja süsteem",
+          items: [
+            { label: "Režiim", value: mode === "advanced" ? "Täpsem arvutus" : "Kiire hinnang" },
+            { label: "Laaditav energia (arvestus)", value: `${result.gridEnergy.toFixed(2).replace(".", ",")} kWh` },
+            { label: "Laadija võimsus", value: `${chargerKw || "—"} kW` },
+            { label: "Elektrihind", value: `${priceEurKwh || "—"} €/kWh` },
+            { label: "Faasid", value: phase === "3" ? "3-faasiline" : "1-faasiline" },
+            { label: "Peakaitse", value: `${mainFuseA || "—"} A` },
+            { label: "Reserv majas", value: `${reserveKw || "—"} kW` },
+          ],
+        },
+      ],
+      assumptions: [
+        {
+          label: "Märkus",
+          value: "Tegelik laadimisaeg sõltub auto, laadija ja võrgu tegelikust käitumisest.",
+        },
+      ],
+      disclaimer: "Hinnang põhineb lihtsustatud mudelil. Kontrolli liitumistingimusi ja paigaldisaini.",
+      metrics: [
+        {
+          label: "Laadimise aeg",
+          value:
+            Number.isFinite(result.timeH) && result.timeH > 0
+              ? `${result.timeH.toFixed(1).replace(".", ",")} h`
+              : "—",
+        },
+        { label: "Energia kulu", value: fmtEur(result.cost) },
+        { label: "Soovitatud 1-faasiline laadija (max)", value: `${result.rec1} kW` },
+        { label: "Soovitatud 3-faasiline laadija (max)", value: `${result.rec3} kW` },
+        { label: "EV jaoks vaba võimsus (1f)", value: `${result.p1.toFixed(1).replace(".", ",")} kW` },
+        { label: "EV jaoks vaba võimsus (3f)", value: `${result.p3.toFixed(1).replace(".", ",")} kW` },
+      ],
+    }, "energiakalkulaator-ev-analuus.pdf");
+    if (!out.ok) setMessage(out.error);
+  };
 
   const findCheapestSpotWindow = async () => {
     setSpotState({ loading: true, note: "Laen Eleringi hindu...", cheapest: null });
@@ -248,6 +291,17 @@ export function EvLaadiminePageClient() {
   }, [priceEurKwh, mainFuseA, result.timeH]);
   const hasRequiredInputs = toNumber(energyToChargeKwh) > 0 && toNumber(chargerKw) > 0 && toNumber(priceEurKwh) > 0;
 
+  useEffect(() => {
+    if (!hasCalculated || !hasRequiredInputs) return;
+    const p = Math.max(toNumber(chargerKw), 0.000001);
+    if (Number.isFinite(result.timeH) && result.timeH > 48 && p > 2) {
+      console.warn(
+        "[EV charging calculator] Laadimisaeg ületab 48 h suure võimsusega laadijaga — kontrolli sisendeid (nt koma vs punkt, ühikud).",
+        { chargingTimeHours: result.timeH, chargerKw: p, energyKwh: result.gridEnergy },
+      );
+    }
+  }, [hasCalculated, hasRequiredInputs, result.timeH, result.gridEnergy, chargerKw]);
+
   const handleCalculate = () => {
     if (!hasRequiredInputs) {
       setValidationMessage("Täida vajalikud väljad enne arvutamist.");
@@ -276,6 +330,11 @@ export function EvLaadiminePageClient() {
     setValidationMessage(null);
     setHasCalculated(false);
   };
+
+  const chargingDurationText = (() => {
+    const d = formatChargingDurationHm(result.timeH);
+    return d ? `${d.hours}h ${d.minutes}m` : "—";
+  })();
 
   return (
     <div className="grid gap-6">
@@ -551,11 +610,7 @@ export function EvLaadiminePageClient() {
             <div className="mb-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
               <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <strong className="text-4xl font-semibold text-emerald-100 sm:text-5xl">
-                  {Number.isFinite(result.timeH)
-                    ? `${Math.floor(result.timeH)}h ${Math.round((result.timeH % 1) * 60)}m`
-                    : "—"}
-                </strong>
+                <strong className="text-4xl font-semibold text-emerald-100 sm:text-5xl">{chargingDurationText}</strong>
               </div>
               <p className="mt-2 text-sm text-emerald-50/90">
                 Selle sisendi põhjal kulub laadimise lõpetamiseks ligikaudu nii palju aega.
@@ -565,18 +620,18 @@ export function EvLaadiminePageClient() {
               <div className="metric-card metric-card-primary metric-card-accent-emerald">
                 <p className="metric-label">Olulisim: laadimise aeg</p>
                 <div className="metric-main">
-                  <strong className="metric-value">
-                    {Number.isFinite(result.timeH)
-                      ? `${Math.floor(result.timeH)}h ${Math.round((result.timeH % 1) * 60)}m`
-                      : "—"}
-                  </strong>
+                  <strong className="metric-value">{chargingDurationText}</strong>
                 </div>
                 <p className="metric-help">Kui kaua võtab valitud energia koguse laadimine.</p>
               </div>
               <div className="metric-card metric-card-accent-teal">
                 <p className="metric-label">Laadimise maksumus</p>
                 <div className="metric-main">
-                  <strong className="metric-value">{result.cost.toFixed(2).replace(".", ",")}</strong>
+                  <strong className="metric-value">
+                    {new Intl.NumberFormat("et-EE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                      result.cost,
+                    )}
+                  </strong>
                   <span className="metric-unit">EUR</span>
                 </div>
                 <p className="metric-help">Arvutus põhineb hinnal ja laaditaval energial.</p>
@@ -647,6 +702,15 @@ export function EvLaadiminePageClient() {
               </p>
             ) : null}
             <UsedAssumptionsBlock {...assumptionsInfo} />
+            <CalculatorPdfActions
+              projectId={projectId}
+              unlock={unlock}
+              purchaseBusy={purchaseBusy}
+              startCheckout={startCheckout}
+              checkPaymentStatus={checkPaymentStatus}
+              onDownload={downloadPdf}
+              returnSlug="ev-laadimine"
+            />
               </>
             ) : (
               <p className="text-sm text-zinc-400">
@@ -663,7 +727,7 @@ export function EvLaadiminePageClient() {
         description="avab odavaimate tundide leidmise, laadimisplaani ja ekspordi selle projekti jaoks."
         ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
         secondaryLabel="Kontrolli ligipääsu staatust"
-        onCta={() => startCheckout("full_analysis")}
+        onCta={() => startCheckout("full_analysis", { returnSlug: "ev-laadimine" })}
         onSecondary={checkPaymentStatus}
         footer={
           <>

@@ -2,6 +2,8 @@
 
 import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
+import { clientDownloadPdf } from "@/lib/pdf/client-download";
+import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { PaywallCard } from "@/components/paywall-card";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
@@ -10,15 +12,13 @@ import {
   calculatePeakShaving,
   calculatePeakShavingProjection,
 } from "@/lib/calculators/peak-shaving";
-
-function toNumber(value: string) {
-  if (!value.trim()) return 0;
-  const n = Number(value.replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-}
+import { parseLocaleNumber, toNumber } from "@/lib/units";
 
 const fmtEur = (value: number) =>
   new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(value) + " €";
+
+const fmtKw1 = (value: number) =>
+  new Intl.NumberFormat("et-EE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value) + " kW";
 
 export function PeakShavingPageClient() {
   const { projectId, unlock, purchaseBusy, startCheckout, checkPaymentStatus, message, setMessage } =
@@ -50,28 +50,37 @@ export function PeakShavingPageClient() {
     const limit = Math.max(toNumber(targetLimitKw), 0);
     const battKwh = Math.max(toNumber(batteryKwh), 0);
     const battKw = Math.max(toNumber(batteryKw), 0);
-    const hours =
-      mode === "advanced"
-        ? Math.max(toNumber(avgPeakDurationHours), 0.25)
-        : Math.max(toNumber(peakHours), 0.25);
+    const hoursParsed =
+      mode === "advanced" ? parseLocaleNumber(avgPeakDurationHours) : parseLocaleNumber(peakHours);
+    const hours = Math.max(hoursParsed ?? 0, 0.000001);
     const fee = Math.max(toNumber(demandFeeEurPerKwMonth), 0);
     const peaks = Math.max(Math.round(toNumber(peaksPerMonth)), 0);
-    const minSoc = Math.min(Math.max(toNumber(minSocPct), 0), 100);
-    const maxSoc = Math.min(Math.max(toNumber(maxUsableSocPct), 0), 100);
-    const usableSocRange = Math.max((maxSoc - minSoc) / 100, 0);
-    const efficiency = Math.min(Math.max(toNumber(batteryEfficiencyPct), 1), 100) / 100;
     const degradation = Math.min(Math.max(toNumber(batteryDegradationPct), 0), 30) / 100;
-    const inv = Math.max(toNumber(investmentEur), 0);
-    const maintenance = Math.max(toNumber(annualMaintenanceEur), 0);
+    const maintenance = parseLocaleNumber(annualMaintenanceEur) ?? 0;
+    const inv = parseLocaleNumber(investmentEur);
     const feeGrowth = Math.min(Math.max(toNumber(demandFeeGrowthPct), 0), 100) / 100;
     const years = Math.max(Math.round(toNumber(periodYears)), 1);
+
+    let usableSocPercent = 100;
+    if (mode === "advanced" && hasValue(minSocPct) && hasValue(maxUsableSocPct)) {
+      const minS = Math.min(Math.max(toNumber(minSocPct), 0), 100);
+      const maxS = Math.min(Math.max(toNumber(maxUsableSocPct), 0), 100);
+      const range = Math.max(maxS - minS, 0);
+      if (range > 0) usableSocPercent = range;
+    }
+
+    let efficiencyPercent = 100;
+    if (mode === "advanced" && hasValue(batteryEfficiencyPct)) {
+      const e = toNumber(batteryEfficiencyPct);
+      if (e > 0) efficiencyPercent = Math.min(Math.max(e, 1), 100);
+    }
 
     const peakShaving = calculatePeakShaving({
       currentPeakKw: peak,
       targetPeakKw: limit,
       batteryKwh: battKwh,
-      usableSocPercent: usableSocRange * 100,
-      efficiencyPercent: efficiency * 100,
+      usableSocPercent,
+      efficiencyPercent,
       batteryPowerKw: battKw,
       peakDurationHours: hours,
       demandChargeEurKwMonth: fee,
@@ -95,8 +104,8 @@ export function PeakShavingPageClient() {
       possibleReductionKw: achievableCut,
       requiredReductionKw: needCut,
       peakDurationHours: hours,
-      usableSocPercent: usableSocRange * 100,
-      efficiencyPercent: efficiency * 100,
+      usableSocPercent,
+      efficiencyPercent,
       demandChargeEurKwMonth: fee,
       annualMaintenanceCost: maintenance,
       demandFeeGrowthPercent: feeGrowth * 100,
@@ -106,12 +115,12 @@ export function PeakShavingPageClient() {
     });
     const note =
       needCut <= 0
-        ? "Sinu sisendi põhjal pole vaja tippu lõigata (piir on juba piisav)."
+        ? "Soovitud piir on juba saavutatud või sisend ei vaja lõiget."
         : achievableCut <= 0
           ? "Aku parameetritega ei saa tippu sisuliselt lõigata."
-          : achievableCut < needCut
-            ? "Aku piirab lõikamist (võimsus või energia ei pruugi täielikult piisata)."
-            : "Aku parameetritega on tippude lõikamine selle piirini realistlik.";
+          : achievableCut + 1e-9 >= needCut
+            ? "Eesmärk on selle sisendi põhjal saavutatav."
+            : `Piirav tegur: ${limitingFactor}.`;
 
     return {
       needCut,
@@ -153,6 +162,21 @@ export function PeakShavingPageClient() {
     periodYears,
   ]);
 
+  const hasRequiredInputs =
+    parseLocaleNumber(currentPeakKw) != null &&
+    parseLocaleNumber(currentPeakKw)! > 0 &&
+    parseLocaleNumber(targetLimitKw) != null &&
+    parseLocaleNumber(targetLimitKw)! > 0 &&
+    parseLocaleNumber(batteryKwh) != null &&
+    parseLocaleNumber(batteryKwh)! > 0 &&
+    parseLocaleNumber(batteryKw) != null &&
+    parseLocaleNumber(batteryKw)! > 0 &&
+    (mode === "advanced"
+      ? parseLocaleNumber(avgPeakDurationHours) != null && parseLocaleNumber(avgPeakDurationHours)! > 0
+      : parseLocaleNumber(peakHours) != null && parseLocaleNumber(peakHours)! > 0) &&
+    parseLocaleNumber(demandFeeEurPerKwMonth) != null &&
+    parseLocaleNumber(demandFeeEurPerKwMonth)! > 0;
+
   const assumptionsInfo = useMemo(() => {
     const userInputs: string[] = [];
     if (toNumber(currentPeakKw) > 0) userInputs.push(`Praegune peak: ${currentPeakKw} kW`);
@@ -162,7 +186,8 @@ export function PeakShavingPageClient() {
     if (toNumber(demandFeeEurPerKwMonth) > 0) userInputs.push(`Võimsustasu: ${demandFeeEurPerKwMonth} €/kW/kuu`);
 
     const defaultAssumptions: string[] = [];
-    if (mode === "quick") defaultAssumptions.push("SOC vahemik ja aku efektiivsus eeldati tüüpiliste väärtustega.");
+    if (mode === "quick")
+      defaultAssumptions.push("Kasutatav aku maht ja efektiivsus: 100% / 100% (täpsemaid tehnilisi välju pole täidetud).");
     if (mode === "advanced" && toNumber(minSocPct) === 15) defaultAssumptions.push("Min SOC: 15%.");
     if (mode === "advanced" && toNumber(maxUsableSocPct) === 90) defaultAssumptions.push("Max kasutatav SOC: 90%.");
     if (mode === "advanced" && toNumber(batteryEfficiencyPct) === 92) defaultAssumptions.push("Aku efektiivsus: 92%.");
@@ -190,6 +215,7 @@ export function PeakShavingPageClient() {
   ]);
 
   const sanityWarnings = useMemo(() => {
+    if (!hasCalculated || !hasRequiredInputs) return [];
     const warnings: string[] = [];
     const fee = toNumber(demandFeeEurPerKwMonth);
     if (fee > 0 && (fee < 1 || fee > 40)) {
@@ -198,17 +224,21 @@ export function PeakShavingPageClient() {
     if (result.needCut > 0 && !result.targetRealistic) {
       warnings.push("Aku ei kata soovitud lõiget täielikult. Vajad suuremat kW, suuremat kWh või leebemat sihtpiiri.");
     }
-    if (result.netSavings <= 0) {
-      warnings.push("Netosääst on null või negatiivne - selle sisendi korral ei pruugi investeering ära tasuda.");
+    if (result.netSavings < 0) {
+      warnings.push("Netosääst on negatiivne — selle sisendi korral ei pruugi investeering ära tasuda.");
+    } else if (result.netSavings === 0 && result.annualSavings > 0 && result.needCut > 0) {
+      warnings.push("Hoolduskulu vähendab netosäästu nullini — kontrolli kulude sisendit.");
     }
     return warnings;
-  }, [demandFeeEurPerKwMonth, result.needCut, result.targetRealistic, result.netSavings]);
-  const hasRequiredInputs =
-    toNumber(currentPeakKw) > 0 &&
-    toNumber(targetLimitKw) > 0 &&
-    toNumber(batteryKwh) > 0 &&
-    toNumber(batteryKw) > 0 &&
-    toNumber(demandFeeEurPerKwMonth) > 0;
+  }, [
+    hasCalculated,
+    hasRequiredInputs,
+    demandFeeEurPerKwMonth,
+    result.needCut,
+    result.targetRealistic,
+    result.netSavings,
+    result.annualSavings,
+  ]);
 
   const handleCalculate = () => {
     if (!hasRequiredInputs) {
@@ -239,6 +269,56 @@ export function PeakShavingPageClient() {
     setPeriodYears("");
     setValidationMessage(null);
     setHasCalculated(false);
+  };
+
+  const downloadPdf = async () => {
+    if (!projectId) return;
+    const years = Math.max(Math.round(toNumber(periodYears)), 1);
+    const out = await clientDownloadPdf(projectId, unlock, {
+      calculatorType: "peak-shaving",
+      summary: "Peak shaving analüüs hinnang tippude lõikamise ja võimsustasu säästu kohta.",
+      analysisBasis: mode === "advanced" ? "advanced" : "defaults",
+      inputs: [
+        {
+          group: "Tipud ja aku",
+          items: [
+            { label: "Praegune peak", value: `${currentPeakKw || "—"} kW` },
+            { label: "Sihtpiir", value: `${targetLimitKw || "—"} kW` },
+            { label: "Aku maht", value: `${batteryKwh || "—"} kWh` },
+            { label: "Aku võimsus", value: `${batteryKw || "—"} kW` },
+            { label: "Tipu kestus", value: `${result.hours.toFixed(2).replace(".", ",")} h` },
+            { label: "Võimsustasu", value: `${demandFeeEurPerKwMonth || "—"} €/kW/kuu` },
+          ],
+        },
+        {
+          group: "Kulud",
+          items: [
+            { label: "Investeering", value: `${investmentEur || "—"} €` },
+            { label: "Hooldus (€/a)", value: `${annualMaintenanceEur || "—"} €` },
+            { label: "Arvutusperiood", value: `${years} a` },
+          ],
+        },
+      ],
+      assumptions: [
+        {
+          label: "Märkus",
+          value: "Tegelik sääst sõltub tarbimisprofiilist, lepingutest ja piirangutest.",
+        },
+      ],
+      disclaimer: "Raport on informatiivne hinnang, mitte garantii säästu suuruse kohta.",
+      metrics: [
+        { label: "Aastane sääst (bruto)", value: fmtEur(result.annualSavings) },
+        { label: "Neto sääst", value: fmtEur(result.netSavings) },
+        {
+          label: "Tasuvusaeg",
+          value: result.paybackYears !== null ? `${result.paybackYears.toFixed(1).replace(".", ",")} a` : "—",
+        },
+        { label: "Saavutatav lõige", value: fmtKw1(result.achievableCut) },
+        { label: "Eesmärk saavutatav", value: result.targetRealistic ? "Jah" : "Ei" },
+        { label: "Piirav tegur", value: result.limitingFactor },
+      ],
+    }, "energiakalkulaator-peak-shaving-analuus.pdf");
+    if (!out.ok) setMessage(out.error);
   };
 
   return (
@@ -393,7 +473,15 @@ export function PeakShavingPageClient() {
                       </label>
                       <label className="field-label">
                         <span className="field-label-text">Keskmine tipu kestus (h)</span>
-                        <input className="input" value={avgPeakDurationHours} inputMode="decimal" onChange={(e) => setAvgPeakDurationHours(e.target.value)} placeholder="nt 1,2" />
+                        <input
+                          className={`input ${
+                            hasValue(avgPeakDurationHours) && toNumber(avgPeakDurationHours) <= 0 ? "input-warning" : ""
+                          }`}
+                          value={avgPeakDurationHours}
+                          inputMode="decimal"
+                          onChange={(e) => setAvgPeakDurationHours(e.target.value)}
+                          placeholder="nt 1,2"
+                        />
                         <span className="field-hint">Kasutatakse energia-põhise lõike arvutuses.</span>
                       </label>
                     </div>
@@ -495,9 +583,9 @@ export function PeakShavingPageClient() {
               <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
                 <strong className="text-4xl font-semibold text-emerald-100 sm:text-5xl">
-                  {Math.round(result.annualSavings).toLocaleString("et-EE")}
+                  {new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(Math.round(result.annualSavings))}
                 </strong>
-                <span className="pb-1 text-base text-emerald-50/90 sm:text-lg">EUR/a</span>
+                <span className="pb-1 text-base text-emerald-50/90 sm:text-lg">€/a</span>
               </div>
               <p className="mt-2 text-sm text-emerald-50/90">
                 Selle sisendi põhjal võiks aastane võimsustasu kokkuhoid olla sellises suurusjärgus.
@@ -507,7 +595,11 @@ export function PeakShavingPageClient() {
               <div className="metric-card metric-card-accent-teal">
                 <p className="metric-label">Vajalik lõige</p>
                 <div className="metric-main">
-                  <strong className="metric-value">{result.needCut.toFixed(1).replace(".", ",")}</strong>
+                  <strong className="metric-value">
+                    {new Intl.NumberFormat("et-EE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
+                      result.needCut,
+                    )}
+                  </strong>
                   <span className="metric-unit">kW</span>
                 </div>
                 <p className="metric-help">Kui palju tuleks tippu vähendada sihtpiiri saavutamiseks.</p>
@@ -515,7 +607,11 @@ export function PeakShavingPageClient() {
               <div className="metric-card metric-card-accent-emerald">
                 <p className="metric-label">Saavutatav lõige</p>
                 <div className="metric-main">
-                  <strong className="metric-value">{result.achievableCut.toFixed(1).replace(".", ",")}</strong>
+                  <strong className="metric-value">
+                    {new Intl.NumberFormat("et-EE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
+                      result.achievableCut,
+                    )}
+                  </strong>
                   <span className="metric-unit">kW</span>
                 </div>
                 <p className="metric-help">Aku reaalselt võimaldatav tipukoormuse vähendus.</p>
@@ -523,8 +619,10 @@ export function PeakShavingPageClient() {
               <div className="metric-card metric-card-primary metric-card-accent-emerald sm:col-span-2">
                 <p className="metric-label">Olulisim: hinnanguline sääst aastas</p>
                 <div className="metric-main">
-                  <strong className="metric-value">{Math.round(result.annualSavings).toLocaleString("et-EE")}</strong>
-                  <span className="metric-unit">EUR/a</span>
+                  <strong className="metric-value">
+                    {new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(Math.round(result.annualSavings))}
+                  </strong>
+                  <span className="metric-unit">€/a</span>
                 </div>
                 <p className="metric-help">Aastane võimsustasu kokkuhoid saavutatud lõike põhjal.</p>
               </div>
@@ -579,12 +677,26 @@ export function PeakShavingPageClient() {
                 <strong>{result.recommendedBatteryKwh.toFixed(1).replace(".", ",")} kWh</strong>
               </div>
             </div>
-            {result.paybackYears === null ? (
+            {result.paybackYears === null && result.netSavings > 0 ? (
+              <p className="mt-3 text-sm text-zinc-400">
+                Tasuvusaega ei näidata — lisa investeering (€), et hinnata tasuvust.
+              </p>
+            ) : null}
+            {result.paybackYears === null && result.netSavings <= 0 ? (
               <p className="mt-3 text-sm text-amber-200">
                 Tasuvusaega ei saa arvutada, sest netosääst on null või negatiivne.
               </p>
             ) : null}
             <UsedAssumptionsBlock {...assumptionsInfo} />
+            <CalculatorPdfActions
+              projectId={projectId}
+              unlock={unlock}
+              purchaseBusy={purchaseBusy}
+              startCheckout={startCheckout}
+              checkPaymentStatus={checkPaymentStatus}
+              onDownload={downloadPdf}
+              returnSlug="peak-shaving"
+            />
               </>
             ) : (
               <p className="text-sm text-zinc-400">
@@ -601,7 +713,7 @@ export function PeakShavingPageClient() {
         description="avab 15-min tarbimisprofiili simulatsiooni, tippude analüüsi ja rahavoo tabelina selle projekti jaoks."
         ctaLabel={purchaseBusy === "full_analysis" ? "Laen..." : "Ava detailne vaade"}
         secondaryLabel="Kontrolli ligipääsu staatust"
-        onCta={() => startCheckout("full_analysis")}
+        onCta={() => startCheckout("full_analysis", { returnSlug: "peak-shaving" })}
         onSecondary={checkPaymentStatus}
         footer={
           <>

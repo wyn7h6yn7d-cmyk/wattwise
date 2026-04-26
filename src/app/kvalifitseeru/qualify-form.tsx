@@ -285,7 +285,7 @@ export function QualifyForm() {
             <ul className="mt-2 list-disc space-y-1 pl-4">
               <li>viimane elektriarve (kWh + hind)</li>
               <li>peakaitse (A)</li>
-              <li>katusesuund ja kalle (kui tead)</li>
+              <li>paneelide suund ja kalle (kui tead)</li>
               <li>kas on börsipakett</li>
             </ul>
           </div>

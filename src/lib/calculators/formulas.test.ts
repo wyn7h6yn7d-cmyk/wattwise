@@ -7,7 +7,12 @@ import {
 } from "../elering";
 import { calculateComparison } from "../calculator";
 import type { CalculatorInput } from "../../types/calculator";
-import { calculateEvChargeableEnergy, calculateEvCharging, mainFusePower3fKw } from "./ev";
+import {
+  calculateEvChargeableEnergy,
+  calculateEvCharging,
+  formatChargingDurationHm,
+  mainFusePower3fKw,
+} from "./ev";
 import {
   annualPeakShavingSavingsEur,
   calculatePeakShaving,
@@ -15,7 +20,7 @@ import {
   possibleCutKw,
   requiredCutKw,
 } from "./peak-shaving";
-import { toRatio } from "../units";
+import { parseLocaleNumber, toRatio } from "../units";
 import { calculateVppCore, calculateVppModel } from "./vpp";
 import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "./electricity-plan";
 import { calculateSolarCoreFormulas } from "./solar";
@@ -167,6 +172,25 @@ describe("EV and peak shaving formulas", () => {
     );
   });
 
+  it("EV scenario from locale-formatted strings matches kWh / kW and kWh * €/kWh", () => {
+    const energy = parseLocaleNumber("30")!;
+    const kw = parseLocaleNumber("11")!;
+    const price = parseLocaleNumber("0,16")!;
+    expect(energy / kw).toBeCloseTo(30 / 11, 6);
+    expect(energy * price).toBeCloseTo(4.8, 6);
+  });
+
+  it("formatChargingDurationHm formats 30 kWh / 11 kW as 2h 44m", () => {
+    const hours = 30 / 11;
+    expect(hours).toBeCloseTo(2.7272727, 4);
+    expect(formatChargingDurationHm(hours)).toEqual({ hours: 2, minutes: 44 });
+  });
+
+  it("parseLocaleNumber examples for EV inputs", () => {
+    expect(parseLocaleNumber("0,16")).toBeCloseTo(0.16, 8);
+    expect(parseLocaleNumber("11")).toBe(11);
+  });
+
   it("EV chargeable energy formulas are computed in calculator lib", () => {
     const result = calculateEvChargeableEnergy({
       mode: "advanced",
@@ -179,6 +203,43 @@ describe("EV and peak shaving formulas", () => {
     });
     expect(result.chargeableEnergyKwh).toBeCloseTo(36, 6);
     expect(result.gridEnergyKwh).toBeCloseTo((36 / 0.92) * 1.08, 6);
+  });
+
+  it("EV quick mode: empty efficiency must not blow up grid kWh (regression)", () => {
+    const result = calculateEvChargeableEnergy({
+      mode: "quick",
+      batteryKwh: 0,
+      startSocPct: 0,
+      targetSocPct: 0,
+      energyToChargeKwh: 30,
+      chargerEfficiencyPct: 0,
+      chargingLossPct: 0,
+    });
+    expect(result.gridEnergyKwh).toBeCloseTo(30, 6);
+  });
+
+  it("EV manual scenario: 30 kWh, 11 kW, 0.16 €/kWh, 32 A 3f, 2 kW reserve", () => {
+    const chargeable = calculateEvChargeableEnergy({
+      mode: "quick",
+      batteryKwh: 0,
+      startSocPct: 0,
+      targetSocPct: 0,
+      energyToChargeKwh: 30,
+      chargerEfficiencyPct: 0,
+      chargingLossPct: 0,
+    });
+    const ev = calculateEvCharging({
+      amps: 32,
+      phase: "3",
+      householdReserveKw: 2,
+      energyToChargeKwh: chargeable.gridEnergyKwh,
+      chargerKw: 11,
+      priceEurKwh: 0.16,
+    });
+    expect(ev.chargingTimeHours).toBeCloseTo(30 / 11, 5);
+    expect(ev.chargingCost).toBeCloseTo(4.8, 5);
+    expect(ev.fits11Kw).toBe(true);
+    expect(ev.fits22Kw).toBe(false);
   });
 
   it("peak shaving annual savings are computed correctly", () => {
@@ -288,6 +349,108 @@ describe("EV and peak shaving formulas", () => {
     const energyLimited = possibleCutKw(needCut, 100, 10, 1); // energy limited
     expect(powerLimited).toBe(20);
     expect(energyLimited).toBe(10);
+  });
+
+  it("peak shaving UI scenario: 120/90/150/60/2h/6.5 with full SOC+efficiency defaults", () => {
+    const result = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 150,
+      usableSocPercent: 100,
+      efficiencyPercent: 100,
+      batteryPowerKw: 60,
+      peakDurationHours: 2,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 0,
+      investment: null,
+    });
+    expect(result.requiredReductionKw).toBe(30);
+    expect(result.usableBatteryEnergyKwh).toBeCloseTo(150, 6);
+    expect(result.energyLimitedReductionKw).toBeCloseTo(75, 6);
+    expect(result.possibleReductionKw).toBeCloseTo(30, 6);
+    expect(result.annualSavings).toBeCloseTo(2340, 6);
+    expect(result.targetAchievable).toBe(true);
+    expect(result.limitingFactor).toBe("eesmärk saavutatud");
+    expect(result.paybackYears).toBeNull();
+  });
+
+  it("parseLocaleNumber parses peak fee 6,5", () => {
+    expect(parseLocaleNumber("6,5")).toBeCloseTo(6.5, 8);
+    const fee = parseLocaleNumber("6,5")!;
+    expect(30 * fee * 12).toBeCloseTo(2340, 6);
+  });
+
+  it("peak shaving: target >= current → no cut, zero savings", () => {
+    const result = calculatePeakShaving({
+      currentPeakKw: 100,
+      targetPeakKw: 100,
+      batteryKwh: 150,
+      usableSocPercent: 100,
+      efficiencyPercent: 100,
+      batteryPowerKw: 60,
+      peakDurationHours: 2,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 0,
+      investment: null,
+    });
+    expect(result.requiredReductionKw).toBe(0);
+    expect(result.possibleReductionKw).toBe(0);
+    expect(result.annualSavings).toBe(0);
+    expect(result.targetAchievable).toBe(true);
+  });
+
+  it("peak shaving: low battery power limits cut", () => {
+    const result = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 500,
+      usableSocPercent: 100,
+      efficiencyPercent: 100,
+      batteryPowerKw: 10,
+      peakDurationHours: 2,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 0,
+      investment: null,
+    });
+    expect(result.possibleReductionKw).toBeCloseTo(10, 6);
+    expect(result.limitingFactor).toBe("aku võimsus");
+    expect(result.targetAchievable).toBe(false);
+  });
+
+  it("peak shaving: small battery energy limits cut (10 kWh / 2 h)", () => {
+    const result = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 10,
+      usableSocPercent: 100,
+      efficiencyPercent: 100,
+      batteryPowerKw: 100,
+      peakDurationHours: 2,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 0,
+      investment: null,
+    });
+    expect(result.energyLimitedReductionKw).toBeCloseTo(5, 6);
+    expect(result.possibleReductionKw).toBeCloseTo(5, 6);
+    expect(result.limitingFactor).toBe("aku maht");
+    expect(result.targetAchievable).toBe(false);
+  });
+
+  it("peak shaving: payback null when investment not provided despite positive net", () => {
+    const result = calculatePeakShaving({
+      currentPeakKw: 120,
+      targetPeakKw: 90,
+      batteryKwh: 150,
+      usableSocPercent: 100,
+      efficiencyPercent: 100,
+      batteryPowerKw: 60,
+      peakDurationHours: 2,
+      demandChargeEurKwMonth: 6.5,
+      annualMaintenanceCost: 0,
+      investment: null,
+    });
+    expect(result.netSavings).toBeGreaterThan(0);
+    expect(result.paybackYears).toBeNull();
   });
 });
 

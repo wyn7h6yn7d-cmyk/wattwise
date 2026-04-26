@@ -61,7 +61,10 @@ export function calculateEvChargeableEnergy(input: EvChargeableEnergyInput): EvC
   const quickEnergy = Math.max(input.energyToChargeKwh, 0);
   const chargeableEnergyKwh =
     input.mode === "advanced" ? Math.max((batteryKwh * Math.max(targetSocPct - startSocPct, 0)) / 100, 0) : quickEnergy;
-  const chargerEff = Math.min(Math.max(input.chargerEfficiencyPct, 1), 100) / 100;
+  // 0 = pole täidetud → ära jaga 1%-ga (see teeks võrgust küsitava energia ~100× suuremaks).
+  const effPct = input.chargerEfficiencyPct;
+  const chargerEff =
+    effPct <= 0 ? 1 : Math.min(Math.max(effPct, 1), 100) / 100;
   const lossFactor = 1 + Math.min(Math.max(input.chargingLossPct, 0), 40) / 100;
   const gridEnergyKwh = chargeableEnergyKwh > 0 ? (chargeableEnergyKwh / chargerEff) * lossFactor : 0;
   return { chargeableEnergyKwh, gridEnergyKwh };
@@ -80,6 +83,13 @@ export type EvChargingFormulaResult = {
   loadManagementRecommended: boolean;
   warning22Kw: string | null;
 };
+
+/** Hours + minutes for UI (avoids float edge cases from `time % 1`). */
+export function formatChargingDurationHm(timeHours: number): { hours: number; minutes: number } | null {
+  if (!Number.isFinite(timeHours) || timeHours <= 0) return null;
+  const totalMinutes = Math.round(timeHours * 60);
+  return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
 
 export function calculateEvCharging(input: EvChargingFormulaInput): EvChargingFormulaResult {
   const amps = Math.max(input.amps, 0);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { PurchaseType, UnlockState } from "@/lib/unlock";
 import { FEATURES } from "@/lib/features";
+import type { CalculatorReturnSlug } from "@/lib/calculator-slugs";
 
 function safeUuid() {
   try {
@@ -135,7 +136,10 @@ export function useProjectUnlock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const startCheckout = async (purchaseType: PurchaseType) => {
+  const startCheckout = async (
+    purchaseType: PurchaseType,
+    options?: { returnSlug?: CalculatorReturnSlug },
+  ) => {
     if (!projectId) return;
     setPurchaseBusy(purchaseType);
     try {
@@ -146,6 +150,7 @@ export function useProjectUnlock() {
           projectId,
           purchaseType,
           fullAnalysisSessionId: unlock.fullAnalysisSessionId,
+          returnSlug: options?.returnSlug,
         }),
       });
       const data = (await res.json()) as { url?: string; error?: string };

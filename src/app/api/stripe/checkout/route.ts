@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripeServer, getSiteUrl } from "@/lib/stripe";
+import { sanitizeCalculatorReturnSlug } from "@/lib/calculator-slugs";
 
 type PurchaseType = "full_analysis" | "pdf_report";
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
     projectId?: string;
     purchaseType?: PurchaseType;
     fullAnalysisSessionId?: string;
+    returnSlug?: string;
   };
 
   const projectId = body.projectId?.trim();
@@ -54,7 +56,8 @@ export async function POST(request: Request) {
   }
 
   const siteUrl = getSiteUrl();
-  const baseReturn = `${siteUrl}/kalkulaatorid/paikesejaam?projectId=${encodeURIComponent(projectId)}`;
+  const slug = sanitizeCalculatorReturnSlug(body.returnSlug);
+  const baseReturn = `${siteUrl}/kalkulaatorid/${slug}?projectId=${encodeURIComponent(projectId)}`;
   const successUrl = `${baseReturn}&session_id={CHECKOUT_SESSION_ID}&purchaseType=${purchaseType}&status=success`;
   const cancelUrl = `${baseReturn}&purchaseType=${purchaseType}&status=cancel`;
 
