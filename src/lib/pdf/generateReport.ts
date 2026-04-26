@@ -21,8 +21,12 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     payload.analysisBasis === "advanced"
       ? "Tulemus põhineb kasutaja sisestatud täpsematel andmetel."
       : "See tulemus kasutab osaliselt vaikimisi eeldusi.";
-  const formulas = payload.formulas ?? [
-    { label: "Valemid", value: "Põhinäitajad arvutatakse sisendite põhjal; täpne valem sõltub kalkulaatori tüübist." },
+  const methodology = payload.formulas ?? [
+    {
+      label: "Arvutuse metoodika",
+      value:
+        "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
+    },
   ];
   const risksAndLimits = payload.risksAndLimits ?? [
     { label: "Riskid", value: "Tegelik tulemus võib erineda turutingimuste, kasutusprofiili ja tehniliste piirangute tõttu." },
@@ -141,7 +145,7 @@ export async function generatePremiumReport(payload: PdfReportPayload) {
     const rec = payload.recommendation ?? defaultRecommendation(payload.calculatorType);
     drawRecommendationBox(page, fonts, { x: pdfTheme.margin, y: 520, w: A4.width - pdfTheme.margin * 2, h: 220 }, rec.title, rec.bullets);
 
-    drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 418, w: A4.width - pdfTheme.margin * 2, h: 102 }, formulas, "Valemite lühiselgitus");
+    drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 418, w: A4.width - pdfTheme.margin * 2, h: 102 }, methodology, "Arvutuse metoodika");
     drawAssumptionsTable(page, fonts, { x: pdfTheme.margin, y: 220, w: A4.width - pdfTheme.margin * 2, h: 188 }, risksAndLimits, "Riskid ja piirangud");
     drawDisclaimerBlockWithText(page, fonts, { x: pdfTheme.margin, y: 80, w: A4.width - pdfTheme.margin * 2, h: 130 }, payload.disclaimer);
     drawFooter(page, fonts);

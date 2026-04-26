@@ -274,7 +274,7 @@ export function EnergyForecastDashboard({
         <div className="mt-6">
           <ChartCard
             title="Hinna, ilma ja tootluse graafik"
-            description="Teal = hind, kollane = kiirgus, sinine = pilvisus, roheline = PV tootlus."
+            description="Teal joon näitab hinda, kollane kiirgust, sinine pilvisust ja roheline PV tootlust."
             chartClassName="min-h-[280px] md:min-h-[360px]"
           >
             <ForecastChart rows={rows} />

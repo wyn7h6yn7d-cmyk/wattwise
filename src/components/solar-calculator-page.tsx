@@ -287,17 +287,9 @@ export function SolarCalculatorPage() {
             ],
             formulas: [
               {
-                label: "Tootmine",
+                label: "Arvutuse metoodika",
                 value:
-                  "Aastane tootmine = süsteemi võimsus * spetsiifiline tootlus * suuna/kalde tegur * (1 - varjutus).",
-              },
-              {
-                label: "Netokasu",
-                value: "Netokasu = aastane sääst + võrku müügitulu - hoolduskulu.",
-              },
-              {
-                label: "Tasuvusaeg",
-                value: "Tasuvusaeg = investeering / netokasu (kuvatakse vaid kui netokasu > 0).",
+                  "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
               },
             ],
             risksAndLimits: [

@@ -178,16 +178,9 @@ export function VppPageClient() {
             ],
             formulas: [
               {
-                label: "Brutotulu",
-                value: "Brutotulu sõltub valitud tulu tüübist: aastane tulu, €/kW/a või arbitraaži spread.",
-              },
-              {
-                label: "Netotulu",
-                value: "Netotulu = brutotulu * kättesaadavus * riskikoefitsient - hooldus - finantseerimiskulu.",
-              },
-              {
-                label: "Tasuvusaeg",
-                value: "Tasuvusaeg = investeering / netotulu (kui netotulu on positiivne).",
+                label: "Arvutuse metoodika",
+                value:
+                  "Analüüs põhineb kasutaja sisestatud andmetel, valitud eeldustel ja süsteemis kasutataval arvutusmudelil. Tulemused on hinnangulised ning sõltuvad sisendandmete täpsusest.",
               },
             ],
             risksAndLimits: [

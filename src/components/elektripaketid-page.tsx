@@ -404,8 +404,8 @@ export function ElektripaketidPageClient() {
             </label>
             {result.mwhWarning ? (
               <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
-                Tuvastasin suure hinnasisendi. Kontrolli kas sisestasid €/MWh (nt 100 €/MWh = 0,10 €/kWh). Teisendan
-                selle automaatselt €/kWh kujule.
+                Tuvastasin suure hinnasisendi. Tõenäoliselt sisestasid hinna MWh-põhises ühikus; teisendan selle
+                automaatselt kWh-põhisesse vaatesse.
               </p>
             ) : null}
           </article>
@@ -476,7 +476,7 @@ export function ElektripaketidPageClient() {
                   <strong className="metric-value">{result.annualDiff.toFixed(2).replace(".", ",")}</strong>
                   <span className="metric-unit">EUR/a</span>
                 </div>
-                <p className="metric-help">Negatiivne tulemus = spot on odavam, positiivne = fikseeritud on odavam.</p>
+                <p className="metric-help">Negatiivne tulemus tähendab, et spot on odavam; positiivne tähendab, et fikseeritud on odavam.</p>
               </div>
               <div className="metric-card metric-card-accent-teal sm:col-span-2">
                 <p className="metric-label">Vahe % ja soodsam valik</p>
@@ -502,9 +502,7 @@ export function ElektripaketidPageClient() {
               <p className="mt-1 text-zinc-300">{result.reco}</p>
             </div>
             <p className="mt-3 text-xs text-zinc-400">
-              Arvutus: spot = tarbimine × (spot + marginaal + võrgutasu + taastuvenergia tasu + aktsiis) + kuutasud;
-              fixed = tarbimine × (fixed + võrgutasu + taastuvenergia tasu + aktsiis) + kuutasud. Kui KM pole hinnas,
-              lisatakse 1,24x.
+              Tulemus arvestab sisestatud tarbimist, energiahinda, võrgutasu, kuutasusid ja KM käsitlust.
             </p>
             {toNumber(monthlyKwh) <= 0 ? (
               <p className="mt-2 text-sm text-amber-200">

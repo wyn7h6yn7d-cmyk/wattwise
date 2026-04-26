@@ -83,8 +83,8 @@ export function HistoricalSolarAnalysisPanel({
           <p>Süsteemi võimsus: <span className="text-zinc-100">{fmt1(systemKw)} kW</span></p>
           <p>Kasutatud kaod: <span className="text-zinc-100">{fmt1(lossesPercent)}%</span></p>
           <p>
-            Ühikud: kiirgus on <span className="text-zinc-100">kWh/m²</span>; tootmispotentsiaal teisendatakse lihtsustatud
-            valemiga hinnanguliseks <span className="text-zinc-100">kWh</span> väärtuseks.
+            Ühikud: kiirgus on <span className="text-zinc-100">kWh/m²</span>; tootmispotentsiaal kuvatakse hinnangulise{" "}
+            <span className="text-zinc-100">kWh</span> väärtusena.
           </p>
           <p>Tegu on lihtsustatud hinnanguga, mitte detailse projektipõhise simulatsiooniga.</p>
         </div>

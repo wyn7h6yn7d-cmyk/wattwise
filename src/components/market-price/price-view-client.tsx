@@ -672,7 +672,7 @@ export function PriceViewClient({
           <div className="grid grid-cols-1 gap-4 lg:col-span-7">
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
               <div className="mb-3 text-sm font-semibold text-zinc-50">Odavaimad aknad</div>
-              <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: odav = alumine 25%.</div>
+              <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: odavaks märgitakse ligikaudu päeva soodsam neljandik.</div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <WindowCard hours={1} pick={windowPicks.cheapest["1"]} vat={vat} variant="cheapest" />
                 <WindowCard hours={2} pick={windowPicks.cheapest["2"]} vat={vat} variant="cheapest" />
@@ -682,7 +682,7 @@ export function PriceViewClient({
             </div>
             <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
               <div className="mb-3 text-sm font-semibold text-zinc-50">Kalleimad aknad</div>
-              <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: kallis/tipp = ülemine 25% (tipp ülemine 10%).</div>
+              <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: kallimaks märgitakse päeva ülemine hinnavahemik, tipp tähistab selle kõige kallimat osa.</div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <WindowCard hours={1} pick={windowPicks.priciest["1"]} vat={vat} variant="priciest" />
                 <WindowCard hours={2} pick={windowPicks.priciest["2"]} vat={vat} variant="priciest" />
