@@ -1,71 +1,62 @@
 import { LegalLayout } from "@/app/(legal)/legal-layout";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Kasutustingimused | Energiakalkulaator",
+};
 
 export default function TermsPage() {
   return (
-    <LegalLayout title="Kasutustingimused" updatedAt="07.04.2026">
+    <LegalLayout title="Kasutustingimused" updatedAt="26.04.2026">
       <p className="text-zinc-200">
-        Need kasutustingimused reguleerivad Energiakalkulaatori teenuse kasutamist. Enne teenuse
-        päris kasutuselevõttu palume tingimused juristiga üle vaadata.
+        Käesolevad kasutustingimused reguleerivad veebilehe energiakalkulaator.ee kasutamist.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">1. Üldsätted</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">1. Teenuse kirjeldus</h2>
       <p className="mt-2">
-        Veebilehe <strong>energiakalkulaator.ee</strong> teenust osutab hetkel eraisik{" "}
-        <strong>Kenneth Alto</strong>. Kontakt: <strong>kennethalto95@gmail.com</strong>.
-      </p>
-      <p className="mt-2">
-        Ettevõtlusvormi muutumisel (nt ettevõtte asutamisel) uuendatakse teenusepakkuja andmeid
-        veebilehel.
-      </p>
-      <p className="mt-2">
-        Teenus on suunatud nii eraisikutele kui ettevõtetele ning on mõeldud energiaotsuste
-        informatiivseks hindamiseks.
+        Energiakalkulaator on informatiivne tööriist energiaotsuste hindamiseks.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">2. Teenuse kirjeldus</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">2. Tulemuste olemus</h2>
       <p className="mt-2">
-        Energiakalkulaator pakub kalkulaatoreid (nt päikesejaama tasuvus, VPP tasuvusmudel, jne), mis
-        arvutavad sisendandmete põhjal hinnangulisi tulemusi. Tulemused ei ole garantii ning võivad
-        erineda tegelikkusest.
+        Tulemused on hinnangulised ja põhinevad kasutaja sisestatud andmetel ning süsteemi eeldustel.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">3. Kasutajakonto</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">3. Mitte nõustamine</h2>
       <p className="mt-2">
-        Teenuse teatud funktsioonid võivad eeldada konto loomist (nt projektide salvestamine,
-        ekspordid). Kasutaja vastutab oma sisselogimisandmete turvalisuse eest.
+        Tööriist ei ole finants-, investeerimis-, maksu-, õigus- ega tehniline nõustamine.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">4. Hinnad ja tasumine</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">4. Kasutaja vastutus</h2>
+      <p className="mt-2">Kasutaja vastutab sisestatud andmete õigsuse eest.</p>
+
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">5. Vastutuse piirang</h2>
       <p className="mt-2">
-        Tasuliste teenuste hinnad on avaldatud lehel <strong>/pricing</strong>. Tegemist on digitaalse
-        teenusega; enne ostu kinnitab kasutaja tingimused ja mõistab, et teenuse kohene osutamine võib
-        mõjutada taganemisõigust vastavalt kohaldatavale õigusele.
+        Teenuse osutaja ei vastuta otsuste eest, mis tehakse ainult kalkulaatori tulemuste põhjal.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">5. Intellektuaalne omand</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">6. Andmeallikad</h2>
       <p className="mt-2">
-        Teenuse sisu, disain ja kood on teenusepakkuja või tema partnerite intellektuaalomand.
-        Teenuse kasutamine ei anna õigust teenuse sisu kopeerida, levitada või taaskasutada väljaspool
-        lubatud kasutusulatust.
+        Kui kasutatakse Eleringi, Open-Meteo, PVGIS või muid avalikke andmeallikaid, sõltuvad
+        tulemused nende andmete kättesaadavusest ja täpsusest.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">6. Vastutuse piirang</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">7. Teenuse muutmine</h2>
       <p className="mt-2">
-        Teenus on informatiivne. Teenusepakkuja ei vastuta otsuste, kahjude või saamata jäänud tulu
-        eest, mis põhinevad kalkulaatori tulemustel. Kasutaja peab vajadusel konsulteerima
-        spetsialistidega.
+        Teenust võib muuta, täiendada või ajutiselt katkestada ilma ette teatamata.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">7. Teenuse kättesaadavus</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">8. Tasulised lisavõimalused</h2>
       <p className="mt-2">
-        Teenusepakkuja võib teenust ajutiselt piirata hoolduse, arenduse või turvalisuse tagamise
-        eesmärgil.
+        Hetkel võib teenus olla tasuta beetaversioonis. Tasulised lisavõimalused võivad hiljem
+        lisanduda.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">8. Lõppsätted</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">9. Kontakt</h2>
       <p className="mt-2">
-        Tingimusi võidakse uuendada. Olulistest muudatustest teavitatakse mõistlikul viisil.
-        Vaidlused lahendatakse esmalt läbirääkimiste teel; kohaldub Eesti õigus.
+        Kenneth Alto
+        <br />
+        <strong>kennethalto95@gmail.com</strong>
       </p>
     </LegalLayout>
   );

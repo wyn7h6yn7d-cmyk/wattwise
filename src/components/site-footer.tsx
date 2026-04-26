@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { OpenCookieSettingsButton } from "@/components/legal/OpenCookieSettingsButton";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -90,6 +91,21 @@ export function SiteFooter() {
             <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/privaatsuspoliitika">
                 Privaatsuspoliitika
+              </Link>
+            </li>
+            <li>
+              <Link className="text-zinc-400 hover:text-zinc-100" href="/kupsised">
+                Küpsised
+              </Link>
+            </li>
+            <li>
+              <OpenCookieSettingsButton className="text-zinc-400 hover:text-zinc-100">
+                Küpsiste seaded
+              </OpenCookieSettingsButton>
+            </li>
+            <li>
+              <Link className="text-zinc-400 hover:text-zinc-100" href="/kontakt">
+                Kontakt
               </Link>
             </li>
             <li>

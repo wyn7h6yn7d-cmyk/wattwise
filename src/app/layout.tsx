@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { CookieConsentManager } from "@/components/legal/CookieConsentManager";
+import { ConsentAwareAnalytics } from "@/components/legal/ConsentAwareAnalytics";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -68,7 +69,8 @@ export default function RootLayout({
         <SiteHeader />
         <div className="relative page-bg flex-1">{children}</div>
         <SiteFooter />
-        <Analytics />
+        <CookieConsentManager />
+        <ConsentAwareAnalytics />
       </body>
     </html>
   );

@@ -1,4 +1,9 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Kontakt | Energiakalkulaator",
+};
 
 export default function ContactPage() {
   return (
@@ -12,7 +17,8 @@ export default function ContactPage() {
         <header className="glass-panel rounded-3xl p-7 sm:p-10">
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">Kontakt</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Küsimuste ja koostöö korral võta ühendust. Teenust osutab hetkel eraisik Kenneth Alto.
+            Saada tagasisidet või küsi lisainfot energiakalkulaator.ee kasutamise kohta.
+            Teenust osutab hetkel eraisik Kenneth Alto.
           </p>
         </header>
 
@@ -61,6 +67,9 @@ export default function ContactPage() {
               <a className="text-emerald-200 underline underline-offset-4" href="mailto:kennethalto95@gmail.com">
                 kennethalto95@gmail.com
               </a>
+            </p>
+            <p className="mt-2 text-xs text-zinc-400">
+              Vormi kaudu saadetud andmeid kasutatakse ainult päringule vastamiseks.
             </p>
           </div>
         </section>
