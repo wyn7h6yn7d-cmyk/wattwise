@@ -8,7 +8,7 @@ import { PaywallCard } from "@/components/paywall-card";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { useMemo, useState } from "react";
 import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "@/lib/calculators/electricity-plan";
-import { ELECTRICITY_PLANS_UPDATED_AT, ELECTRICITY_PLAN_TEMPLATES } from "@/data/electricity-plans";
+import { ELECTRICITY_PLAN_TEMPLATES } from "@/data/electricity-plans";
 import { toNumber } from "@/lib/units";
 
 const fmtEur = (value: number) =>
@@ -267,10 +267,6 @@ export function ElektripaketidPageClient() {
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-zinc-300">
           Elektrimüüjate paketihinnad võivad muutuda. Kontrolli lõplik pakkumine alati müüja juures.
           Börsihinna andmed tulevad Eleringi turuandmetest.
-          <div className="mt-2 text-zinc-400">
-            Näidispakettide info on viimati uuendatud:{" "}
-            <span className="text-zinc-200">{ELECTRICITY_PLANS_UPDATED_AT}</span>.
-          </div>
         </div>
         <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
           <button
