@@ -13,6 +13,7 @@ import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
 import { ChartCard } from "@/components/charts/ChartCard";
 import { toNumber } from "@/lib/units";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 /** Igakuuva alguses: nullid / tühjad — ei salvestata brauserisse, iga refresh sama puhas lähtepunkt. */
 const defaults: CalculatorInput = {
@@ -58,6 +59,14 @@ const defaults: CalculatorInput = {
 };
 
 type NordPoolState = { loading: boolean; message: string; source: "live" | "fallback" | "none" };
+type PvgisResult = {
+  source: "live" | "fallback" | "none";
+  annualProductionKwh: number | null;
+  monthlyProductionKwh: Array<{ month: number; productionKwh: number }>;
+  specificYieldKwhPerKw: number | null;
+};
+const PVGIS_FALLBACK_UI_MESSAGE =
+  "PVGIS andmeid ei saanud hetkel laadida. Arvutus kasutab üldist tootluse eeldust.";
 
 function formatNum(value: number, maxDigits: number): string {
   return new Intl.NumberFormat("et-EE", {
@@ -95,6 +104,48 @@ function numValue(value: number): string | number {
   return value === 0 ? "" : value;
 }
 
+function parseCoordinate(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function directionToAzimuth(direction: CalculatorInput["panelDirection"]): number {
+  if (direction === "ida-laas") return -90;
+  return 0;
+}
+
+const MONTH_NAMES_ET = [
+  "",
+  "Jaanuar",
+  "Veebruar",
+  "Märts",
+  "Aprill",
+  "Mai",
+  "Juuni",
+  "Juuli",
+  "August",
+  "September",
+  "Oktoober",
+  "November",
+  "Detsember",
+];
+
+type PresetLocation = "tallinn" | "tartu" | "parnu" | "narva" | "rakvere" | "viljandi" | "voru" | "kuressaare" | "manual";
+
+const LOCATION_PRESETS: Record<Exclude<PresetLocation, "manual">, { latitude: string; longitude: string }> = {
+  tallinn: { latitude: "59.437", longitude: "24.7536" },
+  tartu: { latitude: "58.3776", longitude: "26.7290" },
+  parnu: { latitude: "58.3859", longitude: "24.4971" },
+  narva: { latitude: "59.3772", longitude: "28.1903" },
+  rakvere: { latitude: "59.3464", longitude: "26.3557" },
+  viljandi: { latitude: "58.3639", longitude: "25.59" },
+  voru: { latitude: "57.8480", longitude: "26.9993" },
+  kuressaare: { latitude: "58.2481", longitude: "22.5039" },
+};
+
 export function SolarCalculatorPage() {
   const [mode, setMode] = useState<"quick" | "advanced">("quick");
   const calculatorRef = useRef<HTMLElement | null>(null);
@@ -116,6 +167,19 @@ export function SolarCalculatorPage() {
     loading: false,
     message: "",
     source: "none",
+  });
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [presetLocation, setPresetLocation] = useState<PresetLocation>("manual");
+  const [pvgisSlopeDeg, setPvgisSlopeDeg] = useState("");
+  const [pvgisAzimuthDeg, setPvgisAzimuthDeg] = useState("");
+  const [pvgisLossesPercent, setPvgisLossesPercent] = useState("");
+  const [pvgisStatusMessage, setPvgisStatusMessage] = useState("");
+  const [pvgisResult, setPvgisResult] = useState<PvgisResult>({
+    source: "none",
+    annualProductionKwh: null,
+    monthlyProductionKwh: [],
+    specificYieldKwhPerKw: null,
   });
   const [result, setResult] = useState(() => calculateSolarComparison(defaults));
 
@@ -223,16 +287,100 @@ export function SolarCalculatorPage() {
     };
   }, [input.priceSource]);
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setErrors(validationErrors);
     if (validationErrors.length > 0) {
       setHasCalculated(false);
       return;
     }
+    let nextInput = input;
+    const parsedLat = parseCoordinate(latitude);
+    const parsedLon = parseCoordinate(longitude);
+    const losses = toNumber(pvgisLossesPercent);
+    const slope = toNumber(pvgisSlopeDeg);
+    const azimuth = toNumber(pvgisAzimuthDeg);
+    const hasCoordinates = latitude.trim().length > 0 && longitude.trim().length > 0;
+    setPvgisStatusMessage("");
+    if (hasCoordinates) {
+      if (parsedLat === null || parsedLon === null) {
+        nextInput = { ...input, annualProductionKwh: 0 };
+        setInput(nextInput);
+        setPvgisResult({
+          source: "fallback",
+          annualProductionKwh: null,
+          monthlyProductionKwh: [],
+          specificYieldKwhPerKw: null,
+        });
+        setPvgisStatusMessage(PVGIS_FALLBACK_UI_MESSAGE);
+      } else {
+      try {
+        const response = await fetch(
+          `/api/pvgis?lat=${encodeURIComponent(String(parsedLat))}&lon=${encodeURIComponent(String(parsedLon))}&systemKw=${encodeURIComponent(String(input.pvPowerKw > 0 ? input.pvPowerKw : 1))}&slope=${encodeURIComponent(String(slope > 0 ? slope : 35))}&azimuth=${encodeURIComponent(String(Number.isFinite(azimuth) ? azimuth : directionToAzimuth(input.panelDirection)))}&losses=${encodeURIComponent(String(losses > 0 ? losses : 14))}`,
+        );
+        if (!response.ok) {
+          if (process.env.NODE_ENV !== "production") {
+            // eslint-disable-next-line no-console
+            console.error("PVGIS API error", response.status);
+          }
+          throw new Error("PVGIS API päring ebaõnnestus");
+        }
+        const data = (await response.json()) as {
+          source: "live" | "fallback";
+          specificYieldKwhPerKw?: number;
+          annualProductionKwh?: number;
+          monthlyProductionKwh?: Array<{ month: number; productionKwh: number }>;
+          message: string;
+        };
+        if (data.source === "live" && Number.isFinite(data.annualProductionKwh) && (data.annualProductionKwh as number) > 0) {
+          nextInput = {
+            ...input,
+            annualProductionKwh: data.annualProductionKwh as number,
+          };
+          setInput(nextInput);
+          setPvgisResult({
+            source: "live",
+            annualProductionKwh: Number.isFinite(data.annualProductionKwh) ? (data.annualProductionKwh as number) : null,
+            monthlyProductionKwh: Array.isArray(data.monthlyProductionKwh) ? data.monthlyProductionKwh : [],
+            specificYieldKwhPerKw: Number.isFinite(data.specificYieldKwhPerKw) ? (data.specificYieldKwhPerKw as number) : null,
+          });
+          setPvgisStatusMessage(data.message);
+        } else {
+          nextInput = { ...input, annualProductionKwh: 0 };
+          setInput(nextInput);
+          setPvgisResult({
+            source: "fallback",
+            annualProductionKwh: null,
+            monthlyProductionKwh: [],
+            specificYieldKwhPerKw: null,
+          });
+          setPvgisStatusMessage(PVGIS_FALLBACK_UI_MESSAGE);
+        }
+      } catch {
+        nextInput = { ...input, annualProductionKwh: 0 };
+        setInput(nextInput);
+        setPvgisResult({
+          source: "fallback",
+          annualProductionKwh: null,
+          monthlyProductionKwh: [],
+          specificYieldKwhPerKw: null,
+        });
+        setPvgisStatusMessage(PVGIS_FALLBACK_UI_MESSAGE);
+      }
+      }
+    } else {
+      nextInput = { ...input, annualProductionKwh: 0 };
+      setInput(nextInput);
+      setPvgisResult({
+        source: "fallback",
+        annualProductionKwh: null,
+        monthlyProductionKwh: [],
+        specificYieldKwhPerKw: null,
+      });
+    }
     setIsCalculating(true);
     window.setTimeout(() => {
-      setResult(draftResult);
+      setResult(calculateSolarComparison(nextInput));
       setHasCalculated(true);
       setIsCalculating(false);
     }, 700);
@@ -254,6 +402,19 @@ export function SolarCalculatorPage() {
       loading: false,
       message: "",
       source: "none",
+    });
+    setLatitude("");
+    setLongitude("");
+    setPresetLocation("manual");
+    setPvgisSlopeDeg("");
+    setPvgisAzimuthDeg("");
+    setPvgisLossesPercent("");
+    setPvgisStatusMessage("");
+    setPvgisResult({
+      source: "none",
+      annualProductionKwh: null,
+      monthlyProductionKwh: [],
+      specificYieldKwhPerKw: null,
     });
     setResult(calculateSolarComparison(defaults));
   };
@@ -398,6 +559,33 @@ export function SolarCalculatorPage() {
     }
     return warnings;
   }, [draftResult.effectiveEnergyPrice, input.pvPowerKw, result.selected.annualNetBenefitEur]);
+  const bestMonth = useMemo(() => {
+    if (!pvgisResult.monthlyProductionKwh.length) return null;
+    return pvgisResult.monthlyProductionKwh.reduce((best, current) =>
+      current.productionKwh > best.productionKwh ? current : best,
+    );
+  }, [pvgisResult.monthlyProductionKwh]);
+  const worstMonth = useMemo(() => {
+    if (!pvgisResult.monthlyProductionKwh.length) return null;
+    return pvgisResult.monthlyProductionKwh.reduce((worst, current) =>
+      current.productionKwh < worst.productionKwh ? current : worst,
+    );
+  }, [pvgisResult.monthlyProductionKwh]);
+  const pvgisMonthlyChartData = useMemo(() => {
+    const byMonth = new Map<number, number>();
+    for (const item of pvgisResult.monthlyProductionKwh) {
+      byMonth.set(item.month, item.productionKwh);
+    }
+    return Array.from({ length: 12 }, (_, idx) => {
+      const month = idx + 1;
+      return {
+        month,
+        label: (MONTH_NAMES_ET[month] ?? `Kuu ${month}`).slice(0, 3),
+        fullLabel: MONTH_NAMES_ET[month] ?? `Kuu ${month}`,
+        productionKwh: byMonth.get(month) ?? 0,
+      };
+    });
+  }, [pvgisResult.monthlyProductionKwh]);
 
   return (
     <div className="glass-panel rounded-3xl p-6 sm:p-8">
@@ -673,6 +861,55 @@ export function SolarCalculatorPage() {
                       placeholder="nt Harjumaa"
                     />
                   </Field>
+                  <Field label="Asukoha valik">
+                    <select
+                      className="input"
+                      value={presetLocation}
+                      onChange={(e) => {
+                        const next = e.target.value as PresetLocation;
+                        setPresetLocation(next);
+                        if (next === "manual") return;
+                        const preset = LOCATION_PRESETS[next];
+                        if (!preset) return;
+                        setLatitude(preset.latitude);
+                        setLongitude(preset.longitude);
+                      }}
+                    >
+                      <option value="tallinn">Tallinn</option>
+                      <option value="tartu">Tartu</option>
+                      <option value="parnu">Pärnu</option>
+                      <option value="narva">Narva</option>
+                      <option value="rakvere">Rakvere</option>
+                      <option value="viljandi">Viljandi</option>
+                      <option value="voru">Võru</option>
+                      <option value="kuressaare">Kuressaare</option>
+                      <option value="manual">Sisestan ise</option>
+                    </select>
+                  </Field>
+                  {presetLocation === "manual" ? (
+                    <>
+                      <Field label="Laiuskraad">
+                        <input
+                          className="input"
+                          type="text"
+                          inputMode="decimal"
+                          value={latitude}
+                          onChange={(e) => setLatitude(e.target.value)}
+                          placeholder="nt 59.437"
+                        />
+                      </Field>
+                      <Field label="Pikkuskraad">
+                        <input
+                          className="input"
+                          type="text"
+                          inputMode="decimal"
+                          value={longitude}
+                          onChange={(e) => setLongitude(e.target.value)}
+                          placeholder="nt 24.7536"
+                        />
+                      </Field>
+                    </>
+                  ) : null}
                   <Field label="Spetsiifiline tootlus (kWh/kW/a)" hint="Vaikimisi Eesti vahemik 900-1050.">
                     <input
                       className="input"
@@ -696,7 +933,27 @@ export function SolarCalculatorPage() {
                       <option value="muu">Muu</option>
                     </select>
                   </Field>
-                  <Field label="Paneelide kalle (kraadid)">
+                  <Field label="Paneelide kalle kraadides">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={pvgisSlopeDeg}
+                      onChange={(e) => setPvgisSlopeDeg(e.target.value)}
+                      placeholder="nt 35"
+                    />
+                  </Field>
+                  <Field label="Paneelide suund">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={pvgisAzimuthDeg}
+                      onChange={(e) => setPvgisAzimuthDeg(e.target.value)}
+                      placeholder="nt 0 lõuna"
+                    />
+                  </Field>
+                  <Field label="Paneelide kalle (olemasolev mudeli sisend)">
                     <input
                       className="input"
                       type="text"
@@ -705,6 +962,16 @@ export function SolarCalculatorPage() {
                       onFocus={(e) => e.currentTarget.select()}
                       onChange={(e) => setInput({ ...input, tiltDeg: toNumber(e.target.value) })}
                       placeholder="nt 35"
+                    />
+                  </Field>
+                  <Field label="Süsteemikaod %">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="decimal"
+                      value={pvgisLossesPercent}
+                      onChange={(e) => setPvgisLossesPercent(e.target.value)}
+                      placeholder="nt 14"
                     />
                   </Field>
                   <Field label="Varjutus (%)">
@@ -891,8 +1158,14 @@ export function SolarCalculatorPage() {
                   </Field>
                 </div>
                 <p className="mt-3 text-xs text-zinc-400">
+                  Kui jätad asukoha täitmata, kasutatakse üldist Eesti tootluse eeldust.
+                </p>
+                <p className="mt-2 text-xs text-zinc-400">
                   Vaikimisi kasutatakse Eesti tootlikkuse vahemikku (900-1050 kWh/kW/a), kui täpsem asukohapõhine tootlus puudub.
                 </p>
+                {pvgisStatusMessage ? (
+                  <p className="mt-2 text-xs text-cyan-200">{pvgisStatusMessage}</p>
+                ) : null}
                 </AdvancedInputAccordion>
               </article>
               ) : null}
@@ -941,6 +1214,11 @@ export function SolarCalculatorPage() {
             Efektiivne elektri hind arvutuses:{" "}
             <strong>{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
           </p>
+          ) : null}
+          {hasCalculated ? (
+            <p className="mt-1 text-sm text-zinc-300">
+              Tootlusallikas: <strong>{pvgisResult.source === "live" ? "PVGIS" : "üldine Eesti eeldus"}</strong>
+            </p>
           ) : null}
           {hasCalculated && sanityWarnings.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
@@ -1152,6 +1430,101 @@ export function SolarCalculatorPage() {
             </article>
           </div>
           <UsedAssumptionsBlock {...assumptionsInfo} />
+
+          <article className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <h4 className="section-title">PVGIS tootluse kokkuvõte</h4>
+            {pvgisResult.source === "live" ? (
+              <div className="mt-3 grid gap-3 text-sm text-zinc-300">
+                <div className="compare-row">
+                  <span className="compare-label">Aastane hinnanguline tootlus</span>
+                  <strong>{formatNum(pvgisResult.annualProductionKwh ?? 0, 0)} kWh</strong>
+                </div>
+                <div className="compare-row">
+                  <span className="compare-label">Tootlus kWh/kW kohta</span>
+                  <strong>{formatNum(pvgisResult.specificYieldKwhPerKw ?? 0, 1)} kWh/kW</strong>
+                </div>
+                {bestMonth ? (
+                  <div className="compare-row">
+                    <span className="compare-label">Parim tootmiskuu</span>
+                    <strong>
+                      {MONTH_NAMES_ET[bestMonth.month] ?? `Kuu ${bestMonth.month}`}:{" "}
+                      {formatNum(bestMonth.productionKwh, 0)} kWh
+                    </strong>
+                  </div>
+                ) : null}
+                {worstMonth ? (
+                  <div className="compare-row">
+                    <span className="compare-label">Madalaim tootmiskuu</span>
+                    <strong>
+                      {MONTH_NAMES_ET[worstMonth.month] ?? `Kuu ${worstMonth.month}`}:{" "}
+                      {formatNum(worstMonth.productionKwh, 0)} kWh
+                    </strong>
+                  </div>
+                ) : null}
+                {pvgisResult.monthlyProductionKwh.length > 0 ? (
+                  <ChartCard
+                    title="Kuupõhine tootlus"
+                    description="PVGIS hinnanguline tootlus kuude lõikes (kWh kuus)."
+                    className="mt-2"
+                    chartClassName="min-h-[280px] md:min-h-[360px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={pvgisMonthlyChartData} margin={{ top: 8, right: 8, left: 8, bottom: 6 }}>
+                        <CartesianGrid stroke="rgba(255,255,255,0.10)" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fill: "rgba(228,233,236,0.85)", fontSize: 12 }}
+                          axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                          tickLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                        />
+                        <YAxis
+                          tick={{ fill: "rgba(228,233,236,0.85)", fontSize: 12 }}
+                          axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                          tickLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                          width={56}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(34,197,94,0.10)" }}
+                          contentStyle={{
+                            background: "rgba(9, 14, 12, 0.96)",
+                            border: "1px solid rgba(52, 211, 153, 0.35)",
+                            borderRadius: "12px",
+                            color: "#ecfdf5",
+                          }}
+                          labelStyle={{ color: "#d1fae5", fontWeight: 600 }}
+                          formatter={(value) => [`${formatNum(Number(value ?? 0), 0)} kWh`, "Tootlus"]}
+                          labelFormatter={(_, payload) =>
+                            payload?.[0]?.payload?.fullLabel ? String(payload[0].payload.fullLabel) : ""
+                          }
+                        />
+                        <Bar
+                          dataKey="productionKwh"
+                          name="Tootlus"
+                          radius={[8, 8, 0, 0]}
+                          fill="#22c55e"
+                          stroke="#4ade80"
+                          strokeWidth={1}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                ) : null}
+                <p className="mt-1 text-xs text-emerald-200">Tootlus põhineb PVGIS andmetel.</p>
+                <p className="text-xs text-zinc-400">
+                  Metoodika: kasutame asukoha- ja suunapõhist tootluse hinnangut PVGIS andmeallikast ning kuvame
+                  selle tulemuste kokkuvõttena.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 text-sm text-zinc-300">
+                <p>Kasutatud üldist Eesti tootluse eeldust.</p>
+                <p className="mt-2 text-xs text-zinc-400">
+                  Metoodika: kui asukohaandmed puuduvad või PVGIS andmeid ei õnnestu laadida, kasutame stabiilset
+                  üldist Eesti tootluse hinnangut.
+                </p>
+              </div>
+            )}
+          </article>
 
           <PaywallCard
             locked={!canViewFullAnalysis(unlock)}

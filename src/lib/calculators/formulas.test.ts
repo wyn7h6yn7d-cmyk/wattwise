@@ -23,7 +23,7 @@ import {
 import { parseLocaleNumber, toRatio } from "../units";
 import { calculateVppCore, calculateVppModel } from "./vpp";
 import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "./electricity-plan";
-import { calculateSolarCoreFormulas } from "./solar";
+import { calculateSolarComparison, calculateSolarCoreFormulas } from "./solar";
 
 function baseSolarInput(overrides: Partial<CalculatorInput> = {}): CalculatorInput {
   return {
@@ -140,6 +140,36 @@ describe("solar calculator sanity", () => {
     );
     expect(result.selected.annualNetBenefitEur).toBeLessThanOrEqual(0);
     expect(result.paybackYears).toBeNull();
+  });
+
+  it("uses provided annual production input when PVGIS yearly yield is available", () => {
+    const withPvgisAnnual = calculateSolarComparison(
+      baseSolarInput({
+        pvPowerKw: 10,
+        annualProductionKwh: 12000,
+        specificYieldKwhPerKw: 400,
+        panelDirection: "louna",
+        tiltDeg: 35,
+        shadingPercent: 0,
+      }),
+    );
+
+    expect(withPvgisAnnual.selected.annualProductionKwh).toBeCloseTo(12000, 6);
+  });
+
+  it("falls back to general Estonia yield when PVGIS annual production is missing", () => {
+    const fallback = calculateSolarComparison(
+      baseSolarInput({
+        pvPowerKw: 10,
+        annualProductionKwh: 0,
+        specificYieldKwhPerKw: 975,
+        panelDirection: "louna",
+        tiltDeg: 35,
+        shadingPercent: 0,
+      }),
+    );
+
+    expect(fallback.selected.annualProductionKwh).toBeCloseTo(9750, 6);
   });
 });
 

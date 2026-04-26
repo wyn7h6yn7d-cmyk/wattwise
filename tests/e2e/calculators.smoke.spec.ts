@@ -63,5 +63,52 @@ test.describe("Kalkulaatorite smoke testid", () => {
     await expect(netIncomeCard).not.toContainText("0EUR/a");
     await expect(netIncomeCard).toContainText(/8 ?721/);
   });
+
+  test("Päikesejaam PVGIS voog: tulemus kuvatakse ja tootlusallikas on määratud", async ({ page }) => {
+    await page.route("**/api/pvgis**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          source: "live",
+          message: "PVGIS tootlusandmed uuendatud.",
+          annualProductionKwh: 10850,
+          specificYieldKwhPerKw: 1085,
+          monthlyProductionKwh: [
+            { month: 1, productionKwh: 320 },
+            { month: 2, productionKwh: 510 },
+            { month: 3, productionKwh: 860 },
+            { month: 4, productionKwh: 1050 },
+            { month: 5, productionKwh: 1230 },
+            { month: 6, productionKwh: 1330 },
+            { month: 7, productionKwh: 1290 },
+            { month: 8, productionKwh: 1130 },
+            { month: 9, productionKwh: 890 },
+            { month: 10, productionKwh: 630 },
+            { month: 11, productionKwh: 390 },
+            { month: 12, productionKwh: 220 },
+          ],
+        }),
+      });
+    });
+
+    await page.goto("/kalkulaatorid/paikesejaam");
+
+    await page.getByLabel("Päikesepargi võimsus (kW)").fill("10");
+    await page.getByLabel("Aastane elektritarbimine (kWh)").fill("9000");
+    await page.getByLabel("Elektri ostuhind (€/kWh)").first().fill("0,12");
+    await page.getByRole("button", { name: "Täpsem arvutus" }).click();
+    await page.getByLabel("Asukoha valik").selectOption("tallinn");
+    await page.getByLabel("Paneelide kalle kraadides").fill("35");
+    await page.getByPlaceholder("nt 0 lõuna").fill("0");
+
+    await page.getByRole("button", { name: "Arvuta tulemus" }).click();
+
+    await expect(
+      page.locator(".metric-card").filter({ has: page.locator(".metric-label", { hasText: "Olulisim: aastane netokasu" }) }),
+    ).toBeVisible();
+    await expect(page.getByText("Tootlusallikas:").first()).toBeVisible();
+    await expect(page.getByText(/Tootlusallikas:\s*(PVGIS|üldine Eesti eeldus)/)).toBeVisible();
+  });
 });
 

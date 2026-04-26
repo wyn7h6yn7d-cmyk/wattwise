@@ -38,6 +38,14 @@ Ava brauseris `http://localhost:3000`.
 - Stripe makselahendus tulevikus
 - kasutajakonto ja salvestatud arvutused
 
+## PVGIS integration
+
+- Päikesejaama kalkulaator saab kasutada PVGIS tootlusandmeid.
+- Kui PVGIS pole saadaval, kasutatakse üldist Eesti tootluse eeldust.
+- API päring käib server route'i kaudu.
+- Testid mockivad API-t.
+- Kasutajale ei kuvata täpseid valemeid.
+
 ## Struktuur
 
 - `src/app/page.tsx` - avaleht
