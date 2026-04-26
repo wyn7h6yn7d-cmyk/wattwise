@@ -20,6 +20,12 @@ function formatYearLabel(index: number) {
   return `A${index + 1}`;
 }
 
+function averageCashflowEur(cashflows: number[] | undefined) {
+  const values = cashflows?.filter((v) => Number.isFinite(v)) ?? [];
+  if (!values.length) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
 type RevenueType = "annual" | "arbitrage" | "per_kw_year";
 
 export function VppPageClient() {
@@ -624,7 +630,7 @@ export function VppPageClient() {
             <div className="grid gap-2 text-sm">
               <div className="compare-row">
                 <span className="compare-label">Keskmine aastane rahavoog</span>
-                <strong>{fmtEur(model.perScenario[1]?.avgNetAnnual ?? 0)}</strong>
+                <strong>{fmtEur(averageCashflowEur(model.perScenario[1]?.cashflows))}</strong>
               </div>
               <div className="compare-row">
                 <span className="compare-label">Tasuvusaeg</span>
