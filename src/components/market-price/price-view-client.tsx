@@ -553,7 +553,7 @@ export function PriceViewClient({
       <div className="glass-panel rounded-3xl p-5 sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna dashboard</h2>
+            <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna ülevaade</h2>
             <p className="mt-2 text-sm text-zinc-400">
               Eesti (EE) turuhind Eleringi andmetel. Vaikimisi näitame hinna käibemaksuga (24%).
             </p>
@@ -659,7 +659,7 @@ export function PriceViewClient({
         <div className="mt-5">
           <ChartCard
             title="Hinnagraafik"
-            description="Hover: näed täpset hinda. Marker näitab praegu lähimat punkti."
+            description="Liiguta kursor graafikule, et näha täpset hinda. Marker näitab praegusele ajale lähimat punkti."
             controls={
               <div className="text-xs text-zinc-400">
                 Vaade: {effectiveInterval === 15 ? "15 min" : "1h"} · Periood:{" "}

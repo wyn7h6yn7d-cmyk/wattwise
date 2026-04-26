@@ -124,18 +124,12 @@ export function SiteHeader() {
       }),
     [],
   );
-  const priceLabel =
-    priceStatus === "ready"
-      ? `${formatSntKwh(livePriceSnt ?? 0)} snt/kWh`
-      : priceStatus === "loading"
-        ? "Börsihind laeb..."
-        : "Börsihind hetkel puudub";
-  const sunLabel =
-    sunStatus === "ready"
-      ? `↑ ${sunTimes?.rise} · ↓ ${sunTimes?.set}`
-      : sunStatus === "loading"
-        ? "Päikeseinfo laeb..."
-        : "Päikeseinfo hetkel puudub";
+  const hasPrice = priceStatus === "ready" && Number.isFinite(livePriceSnt);
+  const priceValue = hasPrice ? livePriceSnt : null;
+  const hasSun = sunStatus === "ready" && !!sunTimes;
+  const isLoading = priceStatus === "loading" || sunStatus === "loading";
+  const hasAnyLiveData = hasPrice || hasSun;
+  const fallbackLabel = isLoading ? "Live-andmed laevad..." : "Live-andmed hetkel puuduvad";
 
   return (
     <header className="sticky top-0 z-50 overflow-x-clip px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
@@ -206,10 +200,31 @@ export function SiteHeader() {
 
       <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-xl border border-emerald-300/20 bg-[linear-gradient(180deg,rgba(9,20,17,0.82),rgba(7,16,13,0.76))] px-3 py-2 text-[11px] text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.32)]">
         <span className="rounded-md bg-white/[0.03] px-2 py-0.5 text-zinc-400">{todayLabel}</span>
-        <span className="text-zinc-600">|</span>
-        <strong className="rounded-md bg-emerald-400/10 px-2 py-0.5 text-emerald-200">{priceLabel}</strong>
-        <span className="text-zinc-600">|</span>
-        <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">{sunLabel}</span>
+        {hasAnyLiveData ? (
+          <>
+            {hasPrice ? (
+              <>
+                <span className="text-zinc-600">|</span>
+                <strong className="rounded-md bg-emerald-400/10 px-2 py-0.5 text-emerald-200">
+                  {priceValue !== null ? `${formatSntKwh(priceValue)} snt/kWh` : null}
+                </strong>
+              </>
+            ) : null}
+            {hasSun ? (
+              <>
+                <span className="text-zinc-600">|</span>
+                <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">
+                  ↑ {sunTimes.rise} · ↓ {sunTimes.set}
+                </span>
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <span className="text-zinc-600">|</span>
+            <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5 text-zinc-300">{fallbackLabel}</span>
+          </>
+        )}
       </div>
 
       {mobileOpen ? (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { PurchaseType, UnlockState } from "@/lib/unlock";
 import { FEATURES } from "@/lib/features";
 import type { CalculatorReturnSlug } from "@/lib/calculator-slugs";
@@ -15,9 +14,6 @@ function safeUuid() {
 }
 
 export function useProjectUnlock() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   const [projectId, setProjectId] = useState("");
   const [unlock, setUnlock] = useState<UnlockState>({
     fullAnalysisUnlocked: false,
@@ -27,6 +23,16 @@ export function useProjectUnlock() {
   });
   const [message, setMessage] = useState<string | null>(null);
   const [purchaseBusy, setPurchaseBusy] = useState<PurchaseType | null>(null);
+
+  const readSearchParams = () =>
+    new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+
+  const replaceSearchParams = (params: URLSearchParams) => {
+    if (typeof window === "undefined") return;
+    const query = params.toString();
+    const nextUrl = query ? `${window.location.pathname}?${query}${window.location.hash}` : `${window.location.pathname}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  };
 
   const persistUnlock = (next: UnlockState) => {
     if (!projectId) return;
@@ -46,15 +52,15 @@ export function useProjectUnlock() {
   };
 
   useEffect(() => {
-    const fromUrl = searchParams.get("projectId")?.trim();
+    const params = readSearchParams();
+    const fromUrl = params.get("projectId")?.trim();
     const id = fromUrl && fromUrl.length >= 6 ? fromUrl : safeUuid();
     setProjectId(id);
     if (!fromUrl) {
-      const next = new URLSearchParams(searchParams.toString());
+      const next = new URLSearchParams(params.toString());
       next.set("projectId", id);
-      router.replace(`?${next.toString()}`, { scroll: false });
+      replaceSearchParams(next);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -77,9 +83,10 @@ export function useProjectUnlock() {
 
   useEffect(() => {
     if (!projectId) return;
-    const status = searchParams.get("status");
-    const sessionId = searchParams.get("session_id")?.trim();
-    const purchaseType = (searchParams.get("purchaseType")?.trim() ?? "") as PurchaseType | "";
+    const params = readSearchParams();
+    const status = params.get("status");
+    const sessionId = params.get("session_id")?.trim();
+    const purchaseType = (params.get("purchaseType")?.trim() ?? "") as PurchaseType | "";
 
     if (status === "cancel") {
       setMessage("Makse katkestati. Midagi ei muutunud.");
@@ -119,11 +126,11 @@ export function useProjectUnlock() {
         persistUnlock(next);
         setMessage("Makse kinnitatud. Ligipääs uuendatud.");
 
-        const nextParams = new URLSearchParams(searchParams.toString());
+        const nextParams = new URLSearchParams(params.toString());
         nextParams.delete("status");
         nextParams.delete("session_id");
         nextParams.delete("purchaseType");
-        router.replace(`?${nextParams.toString()}`, { scroll: false });
+        replaceSearchParams(nextParams);
       } catch {
         if (cancelled) return;
         setMessage("Makse kontroll ebaõnnestus. Proovi uuesti.");
@@ -133,8 +140,7 @@ export function useProjectUnlock() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, unlock]);
 
   const startCheckout = async (
     purchaseType: PurchaseType,

@@ -43,6 +43,21 @@ describe("pickBestWindows with 15-minute data", () => {
     expect((pick.endTs - pick.startTs) / (15 * 60)).toBe(16);
   });
 
+  it("priciest windows also use exact 1h/2h/3h/4h durations", () => {
+    const points = buildQuarterHourPoints(40);
+    const assertIntervals = (hours: 1 | 2 | 3 | 4, expectedIntervals: number) => {
+      const res = pickBestWindows({ points, intervalMinutes: 15, windowHours: hours, topN: 1 });
+      const pick = res.priciest[0];
+      expect(pick).toBeDefined();
+      expect((pick.endTs - pick.startTs) / (15 * 60)).toBe(expectedIntervals);
+    };
+
+    assertIntervals(1, 4);
+    assertIntervals(2, 8);
+    assertIntervals(3, 12);
+    assertIntervals(4, 16);
+  });
+
   it("skips non-contiguous slices to avoid stretched windows", () => {
     const points = [
       point(0, 0.10),

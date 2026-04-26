@@ -106,7 +106,7 @@ export default async function EnergiaprognoosPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   try {
-  const params = await searchParams;
+  const params = await Promise.resolve(searchParams);
   const location = toSingle(params.location) ?? "";
   const latitudeRaw = toSingle(params.latitude);
   const longitudeRaw = toSingle(params.longitude);
@@ -287,13 +287,27 @@ export default async function EnergiaprognoosPage({
           V1 loogika: PV hinnang põhineb kiirgusel, süsteemi võimsusel, kadudel ja lihtsatel suuna/kalde koefitsientidel.
           Soovitused põhinevad hinnal, pilvisusel ja PV tootlusel (lihtsustatud energyScore mudel).
         </section>
-        {historicalAnalysis ? (
-          <HistoricalSolarAnalysisPanel
-            analysis={historicalAnalysis}
-            loadingFallback={historicalFallback}
-            systemKw={input.systemKw}
-            lossesPercent={input.systemLossesPercent}
-          />
+        {historicalAnalysis &&
+        Array.isArray(historicalAnalysis.monthly) &&
+        historicalAnalysis.monthly.length > 0 ? (
+          (() => {
+            try {
+              return (
+                <HistoricalSolarAnalysisPanel
+                  analysis={historicalAnalysis}
+                  loadingFallback={historicalFallback}
+                  systemKw={input.systemKw}
+                  lossesPercent={input.systemLossesPercent}
+                />
+              );
+            } catch {
+              return (
+                <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-zinc-300">
+                  Ajaloolise analuusi andmeid ei saanud hetkel laadida.
+                </section>
+              );
+            }
+          })()
         ) : (
           <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-zinc-300">
             Ajaloolise analuusi andmeid ei saanud hetkel laadida.

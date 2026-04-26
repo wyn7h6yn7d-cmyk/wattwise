@@ -23,12 +23,8 @@ function PricingFallback() {
   );
 }
 
-export default async function HinnadPage() {
-  try {
-    const mod = await import("../pricing/page");
-    const PricingPage = mod.default;
-    return <PricingPage />;
-  } catch {
-    return <PricingFallback />;
-  }
+export default function HinnadPage() {
+  // Hoia /hinnad route alati stabiilselt server-renderitavana.
+  // Valtime runtime module import'e, mis voivad live keskkonnas ebaonnestuda.
+  return <PricingFallback />;
 }

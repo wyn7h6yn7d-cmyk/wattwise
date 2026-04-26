@@ -77,18 +77,14 @@ export default function Home() {
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_34%)] opacity-45" />
               <div className="relative space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/35 bg-emerald-400/12 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-100">
-                    <span className="h-2 w-2 rounded-full bg-emerald-300" />
-                    LIVE
-                  </div>
                   <div
                     className="inline-flex items-center rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-1 text-[11px] text-amber-100"
-                    title="Need numbrid on illustratiivsed"
+                    title="Need numbrid on illustratiivsed."
                   >
                     Näidisandmed
                   </div>
                 </div>
-                <p className="text-[11px] text-amber-100/90">Need numbrid on illustratiivsed, mitte sinu päris tulemused.</p>
+                <p className="text-[11px] text-amber-100/90">Need numbrid on illustratiivsed.</p>
 
                 <div className="min-w-0 rounded-xl border border-emerald-300/26 bg-white/[0.03] px-3 py-3.5">
                   <p className="text-[11px] uppercase tracking-wide text-zinc-400">Praegune hind</p>
@@ -163,12 +159,12 @@ export default function Home() {
 
         <section className="mt-6 rounded-2xl border border-emerald-300/24 bg-zinc-950/72 p-3 sm:p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-zinc-200">Live energy strip</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-zinc-200">Energy strip</h2>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              Näidisvaade
+              Näidisandmed
             </span>
           </div>
+          <p className="mb-2 text-[11px] text-amber-100/90">Need numbrid on illustratiivsed.</p>
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-emerald-300/22 bg-white/[0.02] px-3 py-2.5">
               <div className="text-zinc-400">Praegune börsihind</div>
