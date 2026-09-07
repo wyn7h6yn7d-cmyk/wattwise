@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteAtmosphere } from "@/components/site-atmosphere";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CookieConsentManager } from "@/components/legal/CookieConsentManager";
@@ -65,7 +66,8 @@ export default function RootLayout({
       lang="et"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="relative min-h-full flex flex-col">
+        <SiteAtmosphere />
         <SiteHeader />
         <div className="relative page-bg flex-1">{children}</div>
         <SiteFooter />

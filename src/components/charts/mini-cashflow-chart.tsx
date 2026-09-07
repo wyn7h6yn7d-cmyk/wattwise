@@ -57,7 +57,7 @@ export function MiniCashflowChart({
         </div>
         <div className="relative min-w-0 flex-1">
           {hover !== null ? (
-            <div className="chart-tooltip pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-zinc-900/95 px-2 py-1 text-[11px] text-zinc-100 shadow-lg">
+            <div className="chart-tooltip pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-[11px] font-mono tabular-nums text-zinc-100">
               Aasta {hover + 1}: {formatEurCompact(values[hover]!)}
             </div>
           ) : null}
@@ -73,14 +73,14 @@ export function MiniCashflowChart({
                 const h = Math.max(14, Math.round(t * usableH));
                 const positive = v >= 0;
                 const color = positive
-                  ? "from-emerald-400/85 to-teal-300/75"
-                  : "from-rose-400/80 to-amber-500/55";
+                  ? "bg-emerald-400/80"
+                  : "bg-rose-400/70";
                 return (
                   <button
                     // eslint-disable-next-line react/no-array-index-key
                     key={i}
                     type="button"
-                    className={`min-w-[6px] flex-1 rounded-sm bg-gradient-to-t ${color} transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40`}
+                    className={`min-w-[6px] flex-1 rounded-sm ${color} transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40`}
                     style={{ height: `${h}px` }}
                     onMouseEnter={() => setHover(i)}
                     onMouseLeave={() => setHover(null)}

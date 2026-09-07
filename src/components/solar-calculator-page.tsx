@@ -431,7 +431,7 @@ export function SolarCalculatorPage() {
         >
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <h3 className="text-xl font-semibold text-zinc-50">Sisendid</h3>
-            <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+            <div className="flex rounded-xl border border-zinc-800 bg-zinc-950 p-1">
               <button
                 type="button"
                 className={`rounded-lg px-3 py-1.5 text-sm transition ${
@@ -911,27 +911,27 @@ export function SolarCalculatorPage() {
                 role="status"
                 aria-live="polite"
               >
-                <div className="loading-bar h-full w-1/3 rounded-full bg-gradient-to-r from-cyan-300 to-blue-400" />
+                <div className="loading-bar h-full w-1/3 rounded-full bg-emerald-400" />
               </div>
             ) : null}
           </form>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 lg:mt-0">
+        <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 lg:mt-0">
           <h3 className="text-2xl font-semibold text-zinc-50">Tulemused</h3>
           <p className="mt-2 text-sm text-zinc-300">
             Mida see tähendab? Allolevad näitajad annavad kiire pildi, kui suur võiks olla aastane rahaline võit ja
             kui kiiresti investeering võiks tagasi tulla.
           </p>
           {!hasCalculated ? (
-            <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
               <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
             </div>
           ) : null}
           {hasCalculated ? (
           <p className="mt-2 text-zinc-300">
             Efektiivne elektri hind arvutuses:{" "}
-            <strong>{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
+            <strong className="font-mono tabular-nums">{formatNum(result.effectiveEnergyPrice, 3)} €/kWh</strong>
           </p>
           ) : null}
           {hasCalculated && sanityWarnings.length > 0 ? (
@@ -1042,13 +1042,13 @@ export function SolarCalculatorPage() {
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <article className="card">
               <h4 className="section-title">Kas see investeering tundub mõistlik?</h4>
-              <p className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4 text-zinc-100">
+              <p className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-100">
                 Tasuvuse hinnang: <strong>{result.interpretationKind}</strong>. Sinu valitud stsenaariumis on
                 hinnanguline aastane CO2 vähenemine{" "}
                 <strong>{formatNum(result.selected.co2ReductionKgYear, 0)} kg</strong>.
               </p>
               {FEATURES.paywallEnabled && !canViewFullAnalysis(unlock) ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                   <p className="text-sm text-zinc-300">
                     Detailne rahavoog, tundlikkus, lisagraafikud ja võrdlused avanevad koos analüüsiga.
                   </p>
@@ -1210,7 +1210,7 @@ export function SolarCalculatorPage() {
               </ChartCard>
             </div>
 
-            <article className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-300">
+            <article className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
               <h4 className="mb-2 font-medium text-zinc-100">Arvutuse alused</h4>
               <ul className="list-disc space-y-1 pl-5">
                 <li>Tootmist korrigeeritakse suuna, varjutuse, kasuteguri ja hooajalisuse teguriga.</li>

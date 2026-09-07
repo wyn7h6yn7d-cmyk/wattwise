@@ -9,7 +9,7 @@ type Props = {
 export function CookieConsentBanner({ onAcceptAll, onRejectOptional, onManage }: Props) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-[90] p-3 sm:p-4">
-      <div className="mx-auto w-full max-w-4xl rounded-2xl border border-emerald-300/35 bg-zinc-950/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur">
+      <div className="mx-auto w-full max-w-4xl rounded-xl border border-zinc-800 bg-zinc-950 p-4">
         <p className="text-sm text-zinc-100">
           Kasutame küpsiseid, et veebileht töötaks korrektselt, mõõta kasutust ja arendada teenust
           paremaks. Hädavajalikud küpsised on alati aktiivsed. Analüütika ja lisaküpsised kasutame

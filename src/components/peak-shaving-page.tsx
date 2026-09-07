@@ -335,7 +335,7 @@ export function PeakShavingPageClient() {
         <p className="mt-2 text-sm text-zinc-400">
           Lihtne hinnang, kui palju tippu saab akuga lõigata ja mis võiks olla sääst võimsustasudes.
         </p>
-        <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+        <div className="mt-4 inline-flex rounded-xl border border-zinc-800 bg-zinc-950 p-1">
           <button
             type="button"
             className={`rounded-lg px-3 py-1.5 text-sm transition ${
@@ -554,7 +554,7 @@ export function PeakShavingPageClient() {
               aastast säästu.
             </p>
             {!hasCalculated ? (
-              <div className="mb-4 rounded-2xl border border-white/12 bg-white/[0.03] p-4 text-sm text-zinc-300">
+              <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
                 <p className="font-medium text-zinc-100">Sisesta andmed ja vajuta "Arvuta tulemus".</p>
               </div>
             ) : null}
@@ -642,7 +642,7 @@ export function PeakShavingPageClient() {
                 <p className="metric-help">Võrdlus: vajalik lõige vs võimalik lõige.</p>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-zinc-200">
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-200">
               <p className="font-medium text-zinc-50">Soovitus</p>
               <p className="mt-1 text-zinc-300">{result.note}</p>
             </div>
@@ -723,7 +723,7 @@ export function PeakShavingPageClient() {
             ["Raport", "PDF kokkuvõte (eraldi ost) ning projekti dokumentatsioon."],
             ["Soovitused", "Praktiline “mis on mõistlik aku kW/kWh” soovitus."],
           ].map(([t, d]) => (
-            <div key={t} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+            <div key={t} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
               <div className="text-sm font-semibold text-zinc-50">{t}</div>
               <div className="mt-2 text-sm text-zinc-400">{d}</div>
             </div>

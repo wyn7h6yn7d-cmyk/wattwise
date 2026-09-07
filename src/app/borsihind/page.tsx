@@ -40,7 +40,7 @@ export default async function BorsihindPage() {
               <p className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs tracking-wide text-zinc-300">
                 Elering · Eesti (EE)
               </p>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
                 Börsihind
               </h1>
               <p className="mt-3 max-w-2xl text-sm text-zinc-300 sm:text-base">

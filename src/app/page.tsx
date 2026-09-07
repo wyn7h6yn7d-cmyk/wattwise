@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-12 lg:px-8">
       <section className="max-w-3xl">
-        <p className="text-sm text-zinc-400">Projekt 2 prototüüp · Energiakalkulaator.ee</p>
+        <p className="text-sm text-emerald-200/80">Projekt 2 prototüüp · Energiakalkulaator.ee</p>
         <h1 className="mt-4 text-balance text-[1.85rem] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
           Tööstusettevõtte energiaanalüüs ühes tööriistas
         </h1>
@@ -77,7 +77,7 @@ export default function Home() {
             <Link
               key={tool.href}
               href={tool.href}
-              className="flex min-h-[11.5rem] flex-col rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition-colors hover:border-zinc-600"
+              className="flex min-h-[11.5rem] flex-col rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5 transition-colors hover:border-emerald-500/50"
             >
               <h3 className="text-base font-semibold text-zinc-100">{tool.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-400">{tool.description}</p>
@@ -91,7 +91,7 @@ export default function Home() {
         <h2 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">Analüüsi loogika</h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {logic.map((item) => (
-            <div key={item.title} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+            <div key={item.title} className="rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5">
               <h3 className="text-base font-semibold text-zinc-100">{item.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.text}</p>
             </div>
@@ -99,7 +99,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-14 rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:mt-16 sm:p-6">
+      <section className="mt-14 rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5 sm:mt-16 sm:p-6">
         <h2 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">Projekt ja metoodika</h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
           Tööriist on arendamisel Projekt 2 raames. Tulemused on esmased hinnangud sisestatud andmete

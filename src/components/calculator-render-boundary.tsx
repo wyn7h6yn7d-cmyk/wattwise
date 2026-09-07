@@ -25,7 +25,7 @@ export class CalculatorRenderBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="glass-panel rounded-3xl p-6 sm:p-8">
+        <div className="glass-panel rounded-xl p-6 sm:p-8">
           <h2 className="text-xl font-semibold text-zinc-50">Kalkulaatori laadimine ebaõnnestus</h2>
           <p className="mt-2 text-sm text-zinc-300">
             Selle kalkulaatori vaate renderdamisel tekkis viga: {this.props.calculatorName}.

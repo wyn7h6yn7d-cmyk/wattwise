@@ -145,7 +145,7 @@ function buildPriceThresholds(points: MarketPricePoint[]) {
 
 function priceClass(p: number, thresholds: { q25: number; q75: number; q90: number; range: number } | null) {
   if (!thresholds) {
-    return { label: "keskmine", pill: "bg-white/[0.04] text-zinc-200 ring-1 ring-white/10" };
+    return { label: "keskmine", pill: "bg-zinc-900 text-zinc-300 ring-1 ring-zinc-700" };
   }
 
   const { q25, q75, q90, range } = thresholds;
@@ -153,7 +153,7 @@ function priceClass(p: number, thresholds: { q25: number; q75: number; q90: numb
   const allowPeak = range >= 0.008; // ~0.8 snt/kWh
 
   if (p <= q25) {
-    return { label: "odav", pill: "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/20" };
+    return { label: "odav", pill: "bg-zinc-900 font-medium text-emerald-400 ring-1 ring-zinc-700" };
   }
   if (allowPeak && p >= q90) {
     return { label: "tipp", pill: "bg-rose-400/16 text-rose-100 ring-1 ring-rose-300/25" };
@@ -161,7 +161,7 @@ function priceClass(p: number, thresholds: { q25: number; q75: number; q90: numb
   if (p >= q75) {
     return { label: "kallis", pill: "bg-amber-400/15 text-amber-100 ring-1 ring-amber-300/25" };
   }
-  return { label: "keskmine", pill: "bg-white/[0.04] text-zinc-200 ring-1 ring-white/10" };
+  return { label: "keskmine", pill: "bg-zinc-900 text-zinc-300 ring-1 ring-zinc-700" };
 }
 
 function cardTitle(label: string) {
@@ -283,8 +283,8 @@ function AreaChart({
         >
         <defs>
           <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(20,184,166,0.34)" />
-            <stop offset="100%" stopColor="rgba(16,185,129,0.02)" />
+            <stop offset="0%" stopColor="rgba(52,211,153,0.22)" />
+            <stop offset="100%" stopColor="rgba(52,211,153,0.02)" />
           </linearGradient>
         </defs>
         {[0, 0.25, 0.5, 0.75, 1].map((g) => {
@@ -293,7 +293,7 @@ function AreaChart({
         })}
         <line x1={leftPad} x2={leftPad} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.15)" />
         <line x1={leftPad} x2={w - rightPad} y1={h - bottomPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.15)" />
-        <path d={d} fill="none" stroke="rgba(45,212,191,0.95)" strokeWidth="2.2" />
+        <path d={d} fill="none" stroke="rgba(52,211,153,0.95)" strokeWidth="2" />
         <path d={`${d} L${w - rightPad},${h - bottomPad} L${leftPad},${h - bottomPad} Z`} fill="url(#area)" />
 
         {/* Y-axis labels */}
@@ -333,7 +333,7 @@ function AreaChart({
             return (
               <g>
                 <line x1={x} x2={x} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.16)" strokeDasharray="3 4" />
-                <circle cx={x} cy={y} r="4.5" fill="rgba(45,212,191,0.95)" />
+                <circle cx={x} cy={y} r="4" fill="rgba(52,211,153,0.95)" />
               </g>
             );
           })()
@@ -342,7 +342,7 @@ function AreaChart({
         {hover ? (
           <g>
             <line x1={hover.x} x2={hover.x} y1={topPad} y2={h - bottomPad} stroke="rgba(255,255,255,0.20)" />
-            <circle cx={hover.x} cy={hover.y} r="4" fill="rgba(110,231,183,0.95)" />
+            <circle cx={hover.x} cy={hover.y} r="4" fill="rgba(52,211,153,0.95)" />
           </g>
         ) : null}
         </svg>
@@ -364,13 +364,13 @@ function SlotTable({
 }) {
   const intervalSec = intervalMinutes * 60;
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
       <div className="text-sm font-semibold text-zinc-50">{title}</div>
       <div className="mt-3 grid gap-2">
         {points.map((p) => (
-          <div key={p.ts} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+          <div key={p.ts} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
             <span className="text-sm text-zinc-200">{fmtRangeEt(p.ts, p.ts + intervalSec)}</span>
-            <strong className="text-sm font-semibold text-zinc-50">{fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh</strong>
+            <strong className="font-mono text-sm font-semibold tabular-nums text-zinc-50">{fmtSnt(p.price_eur_per_kwh, vat)} snt/kWh</strong>
           </div>
         ))}
       </div>
@@ -390,7 +390,7 @@ function WindowCard({
   variant?: "cheapest" | "priciest";
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
       <div className="text-xs text-zinc-400">{variant === "cheapest" ? "Odavaim" : "Kalleim"} {hours}h aken</div>
       <div className="mt-2 text-base font-semibold text-zinc-50">
         {pick ? fmtRangeEt(pick.startTs, pick.endTs) : "—"}
@@ -559,14 +559,14 @@ export function PriceViewClient({
             </p>
           </div>
           <div className="flex min-w-0 w-full flex-wrap gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/45 px-2 py-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1">
               <FilterChip active={area === "ee"} onClick={() => setArea("ee")}>Eesti</FilterChip>
               <FilterChip active={area === "lv"} onClick={() => setArea("lv")}>Läti</FilterChip>
               <FilterChip active={area === "lt"} onClick={() => setArea("lt")}>Leedu</FilterChip>
               <FilterChip active={area === "fi"} onClick={() => setArea("fi")}>Soome</FilterChip>
             </div>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/45 px-2 py-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1">
               <FilterChip active={!vat} onClick={() => setVat(false)}>
                 Ilma KM-ta
               </FilterChip>
@@ -575,7 +575,7 @@ export function PriceViewClient({
               </FilterChip>
             </div>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/45 px-2 py-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1">
               <FilterChip
                 active={effectiveInterval === 15}
                 onClick={() => setViewInterval(15)}
@@ -589,7 +589,7 @@ export function PriceViewClient({
               </FilterChip>
             </div>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/45 px-2 py-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1">
               <FilterChip active={period === "today"} onClick={() => setPeriod("today")}>
                 Täna
               </FilterChip>
@@ -620,33 +620,33 @@ export function PriceViewClient({
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
               <div className="text-xs text-zinc-400">Päeva min</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-50">
                 {statsToday ? fmtSnt(statsToday.min, vat) : "—"}
-                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+                <span className="ml-1 font-sans text-xs font-medium text-zinc-300">snt/kWh</span>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
               <div className="text-xs text-zinc-400">Päeva max</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-50">
                 {statsToday ? fmtSnt(statsToday.max, vat) : "—"}
-                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+                <span className="ml-1 font-sans text-xs font-medium text-zinc-300">snt/kWh</span>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
               <div className="text-xs text-zinc-400">Päeva keskmine</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-50">
                 {statsToday ? fmtSnt(statsToday.mean, vat) : "—"}
-                <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+                <span className="ml-1 font-sans text-xs font-medium text-zinc-300">snt/kWh</span>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
               <div className="text-xs text-zinc-400">Homme keskmine</div>
               {statsTomorrow ? (
-                <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-50">
                   {fmtSnt(statsTomorrow.mean, vat)}
-                  <span className="ml-1 text-xs font-medium text-zinc-300">snt/kWh</span>
+                  <span className="ml-1 font-sans text-xs font-medium text-zinc-300">snt/kWh</span>
                 </div>
               ) : (
                 <div className="mt-1 text-sm font-medium text-zinc-300">Homsed hinnad pole veel avaldatud</div>
@@ -674,7 +674,7 @@ export function PriceViewClient({
 
         <div className="mt-6 grid gap-4 lg:grid-cols-12">
           <div className="grid grid-cols-1 gap-4 lg:col-span-7">
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
               <div className="mb-3 text-sm font-semibold text-zinc-50">Odavaimad aknad</div>
               <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: odavaks märgitakse ligikaudu päeva soodsam neljandik.</div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -684,7 +684,7 @@ export function PriceViewClient({
                 <WindowCard hours={4} pick={windowPicks.cheapest["4"]} vat={vat} variant="cheapest" />
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/40 p-4 sm:p-5">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
               <div className="mb-3 text-sm font-semibold text-zinc-50">Kalleimad aknad</div>
               <div className="mb-3 text-xs text-zinc-400">Kvantiilipõhine loogika: kallimaks märgitakse päeva ülemine hinnavahemik, tipp tähistab selle kõige kallimat osa.</div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -719,7 +719,7 @@ export function PriceViewClient({
             </p>
             <button
               type="button"
-              className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-white/[0.08]"
+              className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-900"
               onClick={() => setShowFullDayTable((v) => !v)}
             >
               {showFullDayTable ? "Näita lühemat tabelit" : "Näita kogu päeva tabelit"}
@@ -729,7 +729,7 @@ export function PriceViewClient({
             Tipp tähendab selle päeva suhteliselt kallimat perioodi, mitte tingimata väga kõrget absoluutset hinda.
           </p>
           {marketOverview ? (
-            <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-sm text-zinc-200">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-200">
               <div className="text-xs text-zinc-400">Turu ülevaade</div>
               <div className="mt-1 text-zinc-100">
                 Täna on keskmise hinna järgi <strong>{marketOverview.compared}</strong> kui eile.
@@ -743,11 +743,11 @@ export function PriceViewClient({
         </div>
 
         {visiblePoints.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-sm text-zinc-200">
+          <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-200">
             Andmeid ei ole saadaval.
           </div>
         ) : (
-          <div className="mt-6 w-full max-w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/35">
+          <div className="mt-6 w-full max-w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
             <div className={`grid gap-2 p-2 sm:hidden ${showFullDayTable ? "max-h-[26rem] overflow-y-auto" : ""}`}>
               {(() => {
                 const thresholds = buildPriceThresholds(visiblePoints);
@@ -759,8 +759,8 @@ export function PriceViewClient({
                         key={p.ts}
                         className={`rounded-xl border p-3 ${
                           isNow
-                            ? "border-emerald-300/35 bg-emerald-400/10"
-                            : "border-white/12 bg-zinc-950/46"
+                            ? "border-emerald-500/40 bg-zinc-950"
+                            : "border-zinc-800 bg-zinc-950"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -772,20 +772,20 @@ export function PriceViewClient({
                           </span>
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                          <div className="rounded-lg border border-white/12 bg-white/[0.04] p-2">
+                          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
                             <div className="text-zinc-300">Ilma KM-ta</div>
-                            <div className="mt-1 text-sm font-semibold text-zinc-50">
+                            <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-zinc-50">
                               {fmtSnt(p.price_eur_per_kwh, false)} snt/kWh
                             </div>
                           </div>
-                          <div className="rounded-lg border border-white/12 bg-white/[0.04] p-2">
+                          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
                             <div className="text-zinc-300">KM-ga</div>
-                            <div className="mt-1 text-sm font-semibold text-zinc-50">
+                            <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-zinc-50">
                               {fmtSnt(p.price_eur_per_kwh, true)} snt/kWh
                             </div>
                           </div>
                         </div>
-                        {isNow ? <div className="mt-2 text-xs text-emerald-200">Praegu aktiivne periood</div> : null}
+                        {isNow ? <div className="mt-2 text-xs text-emerald-400">Praegu aktiivne periood</div> : null}
                       </article>
                     );
                   });
@@ -794,7 +794,7 @@ export function PriceViewClient({
 
             <div className={`hidden sm:block w-full max-w-full ${showFullDayTable ? "max-h-[34rem] overflow-auto" : "overflow-x-auto"}`}>
               <table className="min-w-[680px] w-full text-sm">
-                <thead className="bg-white/[0.05] text-zinc-200">
+                <thead className="bg-zinc-900 text-zinc-300">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Aeg</th>
                     <th className="px-4 py-3 text-right font-medium">Ilma KM-ta (snt/kWh)</th>
@@ -802,26 +802,26 @@ export function PriceViewClient({
                     <th className="px-4 py-3 text-left font-medium">Staatus</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/12">
+                <tbody className="divide-y divide-zinc-800">
                   {(() => {
                     const thresholds = buildPriceThresholds(visiblePoints);
                     return tableRows.map((p) => {
                         const cls = priceClass(p.price_eur_per_kwh, thresholds);
                         const isNow = Math.abs(p.ts - nowTs) <= intervalSec / 2;
                         return (
-                          <tr key={p.ts} className={isNow ? "bg-teal-400/12" : "bg-transparent hover:bg-white/[0.04]"}>
+                          <tr key={p.ts} className={isNow ? "bg-zinc-900" : "bg-transparent hover:bg-zinc-900/70"}>
                             <td className="px-4 py-3 text-zinc-100">{fmtRangeEt(p.ts, p.ts + intervalSec)}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-zinc-50">
+                            <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-zinc-50">
                               {fmtSnt(p.price_eur_per_kwh, false)}
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-zinc-50">
+                            <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-zinc-50">
                               {fmtSnt(p.price_eur_per_kwh, true)}
                             </td>
                             <td className="px-4 py-3">
                               <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${cls.pill}`}>
                                 {cls.label}
                               </span>
-                              {isNow ? <span className="ml-2 text-xs text-emerald-200/80">praegu</span> : null}
+                              {isNow ? <span className="ml-2 text-xs text-emerald-400">praegu</span> : null}
                             </td>
                           </tr>
                         );

@@ -59,7 +59,7 @@ export function CookieSettingsModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-zinc-950/70 p-3 sm:items-center sm:p-6">
-      <div className="w-full max-w-2xl rounded-2xl border border-emerald-300/30 bg-zinc-900 p-4 text-zinc-200 shadow-2xl sm:p-6">
+      <div className="w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-200 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-zinc-50">Küpsiste seaded</h2>
@@ -73,7 +73,7 @@ export function CookieSettingsModal({
         </div>
 
         <div className="mt-4 space-y-3">
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium text-zinc-100">Hädavajalikud küpsised</p>
@@ -85,7 +85,7 @@ export function CookieSettingsModal({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium text-zinc-100">Analüütika küpsised</p>
@@ -97,7 +97,7 @@ export function CookieSettingsModal({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium text-zinc-100">Funktsionaalsed küpsised</p>

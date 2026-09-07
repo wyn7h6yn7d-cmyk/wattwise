@@ -7,11 +7,11 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-12 border-t border-zinc-800 bg-zinc-950">
+    <footer className="relative z-10 mt-12 border-t border-emerald-900/70 bg-[#07140f]">
       <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:px-8 lg:py-9">
         <div className="lg:col-span-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-zinc-800">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-emerald-800/70">
               <Image
                 src="/logo.png"
                 alt="Energiakalkulaator"
@@ -25,7 +25,7 @@ export function SiteFooter() {
               <div className="text-sm font-semibold text-zinc-50">Energiakalkulaator</div>
             </div>
           </div>
-          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-300">
+          <div className="mt-4 rounded-xl border border-emerald-800/60 bg-[#0b1a14] p-3 text-sm text-zinc-300">
             <p className="font-medium text-zinc-100">Ülikooli projekt</p>
             <p className="mt-1">Kenneth Alto</p>
             <a className="mt-0.5 inline-flex text-zinc-300 hover:text-zinc-100" href="mailto:kennethalto95@gmail.com">
