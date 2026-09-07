@@ -21,19 +21,18 @@ export function HeroSection() {
             </span>
           </h1>
           <p className="mt-4 max-w-lg text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">
-            Arvuta kiiresti, kas päikesejaam, aku, EV laadimine või elektripaketi vahetus võiks sinu olukorras
-            rahaliselt mõistlik olla.
+            Arvuta, kas päikesejaam või tööstusettevõtte PV + aku võiks sinu olukorras rahaliselt mõistlik olla.
           </p>
 
           <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3.5">
-            <Link href="/kalkulaatorid" className="btn-glow inline-flex w-full justify-center px-6 py-3 sm:w-auto">
-              Proovi tasuta
+            <Link href="/kalkulaatorid/paikesejaam" className="btn-glow inline-flex w-full justify-center px-6 py-3 sm:w-auto">
+              Ava PV kalkulaator
             </Link>
             <Link
-              href="/kalkulaatorid"
+              href="/borsihind"
               className="btn-ghost inline-flex w-full justify-center border-emerald-300/30 bg-white/[0.03] px-6 py-3 sm:w-auto"
             >
-              Vaata kalkulaatoreid
+              Jälgi börsihinda
             </Link>
           </div>
         </div>

@@ -89,10 +89,12 @@ export function useProjectUnlock() {
     const purchaseType = (params.get("purchaseType")?.trim() ?? "") as PurchaseType | "";
 
     if (status === "cancel") {
-      setMessage("Makse katkestati. Midagi ei muutunud.");
+      if (FEATURES.paywallEnabled) {
+        setMessage("Makse katkestati. Midagi ei muutunud.");
+      }
       return;
     }
-    if (status !== "success" || !sessionId) return;
+    if (!FEATURES.paywallEnabled || status !== "success" || !sessionId) return;
 
     let cancelled = false;
     const run = async () => {
@@ -146,7 +148,7 @@ export function useProjectUnlock() {
     purchaseType: PurchaseType,
     options?: { returnSlug?: CalculatorReturnSlug },
   ) => {
-    if (!projectId) return;
+    if (!FEATURES.paywallEnabled || !projectId) return;
     setPurchaseBusy(purchaseType);
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -173,10 +175,7 @@ export function useProjectUnlock() {
   };
 
   const checkPaymentStatus = async () => {
-    if (!FEATURES.paywallEnabled) {
-      setMessage("Hetkel ajutiselt tasuta testimiseks: maksekontrolli pole vaja.");
-      return;
-    }
+    if (!FEATURES.paywallEnabled) return;
     const sid = unlock.pdfSessionId ?? unlock.fullAnalysisSessionId;
     if (!sid) {
       setMessage("Puudub session ID, mida kontrollida.");

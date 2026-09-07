@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { OpenCookieSettingsButton } from "@/components/legal/OpenCookieSettingsButton";
+import { PUBLIC_TOOLS } from "@/lib/nav";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -25,43 +26,39 @@ export function SiteFooter() {
             </div>
           </div>
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-3 text-sm text-zinc-300">
-            <p className="font-medium text-zinc-100">Energiakalkulaator</p>
+            <p className="font-medium text-zinc-100">Ülikooli projekt</p>
             <p className="mt-1">Kenneth Alto</p>
             <a className="mt-0.5 inline-flex text-zinc-300 hover:text-emerald-100" href="mailto:kennethalto95@gmail.com">
               kennethalto95@gmail.com
             </a>
             <div className="mt-3 space-y-1 text-xs leading-relaxed text-zinc-400">
-              <p>Teenust osutab hetkel eraisik Kenneth Alto</p>
-              <p>Registrikood lisatakse pärast ettevõtlusvormi valikut</p>
-              <p>KMKR lisatakse vajadusel</p>
+              <p>Energiakalkulaator.ee on üliõpilastöö raames arendatud informatiivne analüüsiplatvorm.</p>
+              <p>Tulemused on hinnangud, mitte finants- ega tehniline nõuanne.</p>
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-2">
-          <div className="text-sm font-semibold text-zinc-100">Toode</div>
+          <div className="text-sm font-semibold text-zinc-100">Tööriistad</div>
           <ul className="mt-3 grid gap-2 text-sm">
-            <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/kalkulaatorid">
-                Kalkulaatorid
-              </Link>
-            </li>
-            <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/borsihind">
-                Börsihind
-              </Link>
-            </li>
-            <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/pricing">
-                Hinnad
-              </Link>
-            </li>
+            {PUBLIC_TOOLS.map((tool) => (
+              <li key={tool.href}>
+                <Link className="text-zinc-400 hover:text-zinc-100" href={tool.href}>
+                  {tool.title}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
         <div className="lg:col-span-2">
-          <div className="text-sm font-semibold text-zinc-100">Ettevõte</div>
+          <div className="text-sm font-semibold text-zinc-100">Projekt</div>
           <ul className="mt-3 grid gap-2 text-sm">
+            <li>
+              <Link className="text-zinc-400 hover:text-zinc-100" href="/projekt">
+                Ülikooli töö
+              </Link>
+            </li>
             <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/kontakt">
                 Kontakt
@@ -70,11 +67,6 @@ export function SiteFooter() {
             <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/kkk">
                 Korduma kippuvad küsimused
-              </Link>
-            </li>
-            <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/blogi">
-                Blogi
               </Link>
             </li>
           </ul>
@@ -104,11 +96,6 @@ export function SiteFooter() {
               </OpenCookieSettingsButton>
             </li>
             <li>
-              <Link className="text-zinc-400 hover:text-zinc-100" href="/kontakt">
-                Kontakt
-              </Link>
-            </li>
-            <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/vastutusest-loobumine">
                 Vastutusest loobumine
               </Link>
@@ -117,9 +104,8 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 py-3 text-center text-xs text-zinc-500">
-        © {year} Energiakalkulaator · Kõik õigused kaitstud.
+        © {year} Energiakalkulaator · Ülikooli projekt
       </div>
     </footer>
   );
 }
-

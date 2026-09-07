@@ -243,8 +243,8 @@ export default async function EnergiaprognoosPage({
                 Ühenda ilm, päikesekiirgus ja börsihind, et näha millal on parim aeg tarbimiseks, EV laadimiseks ja päikeseenergia kasutuseks.
               </p>
             </div>
-            <Link href="/kalkulaatorid" className="btn-ghost inline-flex w-full justify-center sm:w-auto">
-              Tagasi kalkulaatoritesse
+            <Link href="/kalkulaatorid/paikesejaam" className="btn-ghost inline-flex w-full justify-center sm:w-auto">
+              Ava PV kalkulaator
             </Link>
           </div>
         </header>

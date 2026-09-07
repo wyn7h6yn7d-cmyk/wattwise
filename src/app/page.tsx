@@ -1,39 +1,9 @@
 import Link from "next/link";
 import { AnimatedEnergyBackground } from "@/components/animated-energy-background";
+import { PUBLIC_TOOLS } from "@/lib/nav";
 
 export default function Home() {
-  const tools = [
-    {
-      title: "Päikesejaam",
-      description: "Vaata kiiresti, kas päikesejaam võiks sinu olukorras mõistlik olla.",
-      href: "/kalkulaatorid/paikesejaam",
-      icon: "PV",
-    },
-    {
-      title: "Börsihind",
-      description: "Näe, millal elekter on odavam ja millal tasub tarbimist vähendada.",
-      href: "/borsihind",
-      icon: "BP",
-    },
-    {
-      title: "EV laadimine",
-      description: "Leia soodsamad laadimistunnid ja hinda, kui palju laadimine maksma läheb.",
-      href: "/kalkulaatorid/ev-laadimine",
-      icon: "EV",
-    },
-    {
-      title: "Elektripaketid",
-      description: "Võrdle spot- ja fikseeritud paketti oma tegelike andmete põhjal.",
-      href: "/kalkulaatorid/elektripaketid",
-      icon: "EP",
-    },
-    {
-      title: "Peak shaving",
-      description: "Hinda, kas tipukoormuse vähendamine aitaks sinu kulusid alla tuua.",
-      href: "/kalkulaatorid/peak-shaving",
-      icon: "PS",
-    },
-  ];
+  const tools = PUBLIC_TOOLS;
 
   return (
     <div className="relative page-bg page-bg-static">
@@ -46,7 +16,7 @@ export default function Home() {
           <div className="relative z-10 grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="min-w-0">
               <p className="inline-flex items-center rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-200">
-                Ajutiselt tasuta testimiseks
+                Ülikooli projekt
               </p>
               <h1 className="mt-4 text-balance text-[2rem] font-semibold leading-[1.04] tracking-tight text-zinc-50 min-[390px]:text-[2.2rem] sm:text-[3.8rem]">
                 Arvuta energiaotsuste{" "}
@@ -55,13 +25,13 @@ export default function Home() {
                 </span>
               </h1>
               <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">
-                Arvuta kiiresti, kas päikesejaam, aku, EV laadimine või elektripaketi vahetus võiks sinu olukorras
-                rahaliselt mõistlik olla.
+                Energiakalkulaator on üliõpilastöö raames loodud analüüsiplatvorm. Fookuses on börsihind,
+                päikesejaama tasuvus ja tööstusettevõtte PV + akusalvestus.
               </p>
 
               <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-                <Link href="/kalkulaatorid" className="btn-glow inline-flex w-full justify-center px-6 py-3 sm:w-auto">
-                  Proovi kalkulaatorit
+                <Link href="/kalkulaatorid/paikesejaam" className="btn-glow inline-flex w-full justify-center px-6 py-3 sm:w-auto">
+                  Ava PV kalkulaator
                 </Link>
                 <Link
                   href="/borsihind"
@@ -192,7 +162,7 @@ export default function Home() {
               Arvutused põhinevad sisestatud andmetel ja valitud eeldustel.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {tools.map((tool) => (
               <Link
                 key={tool.title}

@@ -1,4 +1,4 @@
 export const FEATURES = {
-  paywallEnabled: process.env.NEXT_PUBLIC_PAYWALL_ENABLED === "true",
+  // Ülikooli projekt: makseväravat ei kasutata. Stripe'i failid jäävad koodibaasi.
+  paywallEnabled: false,
 } as const;
-

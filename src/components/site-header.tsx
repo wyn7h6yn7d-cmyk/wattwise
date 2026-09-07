@@ -5,15 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { addVat, eurPerKwhToSntPerKwh, formatSntKwh } from "@/lib/elering";
-
-const nav = [
-  { href: "/", label: "Avaleht" },
-  { href: "/kalkulaatorid", label: "Kalkulaatorid" },
-  { href: "/energiaprognoos", label: "Energiaprognoos" },
-  { href: "/borsihind", label: "Börsihind" },
-  { href: "/pricing", label: "Hinnad" },
-  { href: "/kontakt", label: "Kontakt" },
-];
+import { HEADER_CTA, PRIMARY_NAV } from "@/lib/nav";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -24,7 +16,7 @@ export function SiteHeader() {
   const [sunStatus, setSunStatus] = useState<"loading" | "ready" | "unavailable">("loading");
 
   const navItems = useMemo(() => {
-    return nav.map((item) => {
+    return PRIMARY_NAV.map((item) => {
       const active =
         (item.href === "/" ? pathname === "/" : pathname === item.href || pathname?.startsWith(item.href + "/"));
       return { ...item, active };
@@ -156,7 +148,7 @@ export function SiteHeader() {
               Energiakalkulaator
             </div>
             <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.18)]">
-              Beta
+              Projekt 2
             </span>
           </div>
         </Link>
@@ -195,8 +187,8 @@ export function SiteHeader() {
               <path d="M5 17h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Link href="/kalkulaatorid" className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm xl:inline-flex">
-            Proovi tasuta
+          <Link href={HEADER_CTA.href} className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm xl:inline-flex">
+            {HEADER_CTA.label}
           </Link>
         </div>
       </div>
@@ -276,7 +268,7 @@ function MobileMenu({
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
                 <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-amber-100">
-                  Beta
+                  Projekt 2
                 </span>
               </div>
             </div>
@@ -303,8 +295,8 @@ function MobileMenu({
           </div>
 
           <div className="mt-2 border-t border-white/10 p-2">
-            <Link href="/kalkulaatorid" onClick={onClose} className="btn-glow w-full justify-center">
-              Proovi tasuta
+            <Link href={HEADER_CTA.href} onClick={onClose} className="btn-glow w-full justify-center">
+              {HEADER_CTA.label}
             </Link>
           </div>
         </div>

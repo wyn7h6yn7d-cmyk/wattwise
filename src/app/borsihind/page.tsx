@@ -52,8 +52,8 @@ export default async function BorsihindPage() {
                 Andmerikas vaade Eesti (EE) börsihinnale: kokkuvõte, graafik, tabel ja olulisemad aknad.
               </p>
             </div>
-            <Link href="/kalkulaatorid" className="btn-ghost inline-flex w-full justify-center sm:w-auto">
-              Tagasi kalkulaatoritesse
+            <Link href="/kalkulaatorid/paikesejaam" className="btn-ghost inline-flex w-full justify-center sm:w-auto">
+              Ava PV kalkulaator
             </Link>
           </div>
         </header>

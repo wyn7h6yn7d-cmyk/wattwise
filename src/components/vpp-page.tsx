@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { canViewFullAnalysis } from "@/lib/unlock";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
+import { CalculatorNotice } from "@/components/calculator-notice";
 import { FEATURES } from "@/lib/features";
 import { clientDownloadPdf } from "@/lib/pdf/client-download";
 import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
@@ -263,21 +264,12 @@ export function VppPageClient() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {message ? (
-        <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-200">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>{message}</p>
-            <button type="button" className="btn-ghost" onClick={() => setMessage(null)}>
-              Peida
-            </button>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli ligipääsu staatust
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <CalculatorNotice
+        className="lg:col-span-2"
+        message={message}
+        onDismiss={() => setMessage(null)}
+        onCheckPayment={checkPaymentStatus}
+      />
 
       <section className="glass-panel rounded-3xl p-6 sm:p-8">
         <h2 className="text-2xl font-semibold text-zinc-50">VPP tasuvusmudel</h2>

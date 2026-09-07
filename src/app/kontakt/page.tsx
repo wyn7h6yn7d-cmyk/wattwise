@@ -17,8 +17,8 @@ export default function ContactPage() {
         <header className="glass-panel rounded-3xl p-7 sm:p-10">
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">Kontakt</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Saada tagasisidet või küsi lisainfot energiakalkulaator.ee kasutamise kohta.
-            Teenust osutab hetkel eraisik Kenneth Alto.
+            Saada tagasisidet või küsi lisainfot energiakalkulaator.ee kohta. Tegemist on ülikooli
+            projektiga, mitte äriteenusega.
           </p>
         </header>
 
@@ -38,12 +38,12 @@ export default function ContactPage() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
               <div className="text-xs text-zinc-400">Staatus</div>
-              <div className="mt-1 text-sm font-semibold text-zinc-50">Tegutseb hetkel eraisikuna</div>
+              <div className="mt-1 text-sm font-semibold text-zinc-50">Ülikooli projekt</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
               <div className="text-xs text-zinc-400">Lisainfo</div>
               <div className="mt-1 text-sm font-semibold text-zinc-50">
-                Täiendavad andmed lisatakse pärast ettevõtlusvormi vormistamist.
+                Tulemused on informatiivsed hinnangud.
               </div>
             </div>
           </div>
@@ -51,9 +51,9 @@ export default function ContactPage() {
           <div className="mt-6 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
             <div className="text-sm font-semibold text-zinc-50">Kiire link</div>
             <p className="mt-1 text-sm text-zinc-300">
-              Alusta kalkulaatoritest siit:{" "}
+              Alusta tööriistadest siit:{" "}
               <Link href="/kalkulaatorid/paikesejaam" className="text-emerald-200 underline underline-offset-4">
-                ava kalkulaatorite hub
+                ava PV kalkulaator
               </Link>
               .
             </p>
@@ -77,4 +77,3 @@ export default function ContactPage() {
     </div>
   );
 }
-

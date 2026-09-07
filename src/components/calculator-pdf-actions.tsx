@@ -61,7 +61,7 @@ export function CalculatorPdfActions({
             onClick={() => startCheckout("pdf_report", { returnSlug })}
             disabled={purchaseBusy === "pdf_report"}
           >
-            {purchaseBusy === "pdf_report" ? "Laen..." : "Osta PDF raport"}
+            {purchaseBusy === "pdf_report" ? "Laen..." : "Ava PDF raport"}
           </button>
           <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
             Kontrolli ligipääsu staatust

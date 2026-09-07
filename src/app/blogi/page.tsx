@@ -23,7 +23,7 @@ export default function BlogPage() {
   return (
     <LegalLayout title="Blogi" updatedAt="25.04.2026">
       <p className="mt-2">
-        Praktilised artiklid energiaotsuste jaoks. Täispikk blogi on beetaversioonis täienemas.
+        Praktilised artiklid energiaotsuste jaoks. Täispikk blogi on ülikooli projektis täienemas.
       </p>
       <div className="mt-6 grid gap-3">
         {posts.map((post) => (

@@ -7,14 +7,14 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalLayout title="Kasutustingimused" updatedAt="26.04.2026">
+    <LegalLayout title="Kasutustingimused" updatedAt="07.09.2026">
       <p className="text-zinc-200">
         Käesolevad kasutustingimused reguleerivad veebilehe energiakalkulaator.ee kasutamist.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">1. Teenuse kirjeldus</h2>
       <p className="mt-2">
-        Energiakalkulaator on informatiivne tööriist energiaotsuste hindamiseks.
+        Energiakalkulaator on ülikooli projektina loodud informatiivne tööriist energiaotsuste hindamiseks.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">2. Tulemuste olemus</h2>
@@ -46,10 +46,10 @@ export default function TermsPage() {
         Teenust võib muuta, täiendada või ajutiselt katkestada ilma ette teatamata.
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold text-zinc-50">8. Tasulised lisavõimalused</h2>
+      <h2 className="mt-8 text-lg font-semibold text-zinc-50">8. Ülikooli projekt</h2>
       <p className="mt-2">
-        Hetkel võib teenus olla tasuta beetaversioonis. Tasulised lisavõimalused võivad hiljem
-        lisanduda.
+        Energiakalkulaator on üliõpilastöö raames loodud informatiivne platvorm. Tegemist ei ole
+        äriteenuse ega müügikeskkonnaga.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold text-zinc-50">9. Kontakt</h2>

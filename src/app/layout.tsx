@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: "Energiakalkulaator",
   applicationName: "Energiakalkulaator",
   description:
-    "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas. Hinnangud Eesti tingimustes.",
+    "Börsihind, PV kalkulaator ja tööstusettevõtte PV + akusalvestuse analüüs. Ülikooli projekt Eesti tingimustes.",
   metadataBase: new URL("https://energiakalkulaator.ee"),
   alternates: {
     canonical: "https://energiakalkulaator.ee",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Energiakalkulaator",
     description:
-      "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas.",
+      "Börsihind, PV kalkulaator ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
     url: "https://energiakalkulaator.ee",
     siteName: "Energiakalkulaator",
     locale: "et_EE",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "Energiakalkulaator",
-    description: "Päikesejaama, VPP, elektripaketi, EV laadimise ja peak shaving kalkulaatorid ühes kohas.",
+    description: "Börsihind, PV kalkulaator ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
   },
 };
 

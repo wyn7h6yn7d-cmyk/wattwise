@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const tabs = [
-  { href: "/kalkulaatorid/paikesejaam", label: "Päikesejaama tasuvus" },
-  { href: "/kalkulaatorid/vpp", label: "VPP tasuvusmudel" },
-  { href: "/kalkulaatorid/elektripaketid", label: "Elektripaketi võrdlus" },
-  { href: "/kalkulaatorid/ev-laadimine", label: "EV laadimine" },
-  { href: "/kalkulaatorid/peak-shaving", label: "Peak shaving" },
-];
+import { PUBLIC_CALCULATOR_TABS } from "@/lib/nav";
 
 export function CalculatorTabs() {
   const pathname = usePathname();
@@ -18,7 +11,7 @@ export function CalculatorTabs() {
     <div className="glass-panel rounded-3xl p-2">
       <div className="-mx-1 overflow-x-auto px-1 [-webkit-overflow-scrolling:touch]">
         <div className="flex min-w-max gap-2">
-        {tabs.map((tab) => {
+        {PUBLIC_CALCULATOR_TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
             <Link

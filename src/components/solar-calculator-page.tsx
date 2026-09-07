@@ -8,6 +8,7 @@ import { clientDownloadPdf } from "@/lib/pdf/client-download";
 import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { PaywallCard } from "@/components/paywall-card";
+import { CalculatorNotice } from "@/components/calculator-notice";
 import { FEATURES } from "@/lib/features";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { AdvancedInputAccordion } from "@/components/advanced-input-accordion";
@@ -413,21 +414,12 @@ export function SolarCalculatorPage() {
         </button>
       </div>
 
-      {message ? (
-        <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-200">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>{message}</p>
-            <button type="button" className="btn-ghost" onClick={() => setMessage(null)}>
-              Peida
-            </button>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli ligipääsu staatust
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <CalculatorNotice
+        className="mb-6"
+        message={message}
+        onDismiss={() => setMessage(null)}
+        onCheckPayment={checkPaymentStatus}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <section
@@ -1058,8 +1050,7 @@ export function SolarCalculatorPage() {
               {FEATURES.paywallEnabled && !canViewFullAnalysis(unlock) ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                   <p className="text-sm text-zinc-300">
-                    Hetkel ajutiselt tasuta testimiseks: detailne rahavoog, tundlikkus, lisagraafikud ja
-                    võrdlused.
+                    Detailne rahavoog, tundlikkus, lisagraafikud ja võrdlused avanevad koos analüüsiga.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button

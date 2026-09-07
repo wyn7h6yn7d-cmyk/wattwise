@@ -5,6 +5,7 @@ import { useProjectUnlock } from "@/lib/useProjectUnlock";
 import { clientDownloadPdf } from "@/lib/pdf/client-download";
 import { CalculatorPdfActions } from "@/components/calculator-pdf-actions";
 import { PaywallCard } from "@/components/paywall-card";
+import { CalculatorNotice } from "@/components/calculator-notice";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { useMemo, useState } from "react";
 import { calculateElectricityPlan, calculateElectricityPlanSensitivity } from "@/lib/calculators/electricity-plan";
@@ -243,21 +244,11 @@ export function ElektripaketidPageClient() {
 
   return (
     <div className="grid gap-6">
-      {message ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-200">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>{message}</p>
-            <button type="button" className="btn-ghost" onClick={() => setMessage(null)}>
-              Peida
-            </button>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className="btn-ghost" onClick={checkPaymentStatus}>
-              Kontrolli ligipääsu staatust
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <CalculatorNotice
+        message={message}
+        onDismiss={() => setMessage(null)}
+        onCheckPayment={checkPaymentStatus}
+      />
 
       <section className="glass-panel rounded-3xl p-6 sm:p-8">
         <h2 className="text-2xl font-semibold text-zinc-50">Elektripaketi võrdlus</h2>

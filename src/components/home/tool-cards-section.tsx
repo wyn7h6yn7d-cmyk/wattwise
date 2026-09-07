@@ -1,29 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
-const cards = [
-  {
-    title: "Kalkulaatorid",
-    text: "Arvuta ja võrdle investeeringute tasuvust ja säästu.",
-    href: "/kalkulaatorid",
-  },
-  {
-    title: "Börsihind",
-    text: "Jälgi elektri börsihinda reaalajas.",
-    href: "/borsihind",
-  },
-  {
-    title: "Hinnad",
-    text: "Võrdle elektri hinda ja lepingutingimusi.",
-    href: "/pricing",
-  },
-  {
-    title: "Kontakt",
-    text: "Võta ühendust ja küsi lisainfot.",
-    href: "/kontakt",
-  },
-];
+import { PUBLIC_TOOLS } from "@/lib/nav";
 
 export function ToolCardsSection() {
   return (
@@ -32,8 +10,8 @@ export function ToolCardsSection() {
         <h2 className="section-h2 text-center">Vali menüüst sobiv tööriist</h2>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-4">
-        {cards.map((card) => (
+      <div className="grid gap-4 lg:grid-cols-3">
+        {PUBLIC_TOOLS.map((card) => (
           <Link
             key={card.title}
             href={card.href}
@@ -46,7 +24,7 @@ export function ToolCardsSection() {
                 </svg>
               </div>
               <h3 className="mt-4 text-base font-semibold text-zinc-100">{card.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{card.text}</p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{card.description}</p>
             </div>
             <div className="mt-6 flex items-center justify-end text-emerald-200 transition group-hover:translate-x-1">→</div>
           </Link>
