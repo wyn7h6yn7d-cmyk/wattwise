@@ -1,4 +1,12 @@
-export default function HinnadError() {
+"use client";
+
+export default function HinnadError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <div className="relative page-bg">
       <main className="relative mx-auto w-full max-w-4xl px-5 pb-16 pt-12 sm:px-8 lg:px-10">
@@ -7,6 +15,10 @@ export default function HinnadError() {
           <p className="mt-4 max-w-2xl text-zinc-300">
             Energiakalkulaator on ülikooli projekt. See aadress ei ole enam kasutusel.
           </p>
+          <button type="button" className="btn-glow mt-6" onClick={() => reset()}>
+            Proovi uuesti
+          </button>
+          {error?.digest ? <p className="mt-3 text-xs text-zinc-500">Veakood: {error.digest}</p> : null}
         </section>
       </main>
     </div>
