@@ -330,7 +330,7 @@ export function PeakShavingPageClient() {
         onCheckPayment={checkPaymentStatus}
       />
 
-      <section className="glass-panel rounded-3xl p-6 sm:p-8">
+      <section className="glass-panel rounded-xl p-6 sm:p-8">
         <h2 className="text-2xl font-semibold text-zinc-50">Peak shaving / ettevõtte võimsus</h2>
         <p className="mt-2 text-sm text-zinc-400">
           Lihtne hinnang, kui palju tippu saab akuga lõigata ja mis võiks olla sääst võimsustasudes.
@@ -339,7 +339,7 @@ export function PeakShavingPageClient() {
           <button
             type="button"
             className={`rounded-lg px-3 py-1.5 text-sm transition ${
-              mode === "quick" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+              mode === "quick" ? "bg-zinc-800 text-zinc-50" : "text-zinc-400"
             }`}
             onClick={() => setMode("quick")}
           >
@@ -348,7 +348,7 @@ export function PeakShavingPageClient() {
           <button
             type="button"
             className={`rounded-lg px-3 py-1.5 text-sm transition ${
-              mode === "advanced" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+              mode === "advanced" ? "bg-zinc-800 text-zinc-50" : "text-zinc-400"
             }`}
             onClick={() => setMode("advanced")}
           >
@@ -570,15 +570,15 @@ export function PeakShavingPageClient() {
             ) : null}
             {hasCalculated && hasRequiredInputs ? (
               <>
-            <div className="mb-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
-              <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
+            <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Peamine tulemus</p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <strong className="text-4xl font-semibold text-emerald-100 sm:text-5xl">
+                <strong className="font-mono text-4xl font-semibold tabular-nums text-zinc-50 sm:text-5xl">
                   {new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 }).format(Math.round(result.annualSavings))}
                 </strong>
-                <span className="pb-1 text-base text-emerald-50/90 sm:text-lg">€/a</span>
+                <span className="pb-1 font-mono text-base text-emerald-400 sm:text-lg">€/a</span>
               </div>
-              <p className="mt-2 text-sm text-emerald-50/90">
+              <p className="mt-2 text-sm text-zinc-400">
                 Selle sisendi põhjal võiks aastane võimsustasu kokkuhoid olla sellises suurusjärgus.
               </p>
             </div>

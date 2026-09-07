@@ -19,16 +19,16 @@ export default function ToostusPage() {
         </p>
         <p>
           Täisulatuses arvutusliides on koostamisel. Seni saad kasutada olemasolevat{" "}
-          <Link href="/kalkulaatorid/paikesejaam" className="text-emerald-200 underline underline-offset-4">
+          <Link href="/kalkulaatorid/paikesejaam" className="text-zinc-200 underline underline-offset-4">
             PV kalkulaatorit
           </Link>{" "}
           ja jälgida{" "}
-          <Link href="/borsihind" className="text-emerald-200 underline underline-offset-4">
+          <Link href="/borsihind" className="text-zinc-200 underline underline-offset-4">
             börsihinda
           </Link>
           .
         </p>
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-zinc-200">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-200">
           <p className="font-semibold text-zinc-50">Plaanitavad sisendid</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>tööstuse tarbimisprofiil ja tipukoormus;</li>

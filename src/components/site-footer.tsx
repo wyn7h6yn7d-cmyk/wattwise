@@ -7,11 +7,11 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="premium-shell mt-12 border-t border-emerald-300/20 bg-zinc-950/88">
+    <footer className="mt-12 border-t border-zinc-800 bg-zinc-950">
       <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:px-8 lg:py-9">
         <div className="lg:col-span-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-emerald-300/40 shadow-[0_0_22px_rgba(16,185,129,0.18)]">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-zinc-800">
               <Image
                 src="/logo.png"
                 alt="Energiakalkulaator"
@@ -25,10 +25,10 @@ export function SiteFooter() {
               <div className="text-sm font-semibold text-zinc-50">Energiakalkulaator</div>
             </div>
           </div>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-3 text-sm text-zinc-300">
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-300">
             <p className="font-medium text-zinc-100">Ülikooli projekt</p>
             <p className="mt-1">Kenneth Alto</p>
-            <a className="mt-0.5 inline-flex text-zinc-300 hover:text-emerald-100" href="mailto:kennethalto95@gmail.com">
+            <a className="mt-0.5 inline-flex text-zinc-300 hover:text-zinc-100" href="mailto:kennethalto95@gmail.com">
               kennethalto95@gmail.com
             </a>
             <div className="mt-3 space-y-1 text-xs leading-relaxed text-zinc-400">

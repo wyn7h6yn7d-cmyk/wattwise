@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: "Energiakalkulaator",
   applicationName: "Energiakalkulaator",
   description:
-    "Börsihind, PV kalkulaator ja tööstusettevõtte PV + akusalvestuse analüüs. Ülikooli projekt Eesti tingimustes.",
+    "Börsihind, PV, peak shaving ja tööstusettevõtte PV + akusalvestuse analüüs. Ülikooli projekt Eesti tingimustes.",
   metadataBase: new URL("https://energiakalkulaator.ee"),
   alternates: {
     canonical: "https://energiakalkulaator.ee",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Energiakalkulaator",
     description:
-      "Börsihind, PV kalkulaator ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
+      "Börsihind, PV, peak shaving ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
     url: "https://energiakalkulaator.ee",
     siteName: "Energiakalkulaator",
     locale: "et_EE",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "Energiakalkulaator",
-    description: "Börsihind, PV kalkulaator ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
+    description: "Börsihind, PV, peak shaving ja tööstusettevõtte PV + aku analüüs. Ülikooli projekt.",
   },
 };
 

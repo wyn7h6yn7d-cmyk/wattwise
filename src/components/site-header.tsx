@@ -124,15 +124,15 @@ export function SiteHeader() {
   const fallbackLabel = isLoading ? "Live-andmed laevad..." : "Live-andmed hetkel puuduvad";
 
   return (
-    <header className="sticky top-0 z-50 overflow-x-clip px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
-      <div className="mx-auto flex h-[72px] w-full max-w-7xl min-w-0 items-center justify-between gap-3 rounded-2xl border border-emerald-300/24 bg-zinc-950/72 px-3 shadow-[0_12px_36px_rgba(0,0,0,0.42),0_0_28px_rgba(16,185,129,0.07)] backdrop-blur-md sm:px-4 lg:h-[78px] lg:px-5">
+    <header className="sticky top-0 z-50 overflow-x-clip border-b border-zinc-800 bg-zinc-950 px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
+      <div className="mx-auto flex h-[72px] w-full max-w-7xl min-w-0 items-center justify-between gap-3 px-0 sm:px-0 lg:h-[78px]">
         <Link
           href="/"
           className="flex min-w-0 max-w-[calc(100%-3.5rem)] items-center gap-2.5 sm:gap-3"
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
-          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-emerald-300/45 shadow-[0_0_18px_rgba(16,185,129,0.16)] sm:h-10 sm:w-10 lg:h-11 lg:w-11">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-zinc-800 sm:h-10 sm:w-10 lg:h-11 lg:w-11">
             <Image
               src="/logo.png"
               alt="Energiakalkulaator"
@@ -147,7 +147,7 @@ export function SiteHeader() {
             <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
               Energiakalkulaator
             </div>
-            <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.18)]">
+            <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-zinc-300">
               Projekt 2
             </span>
           </div>
@@ -161,10 +161,10 @@ export function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-full px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
+              className={`rounded-lg px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
                 item.active
-                  ? "bg-emerald-400/16 text-emerald-100 ring-1 ring-emerald-300/28"
-                  : "text-zinc-300 hover:text-zinc-100"
+                  ? "bg-zinc-800 text-zinc-50"
+                  : "text-zinc-400 hover:text-zinc-100"
               }`}
             >
               {item.label}
@@ -175,7 +175,7 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/[0.06] text-zinc-100 shadow-[0_0_24px_rgba(16,185,129,0.08)] backdrop-blur-md transition-colors hover:bg-white/[0.1] lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 transition-colors hover:bg-zinc-900 lg:hidden"
             aria-label={mobileOpen ? "Sulge menüü" : "Ava menüü"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
@@ -187,28 +187,28 @@ export function SiteHeader() {
               <path d="M5 17h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Link href={HEADER_CTA.href} className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm xl:inline-flex">
+          <Link href={HEADER_CTA.href} className="btn-glow hidden h-11 items-center whitespace-nowrap px-4 text-sm lg:inline-flex">
             {HEADER_CTA.label}
           </Link>
         </div>
       </div>
 
-      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-xl border border-emerald-300/20 bg-[linear-gradient(180deg,rgba(9,20,17,0.82),rgba(7,16,13,0.76))] px-3 py-2 text-[11px] text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.32)]">
-        <span className="rounded-md bg-white/[0.03] px-2 py-0.5 text-zinc-400">{todayLabel}</span>
+      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-300">
+        <span className="px-1 text-zinc-500">{todayLabel}</span>
         {hasAnyLiveData ? (
           <>
             {hasPrice ? (
               <>
-                <span className="text-zinc-600">|</span>
-                <strong className="rounded-md bg-emerald-400/10 px-2 py-0.5 text-emerald-200">
+                <span className="text-zinc-700">|</span>
+                <strong className="px-1 font-mono tabular-nums text-emerald-400">
                   {priceValue !== null ? `${formatSntKwh(priceValue)} snt/kWh` : null}
                 </strong>
               </>
             ) : null}
             {hasSun ? (
               <>
-                <span className="text-zinc-600">|</span>
-                <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5">
+                <span className="text-zinc-700">|</span>
+                <span className="px-1 font-mono tabular-nums text-zinc-400">
                   ↑ {sunTimes.rise} · ↓ {sunTimes.set}
                 </span>
               </>
@@ -216,8 +216,8 @@ export function SiteHeader() {
           </>
         ) : (
           <>
-            <span className="text-zinc-600">|</span>
-            <span className="rounded-md bg-white/[0.03] px-1.5 py-0.5 text-zinc-300">{fallbackLabel}</span>
+            <span className="text-zinc-700">|</span>
+            <span className="px-1 text-zinc-400">{fallbackLabel}</span>
           </>
         )}
       </div>
@@ -247,15 +247,15 @@ function MobileMenu({
   return (
       <div className="lg:hidden">
       <div
-        className="fixed inset-0 z-40 bg-zinc-950/60 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-zinc-950/70"
         onClick={onClose}
         aria-hidden="true"
       />
       <div className="relative z-50 mx-auto max-w-7xl px-3 pb-4 pt-2 sm:px-5 lg:px-8">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/12 bg-zinc-950/88 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.55)] backdrop-blur-md">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-2">
           <div className="flex items-center justify-between gap-2 px-2 py-2">
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-emerald-300/45 shadow-[0_0_16px_rgba(16,185,129,0.2)]">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-zinc-800">
                 <Image
                   src="/logo.png"
                   alt="Energiakalkulaator"
@@ -267,7 +267,7 @@ function MobileMenu({
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-400/15 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-amber-100">
+                <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                   Projekt 2
                 </span>
               </div>

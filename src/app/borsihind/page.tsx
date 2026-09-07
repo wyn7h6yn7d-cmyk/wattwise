@@ -32,17 +32,12 @@ export default async function BorsihindPage() {
   }
 
   return (
-    <div className="relative page-bg">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="aurora" />
-        <div className="grid-glow" />
-      </div>
-
+    <div className="relative">
       <main className="relative mx-auto w-full max-w-7xl px-3 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
-        <header className="glass-panel rounded-2xl p-4 sm:rounded-3xl sm:p-10">
+        <header className="glass-panel rounded-xl p-4 sm:p-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs tracking-wide text-emerald-200">
+              <p className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs tracking-wide text-zinc-300">
                 Elering · Eesti (EE)
               </p>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
@@ -59,7 +54,7 @@ export default async function BorsihindPage() {
         </header>
 
         {error ? (
-          <section className="mt-8 glass-panel rounded-3xl p-6 sm:p-8">
+          <section className="mt-8 glass-panel rounded-xl p-6 sm:p-8">
             <h2 className="text-xl font-semibold text-zinc-50">Hinda ei saanud laadida</h2>
             <p className="mt-2 text-sm text-zinc-300">{error}</p>
             <p className="mt-3 text-xs text-zinc-400">

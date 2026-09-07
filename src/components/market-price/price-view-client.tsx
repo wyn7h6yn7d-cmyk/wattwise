@@ -189,8 +189,8 @@ function FilterChip({
       title={title}
       className={`rounded-full border px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
         active
-          ? "border-emerald-300/35 bg-emerald-400/15 text-zinc-50 shadow-[0_0_20px_rgba(16,185,129,0.12)]"
-          : "border-white/10 bg-white/[0.02] text-zinc-300 hover:bg-white/[0.05] hover:text-zinc-50"
+          ? "border-zinc-600 bg-zinc-800 text-zinc-50"
+          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
       } ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
     >
       {children}
@@ -550,7 +550,7 @@ export function PriceViewClient({
 
   return (
     <section className="mt-8 grid grid-cols-1 gap-6 overflow-x-hidden">
-      <div className="glass-panel rounded-3xl p-5 sm:p-8">
+      <div className="glass-panel rounded-xl p-5 sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna ülevaade</h2>
@@ -607,15 +607,15 @@ export function PriceViewClient({
 
         {/* A) Summary cards */}
         <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-12">
-          <div className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/15 to-teal-400/10 p-4 shadow-[0_0_30px_rgba(20,184,166,0.12)] lg:col-span-5">
-            <div className="text-xs uppercase tracking-wide text-emerald-100/80">{nowCard?.label ?? "Praegune hind"}</div>
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 lg:col-span-5">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">{nowCard?.label ?? "Praegune hind"}</div>
             <div className="mt-2 flex items-end gap-2">
-              <div className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
+              <div className="font-mono text-4xl font-semibold tabular-nums tracking-tight text-zinc-50 sm:text-5xl">
                 {nowCard ? fmtSnt(nowCard.eurPerKwh, vat) : "—"}
               </div>
-              <span className="pb-1 text-sm font-medium text-emerald-100/80">snt/kWh</span>
+              <span className="pb-1 font-mono text-sm font-medium text-emerald-400">snt/kWh</span>
             </div>
-            <div className="mt-2 text-xs text-emerald-100/70">
+            <div className="mt-2 text-xs text-zinc-500">
               {nowCard ? fmtRangeEt(nowCard.startTs, nowCard.endTs) : "Aknainfo puudub"}
             </div>
           </div>
@@ -705,7 +705,7 @@ export function PriceViewClient({
       </div>
 
       {/* C) Price table + market overview */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8">
+      <div className="glass-panel rounded-xl p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold text-zinc-50">Hinnatabel</h2>

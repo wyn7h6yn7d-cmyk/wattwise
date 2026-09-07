@@ -401,7 +401,7 @@ export function SolarCalculatorPage() {
   }, [draftResult.effectiveEnergyPrice, input.pvPowerKw, result.selected.annualNetBenefitEur]);
 
   return (
-    <div className="glass-panel rounded-3xl p-6 sm:p-8">
+    <div className="glass-panel rounded-xl p-6 sm:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-zinc-50">Päikesejaama tasuvus</h2>
@@ -425,8 +425,8 @@ export function SolarCalculatorPage() {
         <section
           id="kalkulaator"
           ref={calculatorRef}
-          className={`rounded-3xl border border-white/10 bg-white/[0.02] p-6 transition-all duration-300 sm:p-8 ${
-            highlightCalculator ? "ring-2 ring-cyan-300/70 shadow-[0_0_40px_rgba(34,211,238,0.25)]" : ""
+          className={`rounded-xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 ${
+            highlightCalculator ? "border-zinc-500" : ""
           }`}
         >
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -435,7 +435,7 @@ export function SolarCalculatorPage() {
               <button
                 type="button"
                 className={`rounded-lg px-3 py-1.5 text-sm transition ${
-                  mode === "quick" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+                  mode === "quick" ? "bg-zinc-800 text-zinc-50" : "text-zinc-400"
                 }`}
                 onClick={() => setMode("quick")}
               >
@@ -444,7 +444,7 @@ export function SolarCalculatorPage() {
               <button
                 type="button"
                 className={`rounded-lg px-3 py-1.5 text-sm transition ${
-                  mode === "advanced" ? "bg-emerald-400/20 text-emerald-100" : "text-zinc-300"
+                  mode === "advanced" ? "bg-zinc-800 text-zinc-50" : "text-zinc-400"
                 }`}
                 onClick={() => setMode("advanced")}
               >
@@ -951,15 +951,15 @@ export function SolarCalculatorPage() {
           ) : null}
           {hasCalculated && hasRequiredInputs ? (
             <>
-          <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-400/15 p-5 shadow-[0_0_30px_rgba(16,185,129,0.14)]">
-            <p className="text-xs uppercase tracking-wide text-emerald-100/80">Peamine tulemus</p>
+          <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Peamine tulemus</p>
             <div className="mt-2 flex flex-wrap items-end gap-3">
-              <strong className="text-4xl font-semibold text-emerald-100 sm:text-5xl">
+              <strong className="font-mono text-4xl font-semibold tabular-nums text-zinc-50 sm:text-5xl">
                 {Math.round(result.selected.annualNetBenefitEur).toLocaleString("et-EE")}
               </strong>
-              <span className="pb-1 text-base text-emerald-50/90 sm:text-lg">EUR/a</span>
+              <span className="pb-1 font-mono text-base text-emerald-400 sm:text-lg">EUR/a</span>
             </div>
-            <p className="mt-2 text-sm text-emerald-50/90">
+            <p className="mt-2 text-sm text-zinc-400">
               Selle sisendi põhjal on hinnanguline aastane netokasu sellises suurusjärgus.
             </p>
           </div>
