@@ -20,7 +20,7 @@ export function ChartCard({
   chartClassName = "",
 }: ChartCardProps) {
   return (
-    <section className={`rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-6 ${className}`}>
+    <section className={`rounded-xl border border-zinc-800/80 bg-[var(--panel-bg)] p-4 sm:p-6 ${className}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-zinc-50 sm:text-base">{title}</h3>

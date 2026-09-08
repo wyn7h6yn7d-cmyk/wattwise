@@ -131,3 +131,10 @@ export function consumptionProfileToFormFields(summary: ConsumptionProfileSummar
     peakLoadKw: summary.peakLoadKw,
   };
 }
+
+export function describeConsumptionInterval(summary: ConsumptionProfileSummary): string {
+  if (summary.interval === "hour") return "1 tund";
+  if (summary.interval === "15min") return "15 minutit";
+  if (summary.intervalMinutes != null) return `${summary.intervalMinutes} minutit`;
+  return "tuvastamata";
+}

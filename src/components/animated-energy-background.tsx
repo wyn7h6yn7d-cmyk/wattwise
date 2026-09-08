@@ -35,16 +35,16 @@ export function AnimatedEnergyBackground({ intensity = "hero" }: AnimatedEnergyB
       aria-hidden="true"
     >
       <div className="aeb-base" />
-      <div className="aeb-aurora aeb-aurora-a" style={{ opacity: 0.34 * opacityFactor }} />
-      <div className="aeb-aurora aeb-aurora-b" style={{ opacity: 0.3 * opacityFactor }} />
+      <div className="aeb-aurora aeb-aurora-a" style={{ opacity: 0.14 * opacityFactor }} />
+      <div className="aeb-aurora aeb-aurora-b" style={{ opacity: 0.12 * opacityFactor }} />
 
-      <svg className="aeb-lines" viewBox="0 0 1200 700" preserveAspectRatio="none" style={{ opacity: opacityFactor }}>
+      <svg className="aeb-lines" viewBox="0 0 1200 700" preserveAspectRatio="none" style={{ opacity: 0.55 * opacityFactor }}>
         <defs>
           <linearGradient id="aeb_line_grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="rgba(16,185,129,0.0)" />
-            <stop offset="0.38" stopColor="rgba(16,185,129,0.65)" />
-            <stop offset="0.7" stopColor="rgba(45,212,191,0.6)" />
-            <stop offset="1" stopColor="rgba(16,185,129,0.0)" />
+            <stop offset="0" stopColor="rgba(148,163,184,0.0)" />
+            <stop offset="0.38" stopColor="rgba(52,211,153,0.35)" />
+            <stop offset="0.7" stopColor="rgba(148,163,184,0.28)" />
+            <stop offset="1" stopColor="rgba(148,163,184,0.0)" />
           </linearGradient>
         </defs>
 

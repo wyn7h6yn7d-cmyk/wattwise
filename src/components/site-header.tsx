@@ -134,7 +134,7 @@ export function SiteHeader() {
           onClick={() => setMobileOpen(false)}
           aria-label="Energiakalkulaator avalehele"
         >
-          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-emerald-800/70 sm:h-10 sm:w-10 lg:h-11 lg:w-11">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-zinc-700/80 sm:h-10 sm:w-10 lg:h-11 lg:w-11">
             <Image
               src="/logo.png"
               alt="Energiakalkulaator"
@@ -149,7 +149,7 @@ export function SiteHeader() {
             <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
               Energiakalkulaator
             </div>
-            <span className="hidden shrink-0 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-emerald-300/75 min-[430px]:inline">
+            <span className="hidden shrink-0 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-zinc-500 min-[430px]:inline">
               Projekt 2
             </span>
           </div>
@@ -177,7 +177,7 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center border border-emerald-800/50 bg-transparent text-zinc-100 transition-colors hover:border-emerald-500/50 lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center border border-zinc-700/70 bg-transparent text-zinc-100 transition-colors hover:border-zinc-500 lg:hidden"
             aria-label={mobileOpen ? "Sulge menüü" : "Ava menüü"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
@@ -249,15 +249,15 @@ function MobileMenu({
   return (
       <div className="lg:hidden">
       <div
-        className="fixed inset-0 z-40 bg-[#07140f]/80"
+        className="fixed inset-0 z-40 bg-[#090b10]/80"
         onClick={onClose}
         aria-hidden="true"
       />
       <div className="relative z-50 mx-auto max-w-7xl px-3 pb-4 pt-2 sm:px-5 lg:px-8">
-        <div className="min-w-0 overflow-hidden border border-emerald-800/50 bg-[#07140f]/90 p-2">
+        <div className="min-w-0 overflow-hidden border border-zinc-700/60 bg-[#11141b]/95 p-2">
           <div className="flex items-center justify-between gap-2 px-2 py-2">
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-emerald-800/70">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-zinc-700/80">
                 <Image
                   src="/logo.png"
                   alt="Energiakalkulaator"
@@ -269,7 +269,7 @@ function MobileMenu({
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-800/80 bg-emerald-950 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Projekt 2
                 </span>
               </div>
@@ -287,8 +287,8 @@ function MobileMenu({
                 onClick={onClose}
                 className={`block rounded-lg px-3 py-3.5 text-sm transition-colors ${
                   item.active
-                    ? "bg-emerald-950 text-emerald-100"
-                    : "text-zinc-400 hover:bg-emerald-950/70 hover:text-zinc-50"
+                    ? "bg-zinc-800 text-zinc-50"
+                    : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-50"
                 }`}
               >
                 {item.label}
@@ -296,7 +296,7 @@ function MobileMenu({
             ))}
           </div>
 
-          <div className="mt-2 border-t border-emerald-900/70 p-2">
+          <div className="mt-2 border-t border-zinc-800 p-2">
             <Link href={HEADER_CTA.href} onClick={onClose} className="btn-glow w-full justify-center">
               {HEADER_CTA.label}
             </Link>

@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-12 lg:px-8">
       <section className="max-w-3xl">
-        <p className="text-sm text-emerald-200/80">Projekt 2 prototüüp · Energiakalkulaator.ee</p>
+        <p className="text-sm text-zinc-500">Projekt 2 prototüüp · Energiakalkulaator.ee</p>
         <h1 className="mt-4 text-balance text-[1.85rem] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
           Tööstusettevõtte energiaanalüüs ühes tööriistas
         </h1>

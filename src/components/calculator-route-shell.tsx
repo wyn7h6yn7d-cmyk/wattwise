@@ -8,7 +8,7 @@ export function CalculatorRouteShell({
   children: React.ReactNode;
 }) {
   return (
-    <section>
+    <section className="relative">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{title}</h1>
         <p className="mt-2 text-sm text-zinc-400">{description}</p>

@@ -1,4 +1,4 @@
-import { parseLocaleNumber } from "@/lib/units";
+import { parseLocaleNumber } from "../units";
 
 /**
  * Tööstusmooduli v0.2 CSV parser.
@@ -107,7 +107,7 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
     .filter((item) => item.line.length > 0);
 
   if (nonEmpty.length < 2) {
-    return { ok: false, error: "CSV failis peab olema päiserida ja vähemalt üks andmerida." };
+    return { ok: false, error: "CSV fail on tühi või liiga lühike." };
   }
 
   const delimiter = pickDelimiter(nonEmpty[0].line);
@@ -115,17 +115,10 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
   const timestampIdx = headers.findIndex((header) => TIMESTAMP_HEADERS.has(header));
   const consumptionIdx = headers.findIndex((header) => CONSUMPTION_HEADERS.has(header));
 
-  if (timestampIdx < 0) {
+  if (timestampIdx < 0 || consumptionIdx < 0) {
     return {
       ok: false,
-      error: "CSV failis ei leitud aja veergu. Kasuta nime timestamp, aeg, date või datetime.",
-    };
-  }
-  if (consumptionIdx < 0) {
-    return {
-      ok: false,
-      error:
-        "CSV failis ei leitud tarbimise veergu. Kasuta nime consumption_kwh, tarbimine_kwh, kwh või consumption.",
+      error: "CSV failist ei leitud aja või tarbimise veergu.",
     };
   }
 
@@ -138,22 +131,16 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
     if (!parsedTs) {
       return {
         ok: false,
-        error: `CSV real ${lineNumber} ei õnnestunud ajatempli lugeda. Oodatav vorming on nt 2026-01-01 00:00.`,
+        error: `CSV failis on vigased tarbimisväärtused. Real ${lineNumber} ei õnnestunud ajatempli lugeda.`,
       };
     }
 
     const consumptionRaw = parts[consumptionIdx] ?? "";
     const consumptionKwh = parseLocaleNumber(consumptionRaw);
-    if (consumptionKwh == null) {
+    if (consumptionKwh == null || consumptionKwh < 0) {
       return {
         ok: false,
-        error: `CSV real ${lineNumber} ei õnnestunud tarbimist arvuna lugeda.`,
-      };
-    }
-    if (consumptionKwh < 0) {
-      return {
-        ok: false,
-        error: `CSV real ${lineNumber} on negatiivne tarbimine. v0.2 ei aktsepteeri negatiivseid väärtusi.`,
+        error: `CSV failis on vigased tarbimisväärtused. Real ${lineNumber} on tarbimine puuduv või negatiivne.`,
       };
     }
 
@@ -174,12 +161,7 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
 
 export const SAMPLE_CONSUMPTION_CSV = [
   "timestamp,consumption_kwh",
-  "2026-01-01 00:00,90",
-  "2026-01-01 01:00,88",
-  "2026-01-01 02:00,85",
-  "2026-01-01 08:00,160",
-  "2026-01-01 11:00,220",
-  "2026-01-01 15:00,180",
-  "2026-01-01 20:00,110",
-  "2026-01-01 23:00,95",
+  "2026-01-01 00:00,120",
+  "2026-01-01 01:00,115",
+  "2026-01-01 02:00,110",
 ].join("\n");

@@ -11,7 +11,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:px-8 lg:py-9">
         <div className="lg:col-span-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-emerald-800/70">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-zinc-700/80">
               <Image
                 src="/logo.png"
                 alt="Energiakalkulaator"
@@ -103,7 +103,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-emerald-900/40 py-3 text-center text-xs text-zinc-500">
+      <div className="border-t border-zinc-800/80 py-3 text-center text-xs text-zinc-500">
         © {year} Energiakalkulaator · Ülikooli projekt
       </div>
     </footer>

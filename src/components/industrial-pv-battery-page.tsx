@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   INDUSTRIAL_SAMPLE_PROFILES,
   calculateIndustrial,
@@ -10,8 +10,21 @@ import {
   type IndustrialResult,
   type IndustrialSampleProfile,
 } from "@/lib/calculators/industrial";
+import {
+  SAMPLE_CONSUMPTION_CSV,
+  parseConsumptionCsv,
+  type ConsumptionCsvRow,
+} from "@/lib/consumption/parse-consumption-csv";
+import {
+  consumptionProfileToFormFields,
+  describeConsumptionInterval,
+  summarizeConsumptionProfile,
+  type ConsumptionProfileSummary,
+} from "@/lib/consumption/consumption-profile";
 import { parseLocaleNumber, toNumber } from "@/lib/units";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
+
+type InputMode = "manual" | "csv";
 
 type FormState = {
   companyName: string;
@@ -41,8 +54,9 @@ const EMPTY_FORM: FormState = {
   investmentEur: "",
 };
 
-function toField(value: number): string {
-  return String(value).replace(".", ",");
+function toField(value: number, digits?: number): string {
+  const n = digits == null ? value : Number(value.toFixed(digits));
+  return String(n).replace(".", ",");
 }
 
 function profileToForm(profile: IndustrialSampleProfile): FormState {
@@ -103,9 +117,9 @@ function SplitBar({
 
   return (
     <div>
-      <div className="flex h-3 overflow-hidden border border-[var(--panel-border)] bg-[#07140f]">
-        <div className="bg-emerald-700/80" style={{ width: `${leftPct}%` }} />
-        <div className="bg-emerald-300/35" style={{ width: `${rightPct}%` }} />
+      <div className="flex h-3 overflow-hidden border border-[var(--panel-border)] bg-[#0c0e14]">
+        <div className="bg-emerald-600/75" style={{ width: `${leftPct}%` }} />
+        <div className="bg-zinc-600/55" style={{ width: `${rightPct}%` }} />
       </div>
       <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-400">
         <span>
@@ -128,8 +142,8 @@ function PeakCompare({ beforeKw, afterKw }: { beforeKw: number; afterKw: number 
           <span>Enne akut</span>
           <span className="tabular-nums">{fmt(beforeKw, 0)} kW</span>
         </div>
-        <div className="h-2.5 border border-[var(--panel-border)] bg-[#07140f]">
-          <div className="h-full bg-zinc-500/80" style={{ width: `${(beforeKw / max) * 100}%` }} />
+        <div className="h-2.5 border border-[var(--panel-border)] bg-[#0c0e14]">
+          <div className="h-full bg-zinc-500/70" style={{ width: `${(beforeKw / max) * 100}%` }} />
         </div>
       </div>
       <div>
@@ -137,8 +151,8 @@ function PeakCompare({ beforeKw, afterKw }: { beforeKw: number; afterKw: number 
           <span>Pärast akut</span>
           <span className="tabular-nums">{fmt(afterKw, 0)} kW</span>
         </div>
-        <div className="h-2.5 border border-[var(--panel-border)] bg-[#07140f]">
-          <div className="h-full bg-emerald-700/80" style={{ width: `${(afterKw / max) * 100}%` }} />
+        <div className="h-2.5 border border-[var(--panel-border)] bg-[#0c0e14]">
+          <div className="h-full bg-emerald-600/75" style={{ width: `${(afterKw / max) * 100}%` }} />
         </div>
       </div>
     </div>
@@ -150,6 +164,20 @@ export function IndustrialPvBatteryPage() {
   const [activeProfile, setActiveProfile] = useState<IndustrialSampleProfile["id"] | null>(null);
   const [hasCalculated, setHasCalculated] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<InputMode>("manual");
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvFileName, setCsvFileName] = useState("");
+  const [csvPreview, setCsvPreview] = useState<ConsumptionCsvRow[]>([]);
+  const [csvSummary, setCsvSummary] = useState<ConsumptionProfileSummary | null>(null);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const clearCsvImport = () => {
+    setCsvError(null);
+    setCsvFileName("");
+    setCsvPreview([]);
+    setCsvSummary(null);
+    if (csvInputRef.current) csvInputRef.current.value = "";
+  };
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setActiveProfile(null);
@@ -172,10 +200,53 @@ export function IndustrialPvBatteryPage() {
   const result: IndustrialResult = useMemo(() => calculateIndustrial(formToInput(form)), [form]);
 
   const applyProfile = (profile: IndustrialSampleProfile) => {
+    setInputMode("manual");
+    clearCsvImport();
     setForm(profileToForm(profile));
     setActiveProfile(profile.id);
     setValidationMessage(null);
     setHasCalculated(true);
+  };
+
+  const handleCsvFile = async (file: File | undefined) => {
+    if (!file) return;
+    setCsvFileName(file.name);
+    setCsvError(null);
+    setCsvPreview([]);
+    setCsvSummary(null);
+    setActiveProfile(null);
+    try {
+      const text = await file.text();
+      const parsed = parseConsumptionCsv(text);
+      if (!parsed.ok) {
+        setCsvError(parsed.error);
+        return;
+      }
+      const summary = summarizeConsumptionProfile(parsed.rows);
+      const fields = consumptionProfileToFormFields(summary);
+      setCsvPreview(parsed.rows.slice(0, 5));
+      setCsvSummary(summary);
+      setForm((prev) => ({
+        ...prev,
+        annualConsumptionMwh: toField(fields.annualConsumptionMwh, 1),
+        daytimeSharePercent: toField(fields.daytimeSharePercent, 1),
+        peakLoadKw: toField(fields.peakLoadKw, 1),
+      }));
+      setHasCalculated(false);
+      setValidationMessage(null);
+    } catch {
+      setCsvError("CSV faili lugemine ebaõnnestus. Proovi uuesti.");
+    }
+  };
+
+  const downloadSampleCsv = () => {
+    const blob = new Blob([SAMPLE_CONSUMPTION_CSV], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "naidis-toostus-tarbimine.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleCalculate = () => {
@@ -193,12 +264,17 @@ export function IndustrialPvBatteryPage() {
     setActiveProfile(null);
     setHasCalculated(false);
     setValidationMessage(null);
+    setInputMode("manual");
+    clearCsvImport();
   };
 
   const assumptionsInfo = useMemo(
     () => ({
       userInputs: [
         form.companyName.trim() ? `Profiil: ${form.companyName.trim()}` : "",
+        csvSummary
+          ? `Tarbimisprofiil CSV-st (${csvFileName || "import"}): ${csvSummary.rowCount} rida, ${describeConsumptionInterval(csvSummary)}.`
+          : "",
         toNumber(form.annualConsumptionMwh) > 0 ? `Tarbimine: ${form.annualConsumptionMwh} MWh/a` : "",
         parseLocaleNumber(form.daytimeSharePercent) != null ? `Päevane osakaal: ${form.daytimeSharePercent}%` : "",
         toNumber(form.peakLoadKw) > 0 ? `Tipukoormus: ${form.peakLoadKw} kW` : "",
@@ -213,16 +289,17 @@ export function IndustrialPvBatteryPage() {
         "Elektri hind (€/MWh) skaleerib aastase rahalise säästu.",
       ],
     }),
-    [form, result.assumptions],
+    [form, result.assumptions, csvSummary, csvFileName],
   );
 
   return (
     <div className="grid gap-6">
-      <div className="border border-[var(--panel-border)] bg-[#07140f] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.1</p>
+      <div className="border border-[var(--panel-border)] bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
+        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.2</p>
         <p className="mt-1">
           Tulemused on esmased lihtsustatud hinnangud tarbimisprofiili ja süsteemi suuruse põhjal, mitte
-          lõplik investeerimisotsus ega 15-minutiline simulatsioon.
+          lõplik investeerimisotsus ega 15-minutiline simulatsioon. CSV import täidab tarbimise sisendid
+          mõõdetud profiilist; PV ja aku arvutus jääb v0.1 loogika juurde.
         </p>
       </div>
 
@@ -238,8 +315,8 @@ export function IndustrialPvBatteryPage() {
                 onClick={() => applyProfile(profile)}
                 className={`border px-3 py-3 text-left transition-colors ${
                   active
-                    ? "border-emerald-500/50 bg-emerald-950/40 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[#07140f] text-zinc-300 hover:border-emerald-800/80"
+                    ? "border-zinc-500 bg-zinc-800/70 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
                 }`}
               >
                 <span className="block text-sm font-semibold text-zinc-100">{profile.title}</span>
@@ -249,6 +326,157 @@ export function IndustrialPvBatteryPage() {
           })}
         </div>
       </div>
+
+      <div>
+        <p className="text-sm text-zinc-400">Vali, kuidas tarbimisandmed sisestad.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              { id: "manual" as const, title: "Käsitsi sisestamine", description: "Sisesta aastane tarbimine, päevane osakaal ja tipukoormus ise." },
+              { id: "csv" as const, title: "CSV import", description: "Laadi üles tunni- või 15 min tarbimisprofiil ja täida sisendid automaatselt." },
+            ] as const
+          ).map((mode) => {
+            const active = inputMode === mode.id;
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setInputMode(mode.id)}
+                className={`border px-3 py-3 text-left transition-colors ${
+                  active
+                    ? "border-zinc-500 bg-zinc-800/70 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
+                }`}
+              >
+                <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{mode.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {inputMode === "csv" ? (
+        <article className="card">
+          <h2 className="section-title">CSV tarbimisprofiil</h2>
+          <p className="mt-2 text-sm text-zinc-300">
+            Laadi üles ettevõtte elektritarbimise fail. Parser otsib aja veergu{" "}
+            <span className="font-mono text-zinc-100">timestamp</span>, <span className="font-mono text-zinc-100">aeg</span>,{" "}
+            <span className="font-mono text-zinc-100">date</span> või <span className="font-mono text-zinc-100">datetime</span> ja
+            tarbimise veergu <span className="font-mono text-zinc-100">consumption_kwh</span>,{" "}
+            <span className="font-mono text-zinc-100">tarbimine_kwh</span>, <span className="font-mono text-zinc-100">kwh</span> või{" "}
+            <span className="font-mono text-zinc-100">consumption</span>. Eraldajaks sobib koma või semikoolon.
+          </p>
+          <pre className="mt-3 overflow-x-auto border border-zinc-800 bg-zinc-950 p-3 text-xs leading-relaxed text-zinc-300">
+            {SAMPLE_CONSUMPTION_CSV}
+          </pre>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <label className="btn-ghost w-full cursor-pointer text-center sm:w-auto">
+              <span>Vali CSV fail</span>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  void handleCsvFile(file);
+                }}
+              />
+            </label>
+            <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSampleCsv}>
+              Laadi näidisfail
+            </button>
+          </div>
+          {csvFileName ? (
+            <p className="mt-3 text-xs text-zinc-400">
+              Valitud fail: <span className="text-zinc-200">{csvFileName}</span>
+            </p>
+          ) : null}
+          {csvError ? (
+            <p className="mt-3 border border-rose-300/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-100">{csvError}</p>
+          ) : null}
+
+          {csvPreview.length > 0 ? (
+            <div className="mt-4 overflow-x-auto border border-zinc-800">
+              <p className="border-b border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-100">
+                Eelvaade, esimesed {csvPreview.length} rida
+              </p>
+              <table className="min-w-full text-left text-sm text-zinc-300">
+                <thead className="bg-zinc-950 text-xs uppercase tracking-wide text-zinc-500">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">timestamp</th>
+                    <th className="px-3 py-2 font-medium">consumption_kwh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {csvPreview.map((row, index) => (
+                    <tr key={`${row.timestampMs}-${index}`} className="border-t border-zinc-800">
+                      <td className="px-3 py-2 font-mono tabular-nums">{row.timestampRaw}</td>
+                      <td className="px-3 py-2 font-mono tabular-nums">{fmt(row.consumptionKwh, 1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {csvSummary ? (
+            <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4">
+              <p className="text-sm font-medium text-zinc-100">Tarbimisprofiili kokkuvõte</p>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Ridade arv</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.rowCount, 0)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Andmesamm</dt>
+                  <dd className="text-zinc-100">{describeConsumptionInterval(csvSummary)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Perioodi algus</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{csvSummary.periodStartLabel}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Perioodi lõpp</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{csvSummary.periodEndLabel}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Kogu tarbimine</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.totalConsumptionMwh, 2)} MWh</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Hinnanguline aastane tarbimine</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">
+                    {fmt(csvSummary.estimatedAnnualConsumptionMwh, 1)} MWh
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Keskmine koormus</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.averageLoadKw, 1)} kW</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Tipukoormus</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.peakLoadKw, 1)} kW</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+                  <dt className="text-zinc-400">Päevase tarbimise osakaal</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.daytimeSharePercent, 1)}%</dd>
+                </div>
+                <div className="flex justify-between gap-3 py-1.5">
+                  <dt className="text-zinc-400">Öise tarbimise osakaal</dt>
+                  <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.nighttimeSharePercent, 1)}%</dd>
+                </div>
+              </dl>
+              <p className="mt-4 text-xs leading-relaxed text-zinc-400">
+                CSV impordi põhjal arvutatud tulemused on esmased hinnangud. Andmete kvaliteet ja perioodi pikkus
+                mõjutavad tulemuse täpsust. Kui üles laaditud fail ei kata tervet aastat, arvutatakse aastane tarbimine
+                perioodi põhjal lihtsustatud kujul.
+              </p>
+            </div>
+          ) : null}
+        </article>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <article className="card">
@@ -272,7 +500,11 @@ export function IndustrialPvBatteryPage() {
                 onChange={(e) => setField("annualConsumptionMwh", e.target.value)}
                 placeholder="nt 2500"
               />
-              <span className="field-hint">Kogu ostetud ja toodetud elektri tarbimine aastas.</span>
+              <span className="field-hint">
+                {csvSummary
+                  ? "Täidetud CSV profiilist. Väärtust saab käsitsi muuta."
+                  : "Kogu ostetud ja toodetud elektri tarbimine aastas."}
+              </span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Päevase tarbimise osakaal (%)</span>
@@ -283,7 +515,11 @@ export function IndustrialPvBatteryPage() {
                 onChange={(e) => setField("daytimeSharePercent", e.target.value)}
                 placeholder="nt 75"
               />
-              <span className="field-hint">Kui suur osa tarbimisest jääb PV tootmise tundidesse.</span>
+              <span className="field-hint">
+                {csvSummary
+                  ? "Täidetud CSV profiilist (08:00–20:00). Väärtust saab käsitsi muuta."
+                  : "Kui suur osa tarbimisest jääb PV tootmise tundidesse."}
+              </span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Tipukoormus (kW)</span>
@@ -294,7 +530,9 @@ export function IndustrialPvBatteryPage() {
                 onChange={(e) => setField("peakLoadKw", e.target.value)}
                 placeholder="nt 650"
               />
-              <span className="field-hint">Praegune kõrgeim võrguvõimsus.</span>
+              <span className="field-hint">
+                {csvSummary ? "Täidetud CSV profiilist. Väärtust saab käsitsi muuta." : "Praegune kõrgeim võrguvõimsus."}
+              </span>
             </label>
             <label className="field-label">
               <span className="field-label-text">Keskmine elektrihind (€/MWh)</span>
