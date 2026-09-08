@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #090b10;
+  --background: #0b1220;
   --foreground: #f4f4f5;
-  --panel-bg: #11141b;
-  --panel-border: rgba(161, 161, 170, 0.16);
-  --panel-border-strong: rgba(161, 161, 170, 0.28);
+  --panel-bg: #121a24;
+  --panel-border: rgba(52, 211, 153, 0.14);
+  --panel-border-strong: rgba(52, 211, 153, 0.32);
   --text-main: #f4f4f5;
-  --text-muted: #a1a1aa;
+  --text-muted: #a8b4c4;
   --accent-emerald: #34d399;
   --accent-teal: #5eead4;
+  --accent-amber: #fbbf24;
   --accent: #34d399;
-  --surface-raised: #151922;
+  --surface-raised: #172230;
 }
 
 @theme inline {
@@ -23,7 +24,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #090b10;
+    --background: #0b1220;
     --foreground: #f4f4f5;
   }
 }
@@ -107,8 +108,10 @@ canvas {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(70% 42% at 78% 0%, rgba(16, 185, 129, 0.05), transparent 62%),
-    linear-gradient(180deg, #0c1017 0%, #090b10 48%, #07090e 100%);
+    radial-gradient(58% 38% at 82% 0%, rgba(251, 191, 36, 0.14), transparent 58%),
+    radial-gradient(70% 48% at 12% 18%, rgba(45, 212, 191, 0.12), transparent 62%),
+    radial-gradient(72% 46% at 70% 8%, rgba(16, 185, 129, 0.16), transparent 64%),
+    linear-gradient(180deg, #102033 0%, #0b1220 46%, #091018 100%);
 }
 
 .site-atmosphere-paper {
@@ -130,7 +133,7 @@ canvas {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.18;
+  opacity: 0.28;
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0,
@@ -154,7 +157,7 @@ canvas {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.18;
+  opacity: 0.34;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
   mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
 }
@@ -168,10 +171,10 @@ canvas {
 
 .atm-load {
   fill: none;
-  stroke: #94a3b8;
+  stroke: #7dd3fc;
   stroke-width: 2.6;
   stroke-linecap: round;
-  opacity: 0.42;
+  opacity: 0.5;
 }
 
 .atm-solar {
@@ -179,19 +182,19 @@ canvas {
   stroke: #34d399;
   stroke-width: 2;
   stroke-dasharray: 10 9;
-  opacity: 0.28;
+  opacity: 0.48;
 }
 
 .atm-solar-fill {
-  fill: rgba(52, 211, 153, 0.05);
+  fill: rgba(52, 211, 153, 0.1);
   stroke: none;
 }
 
 .atm-price {
   fill: none;
-  stroke: #64748b;
+  stroke: #fbbf24;
   stroke-width: 1.8;
-  opacity: 0.42;
+  opacity: 0.38;
 }
 
 .atm-axis {
@@ -218,8 +221,8 @@ canvas {
 
 .atm-sun-arc {
   fill: none;
-  stroke: rgba(251, 191, 36, 0.18);
-  stroke-width: 1.2;
+  stroke: rgba(251, 191, 36, 0.42);
+  stroke-width: 1.4;
   stroke-dasharray: 4 6;
 }
 
@@ -256,24 +259,25 @@ canvas {
 .aeb-base {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(9, 11, 16, 0.96) 0%, rgba(12, 14, 20, 0.94) 52%, rgba(8, 10, 14, 0.97) 100%);
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.94) 0%, rgba(16, 32, 48, 0.9) 52%, rgba(9, 16, 24, 0.96) 100%);
 }
 
 .aeb-aurora {
   position: absolute;
   inset: -12%;
-  opacity: 0.14;
+  opacity: 0.22;
   will-change: transform, opacity;
 }
 
 .aeb-aurora-a {
-  background: radial-gradient(52% 44% at 24% 28%, rgba(16, 185, 129, 0.18), transparent 72%);
+  background: radial-gradient(52% 44% at 24% 28%, rgba(16, 185, 129, 0.32), transparent 72%);
   transform: translate3d(0, 0, 0);
   animation: aeb-aurora-a 11s ease-in-out infinite alternate;
 }
 
 .aeb-aurora-b {
-  background: radial-gradient(50% 42% at 76% 34%, rgba(100, 116, 139, 0.18), transparent 74%);
+  background: radial-gradient(50% 42% at 76% 34%, rgba(45, 212, 191, 0.22), transparent 74%),
+    radial-gradient(40% 36% at 88% 18%, rgba(251, 191, 36, 0.14), transparent 70%);
   transform: translate3d(0, 0, 0);
   animation: aeb-aurora-b 14s ease-in-out infinite alternate;
 }
@@ -819,9 +823,9 @@ canvas {
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--panel-border);
-  background: rgba(17, 20, 27, 0.96);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--panel-bg) 88%, rgba(16, 185, 129, 0.08));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
 }
 
 .site-board-grid {
@@ -1229,8 +1233,8 @@ a.site-board-cell:hover {
 }
 
 .metric-card-accent-teal::after {
-  background: rgba(148, 163, 184, 0.7);
-  opacity: 0.7;
+  background: var(--accent-teal);
+  opacity: 0.75;
 }
 
 .metric-card-primary {

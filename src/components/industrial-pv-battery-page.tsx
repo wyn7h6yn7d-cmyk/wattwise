@@ -294,8 +294,8 @@ export function IndustrialPvBatteryPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="border border-[var(--panel-border)] bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.2</p>
+      <div className="border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-[var(--panel-bg)] to-amber-400/5 px-4 py-3 text-sm text-zinc-300">
+        <p className="font-medium text-emerald-100">Projekt 2 prototüüp v0.2</p>
         <p className="mt-1">
           Tulemused on esmased lihtsustatud hinnangud tarbimisprofiili ja süsteemi suuruse põhjal, mitte
           lõplik investeerimisotsus ega 15-minutiline simulatsioon. CSV import täidab tarbimise sisendid
@@ -315,8 +315,8 @@ export function IndustrialPvBatteryPage() {
                 onClick={() => applyProfile(profile)}
                 className={`border px-3 py-3 text-left transition-colors ${
                   active
-                    ? "border-zinc-500 bg-zinc-800/70 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
+                    ? "border-emerald-400/50 bg-emerald-500/15 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-teal-400/35"
                 }`}
               >
                 <span className="block text-sm font-semibold text-zinc-100">{profile.title}</span>
@@ -344,8 +344,8 @@ export function IndustrialPvBatteryPage() {
                 onClick={() => setInputMode(mode.id)}
                 className={`border px-3 py-3 text-left transition-colors ${
                   active
-                    ? "border-zinc-500 bg-zinc-800/70 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
+                    ? "border-teal-400/50 bg-teal-500/15 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-emerald-400/35"
                 }`}
               >
                 <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
@@ -655,13 +655,13 @@ export function IndustrialPvBatteryPage() {
 
           {hasCalculated && hasRequiredInputs ? (
             <>
-              <div className="mb-5 border border-zinc-800 bg-zinc-950 p-5">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Peamine tulemus</p>
+              <div className="mb-5 border border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 via-zinc-950 to-teal-500/10 p-5">
+                <p className="text-xs uppercase tracking-wide text-emerald-200/80">Peamine tulemus</p>
                 <div className="mt-2 flex flex-wrap items-end gap-3">
-                  <strong className="font-mono text-4xl font-semibold tabular-nums text-zinc-50 sm:text-5xl">
+                  <strong className="font-mono text-4xl font-semibold tabular-nums text-emerald-50 sm:text-5xl">
                     {fmt(result.annualSavingsEur, 0)}
                   </strong>
-                  <span className="pb-1 font-mono text-base text-emerald-400 sm:text-lg">€/a</span>
+                  <span className="pb-1 font-mono text-base text-emerald-300 sm:text-lg">€/a</span>
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">Ligikaudne aastane sääst v0.1 eelduste põhjal.</p>
               </div>
