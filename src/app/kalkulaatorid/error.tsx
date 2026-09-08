@@ -8,7 +8,7 @@ export default function KalkulaatoridError({
   reset: () => void;
 }) {
   return (
-    <section className="glass-panel rounded-3xl p-6 sm:p-8">
+    <section>
       <h1 className="text-2xl font-semibold text-zinc-50">Kalkulaatori laadimisel tekkis tõrge</h1>
       <p className="mt-2 text-sm text-zinc-300">
         Midagi läks valesti. Proovi leht uuesti laadida või vajuta allolevat nuppu.

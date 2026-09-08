@@ -3,7 +3,7 @@ import { PUBLIC_TOOLS } from "@/lib/nav";
 
 export default function KalkulaatoridHubPage() {
   return (
-    <section className="glass-panel rounded-xl p-5 sm:p-8">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">Tööriistad</h1>

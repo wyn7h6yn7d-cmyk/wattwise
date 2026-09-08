@@ -34,7 +34,7 @@ export default async function BorsihindPage() {
   return (
     <div className="relative">
       <main className="relative mx-auto w-full max-w-7xl px-3 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
-        <header className="glass-panel rounded-xl p-4 sm:p-10">
+        <header className="site-board p-4 sm:p-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs tracking-wide text-zinc-300">
@@ -54,7 +54,7 @@ export default async function BorsihindPage() {
         </header>
 
         {error ? (
-          <section className="mt-8 glass-panel rounded-xl p-6 sm:p-8">
+          <section className="mt-8 site-board p-6 sm:p-8">
             <h2 className="text-xl font-semibold text-zinc-50">Hinda ei saanud laadida</h2>
             <p className="mt-2 text-sm text-zinc-300">{error}</p>
             <p className="mt-3 text-xs text-zinc-400">

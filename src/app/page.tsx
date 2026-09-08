@@ -72,34 +72,34 @@ export default function Home() {
 
       <section className="mt-14 sm:mt-16">
         <h2 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">Neli tööriista</h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {tools.map((tool) => (
-            <Link
-              key={tool.href}
-              href={tool.href}
-              className="flex min-h-[11.5rem] flex-col rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5 transition-colors hover:border-emerald-500/50"
-            >
-              <h3 className="text-base font-semibold text-zinc-100">{tool.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-400">{tool.description}</p>
-              <span className="mt-4 text-sm font-medium text-zinc-200">{tool.cta}</span>
-            </Link>
-          ))}
+        <div className="site-board mt-5">
+          <div className="site-board-grid site-board-grid-2 site-board-grid-4">
+            {tools.map((tool) => (
+              <Link key={tool.href} href={tool.href} className="site-board-cell min-h-[11.5rem]">
+                <h3 className="text-base font-semibold text-zinc-100">{tool.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-400">{tool.description}</p>
+                <span className="mt-4 text-sm font-medium text-zinc-200">{tool.cta}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="mt-14 sm:mt-16">
         <h2 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">Analüüsi loogika</h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {logic.map((item) => (
-            <div key={item.title} className="rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5">
-              <h3 className="text-base font-semibold text-zinc-100">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.text}</p>
-            </div>
-          ))}
+        <div className="site-board mt-5">
+          <div className="site-board-grid site-board-grid-3">
+            {logic.map((item) => (
+              <div key={item.title} className="site-board-cell">
+                <h3 className="text-base font-semibold text-zinc-100">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="mt-14 rounded-xl border border-emerald-800/50 bg-[#0b1a14]/88 p-5 sm:mt-16 sm:p-6">
+      <section className="site-board mt-14 p-5 sm:mt-16 sm:p-6">
         <h2 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">Projekt ja metoodika</h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
           Tööriist on arendamisel Projekt 2 raames. Tulemused on esmased hinnangud sisestatud andmete

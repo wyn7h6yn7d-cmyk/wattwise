@@ -550,7 +550,7 @@ export function PriceViewClient({
 
   return (
     <section className="mt-8 grid grid-cols-1 gap-6 overflow-x-hidden">
-      <div className="glass-panel rounded-xl p-5 sm:p-8">
+      <div className="site-board p-5 sm:p-8">
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-zinc-50">Börsihinna ülevaade</h2>
@@ -705,7 +705,7 @@ export function PriceViewClient({
       </div>
 
       {/* C) Price table + market overview */}
-      <div className="glass-panel rounded-xl p-6 sm:p-8">
+      <div className="site-board p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold text-zinc-50">Hinnatabel</h2>

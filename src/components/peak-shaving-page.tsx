@@ -330,7 +330,7 @@ export function PeakShavingPageClient() {
         onCheckPayment={checkPaymentStatus}
       />
 
-      <section className="glass-panel rounded-xl p-6 sm:p-8">
+      <section>
         <h2 className="text-2xl font-semibold text-zinc-50">Peak shaving / ettevõtte võimsus</h2>
         <p className="mt-2 text-sm text-zinc-400">
           Lihtne hinnang, kui palju tippu saab akuga lõigata ja mis võiks olla sääst võimsustasudes.

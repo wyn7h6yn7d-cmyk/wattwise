@@ -401,7 +401,7 @@ export function SolarCalculatorPage() {
   }, [draftResult.effectiveEnergyPrice, input.pvPowerKw, result.selected.annualNetBenefitEur]);
 
   return (
-    <div className="glass-panel rounded-xl p-6 sm:p-8">
+    <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-zinc-50">Päikesejaama tasuvus</h2>

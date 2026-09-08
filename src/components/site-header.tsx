@@ -124,7 +124,7 @@ export function SiteHeader() {
   const fallbackLabel = isLoading ? "Live-andmed laevad..." : "Live-andmed hetkel puuduvad";
 
   return (
-    <header className="sticky top-0 z-50 overflow-x-clip border-b border-emerald-900/70 bg-[#07140f] px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
+    <header className="site-chrome sticky top-0 z-50 overflow-x-clip px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
       <div className="mx-auto flex h-[72px] w-full max-w-7xl min-w-0 items-center justify-between gap-3 px-0 sm:px-0 lg:h-[78px]">
         <Link
           href="/"
@@ -147,7 +147,7 @@ export function SiteHeader() {
             <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
               Energiakalkulaator
             </div>
-            <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-800/80 bg-emerald-950 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+            <span className="hidden shrink-0 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-emerald-300/75 min-[430px]:inline">
               Projekt 2
             </span>
           </div>
@@ -161,9 +161,9 @@ export function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
+              className={`px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
                 item.active
-                  ? "bg-emerald-950 text-emerald-100"
+                  ? "text-zinc-50 shadow-[inset_0_-1px_0_#34d399]"
                   : "text-zinc-400 hover:text-zinc-100"
               }`}
             >
@@ -175,7 +175,7 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-800/70 bg-[#07140f] text-zinc-100 transition-colors hover:bg-emerald-950 lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center border border-emerald-800/50 bg-transparent text-zinc-100 transition-colors hover:border-emerald-500/50 lg:hidden"
             aria-label={mobileOpen ? "Sulge menüü" : "Ava menüü"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
@@ -193,7 +193,7 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-lg border border-emerald-900/70 bg-[#07140f] px-3 py-2 text-[11px] text-zinc-300">
+      <div className="site-chrome-axis mx-auto mt-1 flex w-full max-w-7xl items-center justify-center gap-1.5 px-1 py-2 text-[11px] text-zinc-300">
         <span className="px-1 text-zinc-500">{todayLabel}</span>
         {hasAnyLiveData ? (
           <>
@@ -252,7 +252,7 @@ function MobileMenu({
         aria-hidden="true"
       />
       <div className="relative z-50 mx-auto max-w-7xl px-3 pb-4 pt-2 sm:px-5 lg:px-8">
-        <div className="min-w-0 overflow-hidden rounded-xl border border-emerald-800/70 bg-[#07140f] p-2">
+        <div className="min-w-0 overflow-hidden border border-emerald-800/50 bg-[#07140f]/90 p-2">
           <div className="flex items-center justify-between gap-2 px-2 py-2">
             <div className="flex min-w-0 items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-emerald-800/70">
