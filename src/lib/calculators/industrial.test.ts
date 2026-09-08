@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   INDUSTRIAL_ASSUMPTIONS,
+  INDUSTRIAL_ECONOMICS_DEFAULTS,
   INDUSTRIAL_SAMPLE_PROFILES,
   calculateIndustrial,
   sanitizeIndustrialInput,
@@ -20,6 +21,7 @@ function baseInput(overrides: Partial<IndustrialInput> = {}): IndustrialInput {
     batteryPowerKw: 0,
     batteryPurpose: "self_consumption",
     investmentEur: null,
+    ...INDUSTRIAL_ECONOMICS_DEFAULTS,
     ...overrides,
   };
 }
@@ -98,6 +100,7 @@ describe("industrial v0.1", () => {
       batteryPowerKw: Number.POSITIVE_INFINITY,
       batteryPurpose: "self_consumption",
       investmentEur: -100,
+      ...INDUSTRIAL_ECONOMICS_DEFAULTS,
     });
     expect(result.pvProductionMwh).toBe(0);
     expect(result.selfConsumedPvMwh).toBe(0);
@@ -117,20 +120,47 @@ describe("industrial v0.1", () => {
       batteryPowerKw: Number.NaN,
       batteryPurpose: "self_consumption",
       investmentEur: 0,
+      pvInvestmentEurPerKw: Number.NaN,
+      batteryInvestmentEurPerKwh: -1,
+      exportPriceEurPerMwh: Number.NEGATIVE_INFINITY,
+      demandChargeEurPerKwMonth: Number.NaN,
+      batteryEfficiencyPercent: 250,
+      batteryUsableCapacityPercent: -5,
     });
     expect(sanitized.companyName).toBe("Nimetu profiil");
     expect(sanitized.daytimeSharePercent).toBe(100);
     expect(sanitized.investmentEur).toBeNull();
     expect(sanitized.batteryPowerKw).toBe(0);
+    expect(sanitized.pvInvestmentEurPerKw).toBe(INDUSTRIAL_ECONOMICS_DEFAULTS.pvInvestmentEurPerKw);
+    expect(sanitized.batteryEfficiencyPercent).toBe(100);
+    expect(sanitized.batteryUsableCapacityPercent).toBe(INDUSTRIAL_ECONOMICS_DEFAULTS.batteryUsableCapacityPercent);
   });
 
-  it("returns payback only when investment and savings exist", () => {
-    const withoutInvestment = calculateIndustrial(baseInput({ investmentEur: null }));
-    expect(withoutInvestment.paybackYears).toBeNull();
-    expect(withoutInvestment.annualSavingsEur).toBeGreaterThan(0);
+  it("returns payback from unit-cost investment when annual impact is positive", () => {
+    const zeroPv = calculateIndustrial(baseInput({ pvPowerKw: 0, pvSpecificYieldKwhPerKw: 0 }));
+    expect(zeroPv.investmentEur).toBe(0);
+    expect(zeroPv.paybackYears).toBeNull();
 
-    const withInvestment = calculateIndustrial(baseInput({ investmentEur: withoutInvestment.annualSavingsEur * 8 }));
-    expect(withInvestment.paybackYears).toBeCloseTo(8, 6);
+    const withPv = calculateIndustrial(baseInput({ batteryCapacityKwh: 0, batteryPowerKw: 0 }));
+    expect(withPv.investmentEur).toBeCloseTo(200 * INDUSTRIAL_ECONOMICS_DEFAULTS.pvInvestmentEurPerKw, 6);
+    expect(withPv.annualSavingsEur).toBeGreaterThan(0);
+    expect(withPv.paybackYears).toBeCloseTo(withPv.investmentEur / withPv.annualSavingsEur, 6);
+  });
+
+  it("values export revenue and breaks down annual impact", () => {
+    const result = calculateIndustrial(
+      baseInput({
+        batteryCapacityKwh: 0,
+        batteryPowerKw: 0,
+        exportPriceEurPerMwh: 45,
+      }),
+    );
+    expect(result.exportRevenueEur).toBeCloseTo(result.exportedPvMwh * 45, 6);
+    expect(result.selfConsumptionSavingsEur).toBeCloseTo(result.selfConsumedPvMwh * 100, 6);
+    expect(result.annualSavingsEur).toBeCloseTo(
+      result.selfConsumptionSavingsEur + result.exportRevenueEur + result.demandChargeSavingsEur,
+      6,
+    );
   });
 
   it("explains that self-consumption mode does not cut peak load", () => {
@@ -174,7 +204,7 @@ describe("industrial v0.1", () => {
       expect(Number.isFinite(result.annualSavingsEur)).toBe(true);
       expect(result.selfConsumedPvMwh + result.exportedPvMwh).toBeCloseTo(result.pvProductionMwh, 6);
       expect(result.summary.length).toBeGreaterThan(40);
-      expect(result.summary).toContain("v0.1");
+      expect(result.summary).toContain("v0.5");
     }
   });
 

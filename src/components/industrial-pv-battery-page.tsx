@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
+  INDUSTRIAL_ECONOMICS_DEFAULTS,
   INDUSTRIAL_SAMPLE_PROFILES,
   calculateIndustrial,
   describeIndustrialBatteryMode,
@@ -44,21 +45,36 @@ type FormState = {
   batteryCapacityKwh: string;
   batteryPowerKw: string;
   batteryPurpose: IndustrialBatteryPurpose;
-  investmentEur: string;
+  pvInvestmentEurPerKw: string;
+  batteryInvestmentEurPerKwh: string;
+  exportPriceEurPerMwh: string;
+  demandChargeEurPerKwMonth: string;
+  batteryEfficiencyPercent: string;
+  batteryUsableCapacityPercent: string;
 };
+
+function toDefaultField(value: number, digits = 0): string {
+  const n = Number(value.toFixed(digits));
+  return String(n).replace(".", ",");
+}
 
 const EMPTY_FORM: FormState = {
   companyName: "",
   annualConsumptionMwh: "",
   daytimeSharePercent: "",
   peakLoadKw: "",
-  averageElectricityPriceEurPerMwh: "",
+  averageElectricityPriceEurPerMwh: "110",
   pvPowerKw: "",
   pvSpecificYieldKwhPerKw: "",
   batteryCapacityKwh: "",
   batteryPowerKw: "",
   batteryPurpose: "self_consumption",
-  investmentEur: "",
+  pvInvestmentEurPerKw: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.pvInvestmentEurPerKw),
+  batteryInvestmentEurPerKwh: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.batteryInvestmentEurPerKwh),
+  exportPriceEurPerMwh: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.exportPriceEurPerMwh),
+  demandChargeEurPerKwMonth: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.demandChargeEurPerKwMonth, 1),
+  batteryEfficiencyPercent: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.batteryEfficiencyPercent),
+  batteryUsableCapacityPercent: toDefaultField(INDUSTRIAL_ECONOMICS_DEFAULTS.batteryUsableCapacityPercent),
 };
 
 function toField(value: number, digits?: number): string {
@@ -79,12 +95,16 @@ function profileToForm(profile: IndustrialSampleProfile): FormState {
     batteryCapacityKwh: toField(input.batteryCapacityKwh),
     batteryPowerKw: toField(input.batteryPowerKw),
     batteryPurpose: input.batteryPurpose,
-    investmentEur: input.investmentEur == null ? "" : toField(input.investmentEur),
+    pvInvestmentEurPerKw: toField(input.pvInvestmentEurPerKw),
+    batteryInvestmentEurPerKwh: toField(input.batteryInvestmentEurPerKwh),
+    exportPriceEurPerMwh: toField(input.exportPriceEurPerMwh),
+    demandChargeEurPerKwMonth: toField(input.demandChargeEurPerKwMonth, 1),
+    batteryEfficiencyPercent: toField(input.batteryEfficiencyPercent),
+    batteryUsableCapacityPercent: toField(input.batteryUsableCapacityPercent),
   };
 }
 
 function formToInput(form: FormState): IndustrialInput {
-  const investment = parseLocaleNumber(form.investmentEur);
   return {
     companyName: form.companyName,
     annualConsumptionMwh: toNumber(form.annualConsumptionMwh),
@@ -96,7 +116,23 @@ function formToInput(form: FormState): IndustrialInput {
     batteryCapacityKwh: toNumber(form.batteryCapacityKwh),
     batteryPowerKw: toNumber(form.batteryPowerKw),
     batteryPurpose: form.batteryPurpose,
-    investmentEur: investment != null && investment > 0 ? investment : null,
+    investmentEur: null,
+    pvInvestmentEurPerKw:
+      parseLocaleNumber(form.pvInvestmentEurPerKw) ?? INDUSTRIAL_ECONOMICS_DEFAULTS.pvInvestmentEurPerKw,
+    batteryInvestmentEurPerKwh:
+      parseLocaleNumber(form.batteryInvestmentEurPerKwh) ??
+      INDUSTRIAL_ECONOMICS_DEFAULTS.batteryInvestmentEurPerKwh,
+    exportPriceEurPerMwh:
+      parseLocaleNumber(form.exportPriceEurPerMwh) ?? INDUSTRIAL_ECONOMICS_DEFAULTS.exportPriceEurPerMwh,
+    demandChargeEurPerKwMonth:
+      parseLocaleNumber(form.demandChargeEurPerKwMonth) ??
+      INDUSTRIAL_ECONOMICS_DEFAULTS.demandChargeEurPerKwMonth,
+    batteryEfficiencyPercent:
+      parseLocaleNumber(form.batteryEfficiencyPercent) ??
+      INDUSTRIAL_ECONOMICS_DEFAULTS.batteryEfficiencyPercent,
+    batteryUsableCapacityPercent:
+      parseLocaleNumber(form.batteryUsableCapacityPercent) ??
+      INDUSTRIAL_ECONOMICS_DEFAULTS.batteryUsableCapacityPercent,
   };
 }
 
@@ -310,9 +346,9 @@ export function IndustrialPvBatteryPage() {
       defaultAssumptions: result.assumptions,
       apiValues: [] as string[],
       mostInfluentialInputs: [
+        "Elektri ostuhind, võrku müügihind ja võimsustasu määravad aastase kogumõju osad.",
+        "PV ja aku ühikinvesteeringud määravad stsenaariumite investeeringu ja tasuvuse.",
         "Päevase tarbimise osakaal määrab, kui palju PV-d saab ilma akuta kohapeal kasutada.",
-        "Aku režiim otsustab, kas sääst tuleb omatarbest või tipu lõikamisest.",
-        "Elektri hind (€/MWh) skaleerib aastase rahalise säästu.",
       ],
     }),
     [form, result.assumptions, csvSummary, csvFileName],
@@ -321,11 +357,10 @@ export function IndustrialPvBatteryPage() {
   return (
     <div className="grid gap-6">
       <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.4</p>
+        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.5</p>
         <p className="mt-1">
-          Tulemused on esmased lihtsustatud hinnangud tarbimisprofiili ja süsteemi suuruse põhjal, mitte
-          lõplik investeerimisotsus ega 15-minutiline simulatsioon. CSV import, graafik, raportivaade ja
-          stsenaariumite võrdlus aitavad lahendusi kõrvuti hinnata.
+          Majandusmudel eristab PV/aku investeeringuid, omatarbe säästu, võrku müügi tulu ja võimsustasu.
+          Tulemused on lihtsustatud hinnangud, mitte 15-minutiline simulatsioon ega lõplik investeerimisotsus.
         </p>
       </div>
 
@@ -600,17 +635,6 @@ export function IndustrialPvBatteryPage() {
               </span>
             </label>
             <label className="field-label">
-              <span className="field-label-text">Keskmine elektrihind (€/MWh)</span>
-              <input
-                className="input"
-                value={form.averageElectricityPriceEurPerMwh}
-                inputMode="decimal"
-                onChange={(e) => setField("averageElectricityPriceEurPerMwh", e.target.value)}
-                placeholder="nt 110"
-              />
-              <span className="field-hint">Ostuhind, millega välditud tarbimist hinnatakse.</span>
-            </label>
-            <label className="field-label">
               <span className="field-label-text">PV süsteemi võimsus (kW)</span>
               <input
                 className="input"
@@ -674,17 +698,89 @@ export function IndustrialPvBatteryPage() {
                 </button>
               </div>
             </div>
-            <label className="field-label sm:col-span-2">
-              <span className="field-label-text">Investeering (€), valikuline</span>
-              <input
-                className="input"
-                value={form.investmentEur}
-                inputMode="decimal"
-                onChange={(e) => setField("investmentEur", e.target.value)}
-                placeholder="nt 760000"
-              />
-              <span className="field-hint">Kui tühjaks jätta, tasuvusaega ei arvutata.</span>
-            </label>
+          </div>
+          <div className="mt-6 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">Majanduslikud eeldused</h3>
+            <p className="mt-1 text-xs text-zinc-400">
+              Stsenaariumite investeeringud ja aastane kogumõju arvutatakse nende ühikhindade põhjal.
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="field-label">
+                <span className="field-label-text">PV investeering (€/kW)</span>
+                <input
+                  className="input"
+                  value={form.pvInvestmentEurPerKw}
+                  inputMode="decimal"
+                  onChange={(e) => setField("pvInvestmentEurPerKw", e.target.value)}
+                  placeholder="nt 700"
+                />
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Aku investeering (€/kWh)</span>
+                <input
+                  className="input"
+                  value={form.batteryInvestmentEurPerKwh}
+                  inputMode="decimal"
+                  onChange={(e) => setField("batteryInvestmentEurPerKwh", e.target.value)}
+                  placeholder="nt 350"
+                />
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Elektri ostuhind (€/MWh)</span>
+                <input
+                  className="input"
+                  value={form.averageElectricityPriceEurPerMwh}
+                  inputMode="decimal"
+                  onChange={(e) => setField("averageElectricityPriceEurPerMwh", e.target.value)}
+                  placeholder="nt 110"
+                />
+                <span className="field-hint">Kohapeal kasutatud PV väärtus.</span>
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Võrku müüdava elektri hind (€/MWh)</span>
+                <input
+                  className="input"
+                  value={form.exportPriceEurPerMwh}
+                  inputMode="decimal"
+                  onChange={(e) => setField("exportPriceEurPerMwh", e.target.value)}
+                  placeholder="nt 45"
+                />
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Võimsustasu (€/kW/kuu)</span>
+                <input
+                  className="input"
+                  value={form.demandChargeEurPerKwMonth}
+                  inputMode="decimal"
+                  onChange={(e) => setField("demandChargeEurPerKwMonth", e.target.value)}
+                  placeholder="nt 6,5"
+                />
+                <span className="field-hint">Kasutatakse peak shaving režiimis.</span>
+              </label>
+              <label className="field-label">
+                <span className="field-label-text">Aku kasutegur (%)</span>
+                <input
+                  className="input"
+                  value={form.batteryEfficiencyPercent}
+                  inputMode="decimal"
+                  onChange={(e) => setField("batteryEfficiencyPercent", e.target.value)}
+                  placeholder="nt 90"
+                />
+              </label>
+              <label className="field-label sm:col-span-2">
+                <span className="field-label-text">Aku kasutatav maht (%)</span>
+                <input
+                  className="input"
+                  value={form.batteryUsableCapacityPercent}
+                  inputMode="decimal"
+                  onChange={(e) => setField("batteryUsableCapacityPercent", e.target.value)}
+                  placeholder="nt 80"
+                />
+                <span className="field-hint">
+                  Kasutatav osa tsükli kohta = kasutegur × kasutatav maht (nt 90% × 80% = 72%).
+                </span>
+              </label>
+            </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
@@ -722,7 +818,28 @@ export function IndustrialPvBatteryPage() {
                   </strong>
                   <span className="pb-1 font-mono text-base text-emerald-300 sm:text-lg">€/a</span>
                 </div>
-                <p className="mt-2 text-sm text-zinc-400">Ligikaudne aastane sääst v0.1 eelduste põhjal.</p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Aastane kogumõju sisaldab omatarbe säästu, võrku müügi tulu
+                  {result.demandChargeSavingsEur > 0 ? " ja võimsustasu säästu" : ""}.
+                </p>
+                <dl className="mt-3 grid gap-1 text-xs text-zinc-400 sm:grid-cols-3">
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt>Omatarve</dt>
+                    <dd className="font-mono tabular-nums text-zinc-200">
+                      {fmt(result.selfConsumptionSavingsEur, 0)} €
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt>Võrku müük</dt>
+                    <dd className="font-mono tabular-nums text-zinc-200">{fmt(result.exportRevenueEur, 0)} €</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt>Võimsustasu</dt>
+                    <dd className="font-mono tabular-nums text-zinc-200">
+                      {fmt(result.demandChargeSavingsEur, 0)} €
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -792,7 +909,10 @@ export function IndustrialPvBatteryPage() {
                     </strong>
                     {result.paybackYears != null ? <span className="metric-unit">a</span> : null}
                   </div>
-                  <p className="metric-help">Investeering jagatud aastase säästuga. Ilma investeeringuta ei arvutata.</p>
+                  <p className="metric-help">
+                    Investeering {fmt(result.investmentEur, 0)} € (PV + aku ühikhindade järgi) jagatud aastase
+                    kogumõjuga.
+                  </p>
                 </div>
               </div>
 
@@ -852,7 +972,7 @@ export function IndustrialPvBatteryPage() {
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 pb-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.4</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.5</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
                 Tööstus: PV + aku raportivaade
               </h2>
@@ -878,13 +998,24 @@ export function IndustrialPvBatteryPage() {
                   Aku: {form.batteryCapacityKwh || "—"} kWh / {form.batteryPowerKw || "—"} kW (
                   {form.batteryPurpose === "peak_shaving" ? "peak shaving" : "omatarve"})
                 </li>
-                <li>Elektrihind: {form.averageElectricityPriceEurPerMwh || "—"} €/MWh</li>
-                {form.investmentEur.trim() ? <li>Investeering: {form.investmentEur} €</li> : null}
               </ul>
             </section>
 
             <section>
-              <h3 className="text-sm font-medium text-zinc-100">2. CSV tarbimisprofiil</h3>
+              <h3 className="text-sm font-medium text-zinc-100">2. Majanduslikud eeldused</h3>
+              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                <li>PV investeering: {form.pvInvestmentEurPerKw || "—"} €/kW</li>
+                <li>Aku investeering: {form.batteryInvestmentEurPerKwh || "—"} €/kWh</li>
+                <li>Elektri ostuhind: {form.averageElectricityPriceEurPerMwh || "—"} €/MWh</li>
+                <li>Võrku müügihind: {form.exportPriceEurPerMwh || "—"} €/MWh</li>
+                <li>Võimsustasu: {form.demandChargeEurPerKwMonth || "—"} €/kW/kuu</li>
+                <li>Aku kasutegur: {form.batteryEfficiencyPercent || "—"}%</li>
+                <li>Aku kasutatav maht: {form.batteryUsableCapacityPercent || "—"}%</li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="text-sm font-medium text-zinc-100">3. CSV tarbimisprofiil</h3>
               <ul className="mt-2 space-y-1 text-sm text-zinc-300">
                 <li>
                   {fmt(csvSummary.rowCount, 0)} rida · {describeConsumptionInterval(csvSummary)}
@@ -904,10 +1035,14 @@ export function IndustrialPvBatteryPage() {
             </section>
 
             <section>
-              <h3 className="text-sm font-medium text-zinc-100">3. PV ja aku tulemused</h3>
+              <h3 className="text-sm font-medium text-zinc-100">4. PV ja aku tulemused</h3>
               {hasCalculated && hasRequiredInputs ? (
                 <ul className="mt-2 space-y-1 text-sm text-zinc-300">
-                  <li>Aastane sääst: {fmt(result.annualSavingsEur, 0)} €/a</li>
+                  <li>Aastane kogumõju: {fmt(result.annualSavingsEur, 0)} €/a</li>
+                  <li>Omatarbe sääst: {fmt(result.selfConsumptionSavingsEur, 0)} €</li>
+                  <li>Võrku müügi tulu: {fmt(result.exportRevenueEur, 0)} €</li>
+                  <li>Võimsustasu sääst: {fmt(result.demandChargeSavingsEur, 0)} €</li>
+                  <li>Investeering: {fmt(result.investmentEur, 0)} €</li>
                   <li>PV toodang: {fmt(result.pvProductionMwh, 1)} MWh</li>
                   <li>Kohapeal kasutatud PV: {fmt(result.selfConsumedPvMwh, 1)} MWh</li>
                   <li>Võrku müüdav PV: {fmt(result.exportedPvMwh, 1)} MWh</li>
@@ -930,8 +1065,8 @@ export function IndustrialPvBatteryPage() {
               )}
             </section>
 
-            <section>
-              <h3 className="text-sm font-medium text-zinc-100">4. Peamised järeldused</h3>
+            <section className="lg:col-span-2">
+              <h3 className="text-sm font-medium text-zinc-100">5. Peamised järeldused</h3>
               <ul className="mt-2 space-y-2 text-sm text-zinc-300">
                 <li>
                   <span className="text-zinc-100">{csvInsight.shapeLabel}.</span> {csvInsight.shapeExplanation}
@@ -953,14 +1088,26 @@ export function IndustrialPvBatteryPage() {
           </div>
 
           <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">5. Stsenaariumite võrdlus</h3>
+            <h3 className="text-sm font-medium text-zinc-100">6. Stsenaariumite võrdlus</h3>
             {hasCalculated && hasRequiredInputs && scenarioComparison ? (
               <>
                 <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                  <li>
+                    Suurim aastane kogumõju: {scenarioComparison.conclusion.bestSavingsLabel}
+                  </li>
+                  <li>
+                    Lühim lihtsustatud tasuvus:{" "}
+                    {scenarioComparison.conclusion.bestPaybackLabel ?? "ei arvutata"}
+                  </li>
+                  <li>
+                    Tipukoormust vähendab kõige rohkem: {scenarioComparison.conclusion.bestPeakLabel}
+                  </li>
+                </ul>
+                <ul className="mt-3 space-y-1 text-sm text-zinc-400">
                   {scenarioComparison.scenarios.map((row) => (
                     <li key={row.id}>
-                      {row.label}: sääst {fmt(row.annualSavingsEur, 0)} €/a · tipp pärast{" "}
-                      {fmt(row.peakLoadAfterKw, 0)} kW · tasuvus{" "}
+                      {row.label}: kogumõju {fmt(row.annualSavingsEur, 0)} €/a · investeering{" "}
+                      {fmt(row.investmentEur, 0)} € · tipp pärast {fmt(row.peakLoadAfterKw, 0)} kW · tasuvus{" "}
                       {row.paybackYears != null ? `${fmt(row.paybackYears, 1)} a` : "ei arvutata"}
                     </li>
                   ))}
@@ -977,12 +1124,12 @@ export function IndustrialPvBatteryPage() {
           </section>
 
           <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">6. Piirangute märkus</h3>
+            <h3 className="text-sm font-medium text-zinc-100">7. Piirangute märkus</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Arvutus on lihtsustatud (ei ole
               15-minutiline PV+aku optimeerija). Lühikese CSV perioodi korral skaleeritakse aastane tarbimine
-              lihtsustatult. Päevane aken on fikseeritud 08:00–20:00. Võrku müüdavat energiat rahalises säästus ei
-              väärtustata. PDF eksporti v0.4-s ei ole — salvesta vaade screenshotina.
+              lihtsustatult. Päevane aken on fikseeritud 08:00–20:00. Investeeringud põhinevad ühikhindadel, mitte
+              pakkumisel. PDF eksporti v0.5-s ei ole — salvesta vaade screenshotina.
             </p>
           </section>
         </article>

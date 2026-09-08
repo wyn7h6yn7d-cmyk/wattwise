@@ -1,9 +1,9 @@
 /**
- * Tööstusmooduli v0.1 arvutusloogika (PV + aku).
+ * Tööstusmooduli v0.5 arvutusloogika (PV + aku).
  *
  * See ei ole optimeerimismootor ega 15-min simulatsioon. Eesmärk on anda
  * loogiline esmane hinnang omatarbele, võrku müügile, tipukoormusele ja
- * ligikaudsele säästule tarbimisprofiili ja süsteemi suuruse põhjal.
+ * ligikaudsele majanduslikule mõjule tarbimisprofiili ja süsteemi suuruse põhjal.
  */
 
 export type IndustrialBatteryPurpose = "self_consumption" | "peak_shaving";
@@ -13,14 +13,30 @@ export type IndustrialInput = {
   annualConsumptionMwh: number;
   daytimeSharePercent: number;
   peakLoadKw: number;
+  /** Elektri ostuhind (€/MWh) — omatarbe säästu alus. */
   averageElectricityPriceEurPerMwh: number;
   pvPowerKw: number;
   pvSpecificYieldKwhPerKw: number;
   batteryCapacityKwh: number;
   batteryPowerKw: number;
   batteryPurpose: IndustrialBatteryPurpose;
-  /** Kui puudub või 0, tasuvusaega ei arvutata. */
+  /**
+   * @deprecated v0.5 kasutab PV/aku ühikhindu. Jäetakse tüübile backward compatibility jaoks;
+   * stsenaariumite võrdlus ja tasuvus seda ei kasuta.
+   */
   investmentEur: number | null;
+  /** PV investeering €/kW */
+  pvInvestmentEurPerKw: number;
+  /** Aku investeering €/kWh */
+  batteryInvestmentEurPerKwh: number;
+  /** Võrku müüdava elektri hind €/MWh */
+  exportPriceEurPerMwh: number;
+  /** Võimsustasu €/kW/kuu */
+  demandChargeEurPerKwMonth: number;
+  /** Aku kasutegur (round-trip) % */
+  batteryEfficiencyPercent: number;
+  /** Aku kasutatav maht (DoD) % */
+  batteryUsableCapacityPercent: number;
 };
 
 export type IndustrialResult = {
@@ -31,18 +47,35 @@ export type IndustrialResult = {
   batterySelfConsumptionImpactMwh: number;
   peakLoadBeforeKw: number;
   peakLoadAfterKw: number;
+  peakReductionKw: number;
+  /** Kohapeal kasutatud PV × ostuhind */
+  selfConsumptionSavingsEur: number;
+  /** Võrku müüdud PV × müügihind */
+  exportRevenueEur: number;
+  /** Tipu lõige × võimsustasu × 12 (ainult peak shaving) */
+  demandChargeSavingsEur: number;
+  /** Aastane kogumõju = omatarve + müük + võimsustasu */
   annualSavingsEur: number;
+  /** Stsenaariumi investeering ühikhindade põhjal */
+  investmentEur: number;
   paybackYears: number | null;
   summary: string;
   assumptions: string[];
 };
 
+export const INDUSTRIAL_ECONOMICS_DEFAULTS = {
+  pvInvestmentEurPerKw: 700,
+  batteryInvestmentEurPerKwh: 350,
+  exportPriceEurPerMwh: 45,
+  demandChargeEurPerKwMonth: 6.5,
+  batteryEfficiencyPercent: 90,
+  batteryUsableCapacityPercent: 80,
+} as const;
+
 export const INDUSTRIAL_ASSUMPTIONS = {
   /** Päevase koormuse ja PV ajaline kattuvus: 50% (madal päevane osakaal) … 90% (kõrge). */
   minDaytimeCoincidence: 0.5,
   maxDaytimeCoincidence: 0.9,
-  /** Kasutatav akuenergia tsükli kohta (DoD × roundtrip ≈ 0,9 × 0,9). */
-  batteryUsableFraction: 0.81,
   /** Ekvivalentsed täistsüklid aastas omatarbe režiimis. */
   selfConsumptionCyclesPerYear: 250,
   /** Peak shaving režiimis jääb omatarbe nihkeks 20% potentsiaalist. */
@@ -51,8 +84,6 @@ export const INDUSTRIAL_ASSUMPTIONS = {
   assumedPeakDurationHours: 1,
   /** Tippu ei lõigata alla selle osakaalu algsest tipust. */
   minPeakRemainingShare: 0.4,
-  /** Võimsustasu eeldus peak shaving säästu jaoks (€/kW/kuu). */
-  demandChargeEurPerKwMonth: 6.5,
   hoursPerYear: 8760,
 } as const;
 
@@ -66,12 +97,34 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function withDefault(value: unknown, fallback: number): number {
+  if (value == null || value === "") return fallback;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return n;
+}
+
+export function batteryUsableFraction(efficiencyPercent: number, usableCapacityPercent: number): number {
+  return (clamp(efficiencyPercent, 0, 100) / 100) * (clamp(usableCapacityPercent, 0, 100) / 100);
+}
+
+export function computeIndustrialInvestmentEur(input: {
+  pvPowerKw: number;
+  batteryCapacityKwh: number;
+  pvInvestmentEurPerKw: number;
+  batteryInvestmentEurPerKwh: number;
+  includeBattery: boolean;
+}): number {
+  const pvPart = input.pvPowerKw * input.pvInvestmentEurPerKw;
+  const batteryPart = input.includeBattery
+    ? input.batteryCapacityKwh * input.batteryInvestmentEurPerKwh
+    : 0;
+  return Math.max(pvPart + batteryPart, 0);
+}
+
 export function sanitizeIndustrialInput(input: IndustrialInput): IndustrialInput {
   const purpose: IndustrialBatteryPurpose =
     input.batteryPurpose === "peak_shaving" ? "peak_shaving" : "self_consumption";
-  const investmentRaw = input.investmentEur;
-  const investment =
-    investmentRaw == null || !Number.isFinite(investmentRaw) || investmentRaw <= 0 ? null : investmentRaw;
   const name = typeof input.companyName === "string" ? input.companyName.trim() : "";
 
   return {
@@ -85,7 +138,36 @@ export function sanitizeIndustrialInput(input: IndustrialInput): IndustrialInput
     batteryCapacityKwh: finiteNonNegative(input.batteryCapacityKwh),
     batteryPowerKw: finiteNonNegative(input.batteryPowerKw),
     batteryPurpose: purpose,
-    investmentEur: investment,
+    investmentEur: null,
+    pvInvestmentEurPerKw: withDefault(
+      input.pvInvestmentEurPerKw,
+      INDUSTRIAL_ECONOMICS_DEFAULTS.pvInvestmentEurPerKw,
+    ),
+    batteryInvestmentEurPerKwh: withDefault(
+      input.batteryInvestmentEurPerKwh,
+      INDUSTRIAL_ECONOMICS_DEFAULTS.batteryInvestmentEurPerKwh,
+    ),
+    exportPriceEurPerMwh: withDefault(
+      input.exportPriceEurPerMwh,
+      INDUSTRIAL_ECONOMICS_DEFAULTS.exportPriceEurPerMwh,
+    ),
+    demandChargeEurPerKwMonth: withDefault(
+      input.demandChargeEurPerKwMonth,
+      INDUSTRIAL_ECONOMICS_DEFAULTS.demandChargeEurPerKwMonth,
+    ),
+    batteryEfficiencyPercent: clamp(
+      withDefault(input.batteryEfficiencyPercent, INDUSTRIAL_ECONOMICS_DEFAULTS.batteryEfficiencyPercent),
+      0,
+      100,
+    ),
+    batteryUsableCapacityPercent: clamp(
+      withDefault(
+        input.batteryUsableCapacityPercent,
+        INDUSTRIAL_ECONOMICS_DEFAULTS.batteryUsableCapacityPercent,
+      ),
+      0,
+      100,
+    ),
   };
 }
 
@@ -137,14 +219,16 @@ export function describeIndustrialResult(input: IndustrialInput, result: Omit<In
 
   const paybackPart =
     result.paybackYears == null
-      ? "Tasuvusaega ei arvutatud, sest investeeringut ei ole sisestatud või aastane sääst on null."
+      ? "Tasuvusaega ei arvutatud, sest investeering on null või aastane kogumõju on null."
       : `Lihtsustatud tasuvusaeg on umbes ${formatEt(result.paybackYears, 1)} aastat.`;
 
   return (
     `${name}: PV toodangust kasutatakse kohapeal umbes ${selfShare}%. ` +
     `${modeSentence} ` +
-    `Aastane ligikaudne sääst on ${savings} €. ${paybackPart} ` +
-    `Tegu on v0.1 lihtsustatud hinnanguga, mitte lõpliku investeerimisotsusega.`
+    `Aastane kogumõju on ${savings} € (omatarbe sääst, võrku müügi tulu` +
+    (result.demandChargeSavingsEur > 0 ? " ja võimsustasu sääst" : "") +
+    `). ${paybackPart} ` +
+    `Tegu on v0.5 lihtsustatud hinnanguga, mitte lõpliku investeerimisotsusega.`
   );
 }
 
@@ -152,12 +236,16 @@ export function describeIndustrialResult(input: IndustrialInput, result: Omit<In
  * 1. PV toodang = võimsus × eritootlus.
  * 2. Omatarve ilma akuta = min(toodang, päevane tarbimine) × kattuvustegur.
  * 3. Kattuvus kasvab päevase tarbimise osakaaluga (50–90%).
- * 4. Aku võib nihutada ülejääki omatarbeks, kuid mitte rohkem kui võrku minev PV.
- * 5. Peak shaving vähendab tippu aku kW/kWh järgi, mitte alla keskmise koormuse ega 40% algsest tipust.
- * 6. Sääst = kohapeal kasutatud PV × elektri hind (+ võimsustasu, kui režiim on peak shaving).
+ * 4. Aku võib nihutada ülejääki omatarbeks (kasutegur × kasutatav maht).
+ * 5. Peak shaving vähendab tippu aku kW/kWh järgi.
+ * 6. Kogumõju = omatarve × ostuhind + eksport × müügihind + tipu × võimsustasu × 12.
  */
 export function calculateIndustrial(rawInput: IndustrialInput): IndustrialResult {
   const input = sanitizeIndustrialInput(rawInput);
+  const usableFraction = batteryUsableFraction(
+    input.batteryEfficiencyPercent,
+    input.batteryUsableCapacityPercent,
+  );
 
   const pvProductionMwh = (input.pvPowerKw * input.pvSpecificYieldKwhPerKw) / 1000;
   const daytimeConsumptionMwh = input.annualConsumptionMwh * (input.daytimeSharePercent / 100);
@@ -166,8 +254,7 @@ export function calculateIndustrial(rawInput: IndustrialInput): IndustrialResult
   const exportedWithoutBatteryMwh = Math.max(pvProductionMwh - selfConsumedWithoutBatteryMwh, 0);
 
   const annualShiftPotentialMwh =
-    (input.batteryCapacityKwh * INDUSTRIAL_ASSUMPTIONS.batteryUsableFraction * INDUSTRIAL_ASSUMPTIONS.selfConsumptionCyclesPerYear) /
-    1000;
+    (input.batteryCapacityKwh * usableFraction * INDUSTRIAL_ASSUMPTIONS.selfConsumptionCyclesPerYear) / 1000;
   const remainingConsumptionMwh = Math.max(input.annualConsumptionMwh - selfConsumedWithoutBatteryMwh, 0);
   const maxBatteryBoostMwh = Math.min(exportedWithoutBatteryMwh, annualShiftPotentialMwh, remainingConsumptionMwh);
 
@@ -183,9 +270,7 @@ export function calculateIndustrial(rawInput: IndustrialInput): IndustrialResult
   const peakLoadBeforeKw = input.peakLoadKw;
   let peakReductionKw = 0;
   if (input.batteryPurpose === "peak_shaving" && input.batteryCapacityKwh > 0 && input.batteryPowerKw > 0) {
-    const energyLimitedCutKw =
-      (input.batteryCapacityKwh * INDUSTRIAL_ASSUMPTIONS.batteryUsableFraction) /
-      INDUSTRIAL_ASSUMPTIONS.assumedPeakDurationHours;
+    const energyLimitedCutKw = (input.batteryCapacityKwh * usableFraction) / INDUSTRIAL_ASSUMPTIONS.assumedPeakDurationHours;
     const powerLimitedCutKw = input.batteryPowerKw;
     const minRealisticPeakKw = Math.max(
       averageLoadKw(input.annualConsumptionMwh),
@@ -196,26 +281,34 @@ export function calculateIndustrial(rawInput: IndustrialInput): IndustrialResult
   }
   const peakLoadAfterKw = Math.max(peakLoadBeforeKw - peakReductionKw, 0);
 
-  const energySavingsEur = selfConsumedPvMwh * input.averageElectricityPriceEurPerMwh;
-  const peakSavingsEur =
-    input.batteryPurpose === "peak_shaving"
-      ? peakReductionKw * INDUSTRIAL_ASSUMPTIONS.demandChargeEurPerKwMonth * 12
-      : 0;
-  const annualSavingsEur = energySavingsEur + peakSavingsEur;
+  const selfConsumptionSavingsEur = selfConsumedPvMwh * input.averageElectricityPriceEurPerMwh;
+  const exportRevenueEur = exportedPvMwh * input.exportPriceEurPerMwh;
+  const demandChargeSavingsEur =
+    input.batteryPurpose === "peak_shaving" ? peakReductionKw * input.demandChargeEurPerKwMonth * 12 : 0;
+  const annualSavingsEur = selfConsumptionSavingsEur + exportRevenueEur + demandChargeSavingsEur;
+
+  const includeBattery = input.batteryCapacityKwh > 0;
+  const investmentEur = computeIndustrialInvestmentEur({
+    pvPowerKw: input.pvPowerKw,
+    batteryCapacityKwh: input.batteryCapacityKwh,
+    pvInvestmentEurPerKw: input.pvInvestmentEurPerKw,
+    batteryInvestmentEurPerKwh: input.batteryInvestmentEurPerKwh,
+    includeBattery,
+  });
 
   const paybackYears =
-    input.investmentEur != null && input.investmentEur > 0 && annualSavingsEur > 0
-      ? input.investmentEur / annualSavingsEur
-      : null;
+    investmentEur > 0 && annualSavingsEur > 0 ? investmentEur / annualSavingsEur : null;
 
   const assumptions = [
     `Päevase tarbimise ja PV kattuvus: ${formatEt(coincidence * 100, 0)}% (sõltub päevasest osakaalust).`,
-    `Aku kasutatav osa tsükli kohta: ${formatEt(INDUSTRIAL_ASSUMPTIONS.batteryUsableFraction * 100, 0)}%.`,
+    `Aku kasutatav osa tsükli kohta: ${formatEt(usableFraction * 100, 0)}% (kasutegur ${formatEt(input.batteryEfficiencyPercent, 0)}% × kasutatav maht ${formatEt(input.batteryUsableCapacityPercent, 0)}%).`,
     `Omatarbe tsüklid aastas: ${INDUSTRIAL_ASSUMPTIONS.selfConsumptionCyclesPerYear}.`,
+    `Elektri ostuhind: ${formatEt(input.averageElectricityPriceEurPerMwh, 0)} €/MWh.`,
+    `Võrku müügihind: ${formatEt(input.exportPriceEurPerMwh, 0)} €/MWh.`,
     input.batteryPurpose === "peak_shaving"
-      ? `Võimsustasu eeldus: ${formatEt(INDUSTRIAL_ASSUMPTIONS.demandChargeEurPerKwMonth, 1)} €/kW/kuu.`
-      : "Peak shaving säästu ei arvestata, sest aku on omatarbe režiimis.",
-    "Võrku müüdavat PV-d v0.1 säästus ei väärtustata — näidatakse ainult energiana.",
+      ? `Võimsustasu: ${formatEt(input.demandChargeEurPerKwMonth, 1)} €/kW/kuu.`
+      : "Peak shaving võimsustasu säästu ei arvestata, sest aku on omatarbe režiimis.",
+    `PV investeering: ${formatEt(input.pvInvestmentEurPerKw, 0)} €/kW · aku: ${formatEt(input.batteryInvestmentEurPerKwh, 0)} €/kWh.`,
   ];
 
   const withoutSummary = {
@@ -226,7 +319,12 @@ export function calculateIndustrial(rawInput: IndustrialInput): IndustrialResult
     batterySelfConsumptionImpactMwh,
     peakLoadBeforeKw,
     peakLoadAfterKw,
+    peakReductionKw,
+    selfConsumptionSavingsEur,
+    exportRevenueEur,
+    demandChargeSavingsEur,
     annualSavingsEur,
+    investmentEur,
     paybackYears,
     assumptions,
   };
@@ -244,12 +342,23 @@ export type IndustrialSampleProfile = {
   input: IndustrialInput;
 };
 
+function withEconomics(
+  input: Omit<IndustrialInput, keyof typeof INDUSTRIAL_ECONOMICS_DEFAULTS | "investmentEur"> &
+    Partial<Pick<IndustrialInput, keyof typeof INDUSTRIAL_ECONOMICS_DEFAULTS>>,
+): IndustrialInput {
+  return {
+    investmentEur: null,
+    ...INDUSTRIAL_ECONOMICS_DEFAULTS,
+    ...input,
+  };
+}
+
 export const INDUSTRIAL_SAMPLE_PROFILES: IndustrialSampleProfile[] = [
   {
     id: "daytime",
     title: "Päevane tootmine",
     description: "Tootmine koondub päevatundidesse, PV kattub tarbimisega hästi.",
-    input: {
+    input: withEconomics({
       companyName: "Päevase tarbimisega tootmisettevõte",
       annualConsumptionMwh: 2500,
       daytimeSharePercent: 75,
@@ -260,14 +369,13 @@ export const INDUSTRIAL_SAMPLE_PROFILES: IndustrialSampleProfile[] = [
       batteryCapacityKwh: 500,
       batteryPowerKw: 250,
       batteryPurpose: "self_consumption",
-      investmentEur: 760000,
-    },
+    }),
   },
   {
     id: "flat",
     title: "Ööpäevaringne tööstus",
     description: "Tarbimine on ühtlane ööpäev läbi, osa PV-st jääb õhtusse.",
-    input: {
+    input: withEconomics({
       companyName: "Ühtlase ööpäevase tarbimisega tööstus",
       annualConsumptionMwh: 8000,
       daytimeSharePercent: 45,
@@ -278,14 +386,13 @@ export const INDUSTRIAL_SAMPLE_PROFILES: IndustrialSampleProfile[] = [
       batteryCapacityKwh: 800,
       batteryPowerKw: 400,
       batteryPurpose: "self_consumption",
-      investmentEur: 1370000,
-    },
+    }),
   },
   {
     id: "peaks",
     title: "Suured tipukoormused",
     description: "Keskmine koormus on mõõdukas, aga tipud on kõrged.",
-    input: {
+    input: withEconomics({
       companyName: "Suurte tipukoormustega ettevõte",
       annualConsumptionMwh: 1800,
       daytimeSharePercent: 55,
@@ -296,7 +403,6 @@ export const INDUSTRIAL_SAMPLE_PROFILES: IndustrialSampleProfile[] = [
       batteryCapacityKwh: 600,
       batteryPowerKw: 400,
       batteryPurpose: "peak_shaving",
-      investmentEur: 520000,
-    },
+    }),
   },
 ];
