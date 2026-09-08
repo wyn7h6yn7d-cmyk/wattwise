@@ -48,6 +48,9 @@ const baseConfig = {
   batteryEfficiencyPercent: 90,
   batteryUsableCapacityPercent: 80,
   intervalMinutes: 60,
+  buyPriceEurPerMwh: 100,
+  exportPriceEurPerMwh: 45,
+  demandChargeEurPerKwMonth: 6.5,
 };
 
 describe("industrial timeseries v0.6", () => {

@@ -2,6 +2,7 @@
 
 import { ChartCard } from "@/components/charts/ChartCard";
 import type { IndustrialTimeseriesResult } from "@/lib/calculators/industrial-timeseries";
+import type { MatchPriceSeriesResult } from "@/lib/market/match-price-series";
 
 function fmt(value: number, digits: number): string {
   return new Intl.NumberFormat("et-EE", {
@@ -157,13 +158,27 @@ function SocChart({ result }: { result: IndustrialTimeseriesResult }) {
   );
 }
 
-export function IndustrialTimeseriesPanel({ result }: { result: IndustrialTimeseriesResult }) {
+export function IndustrialTimeseriesPanel({
+  result,
+  priceModeLabel,
+  priceMatch,
+}: {
+  result: IndustrialTimeseriesResult;
+  priceModeLabel: string;
+  priceMatch: MatchPriceSeriesResult | null;
+}) {
+  const { economics } = result;
+
   return (
     <article className="card">
       <h2 className="section-title">Ajapõhine simulatsioon</h2>
       <p className="mt-2 text-sm text-zinc-400">
         Lihtsustatud PV + aku käitumine CSV tarbimisprofiili peal. PV jaotatakse päevakõvera ja kuuteguri järgi;
-        tegu ei ole täisoptimeerijaga.
+        aku töötab endiselt ahnusloogika järgi (börsihinna optimeerimist ei ole).
+      </p>
+      <p className="mt-2 border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-relaxed text-zinc-400">
+        Hinnarežiim: <span className="text-zinc-200">{priceModeLabel}</span>. v0.8 sidub hinnad rahalise
+        arvestusega; aku dispetšerit börsihinna järgi ei optimeerita.
       </p>
 
       <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -212,6 +227,78 @@ export function IndustrialTimeseriesPanel({ result }: { result: IndustrialTimese
           </dd>
         </div>
       </dl>
+
+      <div className="mt-6 border-t border-zinc-800 pt-4">
+        <h3 className="text-sm font-medium text-zinc-100">Ajapõhise simulatsiooni majandus</h3>
+        {priceMatch ? (
+          <p className="mt-2 text-xs text-zinc-400">
+            Hinnaga seotud ridu: {priceMatch.matchedFromSeriesCount} / {result.rowCount}
+            {priceMatch.unmatchedCount > 0 ? ` · sidumata ${priceMatch.unmatchedCount}` : ""}.
+          </p>
+        ) : null}
+        {priceMatch?.warning ? (
+          <p className="mt-2 border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-relaxed text-amber-50">
+            {priceMatch.warning}
+          </p>
+        ) : null}
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Perioodi sääst</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">{fmt(economics.periodImpactEur, 0)} €</dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Aastaks skaleeritud</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">{fmt(economics.annualizedImpactEur, 0)} €/a</dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Võrguenergia vähenemine</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
+              {fmt(economics.gridImportReductionMwh, 2)} MWh
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">PV omatarbe väärtus</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
+              {fmt(economics.selfConsumptionValueEur, 0)} €
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Võrku müügi tulu</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">{fmt(economics.exportRevenueEur, 0)} €</dd>
+          </div>
+          {result.batteryPurpose === "peak_shaving" ? (
+            <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+              <dt className="text-zinc-400">Võimsustasu sääst</dt>
+              <dd className="font-mono tabular-nums text-zinc-100">
+                {fmt(economics.demandChargeSavingsEur, 0)} €
+              </dd>
+            </div>
+          ) : null}
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Aku läbiv energia</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
+              {fmt(economics.batteryThroughputMwh, 2)} MWh
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5">
+            <dt className="text-zinc-400">Aku tsüklid</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">{fmt(economics.approxBatteryCycles, 1)}</dd>
+          </div>
+          <div className="flex justify-between gap-3 border-b border-zinc-800/80 py-1.5 sm:col-span-2 lg:col-span-3">
+            <dt className="text-zinc-400">Võrgust ost enne / pärast</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
+              {fmt(economics.gridImportBeforeKwh / 1000, 2)} → {fmt(economics.gridImportAfterKwh / 1000, 2)}{" "}
+              MWh
+            </dd>
+          </div>
+        </dl>
+        {!economics.isFullYearEstimate ? (
+          <p className="mt-3 border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-relaxed text-amber-50">
+            Perioodi tulemused põhinevad üles laaditud andmetel. Aastane mõju on lihtsustatud hinnang ja sõltub
+            andmestiku pikkusest ning esinduslikkusest.
+          </p>
+        ) : null}
+      </div>
 
       <div className="mt-4 grid gap-4">
         <DualSeriesChart

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   INDUSTRIAL_ECONOMICS_DEFAULTS,
   INDUSTRIAL_SAMPLE_PROFILES,
@@ -33,8 +33,17 @@ import { IndustrialScenarioComparisonPanel } from "@/components/industrial/indus
 import { IndustrialTimeseriesPanel } from "@/components/industrial/industrial-timeseries-panel";
 import { calculateIndustrialScenarios } from "@/lib/calculators/industrial-scenarios";
 import { simulateIndustrialTimeseries } from "@/lib/calculators/industrial-timeseries";
+import {
+  SAMPLE_PRICE_CSV,
+  parsePriceCsv,
+  type PriceCsvRow,
+} from "@/lib/market/parse-price-csv";
+import { matchPriceSeriesToConsumption } from "@/lib/market/match-price-series";
+import { eleringPointsToPriceRows } from "@/lib/market/elering-to-price-rows";
+import type { MarketPriceSeries } from "@/lib/elering";
 
 type InputMode = "manual" | "csv";
+type PriceMode = "flat" | "csv" | "elering";
 
 type FormState = {
   companyName: string;
@@ -216,6 +225,24 @@ export function IndustrialPvBatteryPage() {
   const [csvRows, setCsvRows] = useState<ConsumptionCsvRow[]>([]);
   const [csvSummary, setCsvSummary] = useState<ConsumptionProfileSummary | null>(null);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+  const priceCsvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [priceMode, setPriceMode] = useState<PriceMode>("flat");
+  const [priceCsvError, setPriceCsvError] = useState<string | null>(null);
+  const [priceCsvFileName, setPriceCsvFileName] = useState("");
+  const [priceCsvPreview, setPriceCsvPreview] = useState<PriceCsvRow[]>([]);
+  const [priceCsvRows, setPriceCsvRows] = useState<PriceCsvRow[]>([]);
+  const [eleringRows, setEleringRows] = useState<PriceCsvRow[] | null>(null);
+  const [eleringNote, setEleringNote] = useState<string | null>(null);
+  const [eleringLoading, setEleringLoading] = useState(false);
+
+  const clearPriceCsvImport = () => {
+    setPriceCsvError(null);
+    setPriceCsvFileName("");
+    setPriceCsvPreview([]);
+    setPriceCsvRows([]);
+    if (priceCsvInputRef.current) priceCsvInputRef.current.value = "";
+  };
 
   const clearCsvImport = () => {
     setCsvError(null);
@@ -224,6 +251,10 @@ export function IndustrialPvBatteryPage() {
     setCsvRows([]);
     setCsvSummary(null);
     if (csvInputRef.current) csvInputRef.current.value = "";
+    clearPriceCsvImport();
+    setEleringRows(null);
+    setEleringNote(null);
+    setPriceMode("flat");
   };
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -251,6 +282,23 @@ export function IndustrialPvBatteryPage() {
     return calculateIndustrialScenarios(formToInput(form));
   }, [form, hasRequiredInputs]);
 
+  const priceSeriesSourceRows = useMemo(() => {
+    if (priceMode === "csv") return priceCsvRows;
+    if (priceMode === "elering") return eleringRows ?? [];
+    return [];
+  }, [priceMode, priceCsvRows, eleringRows]);
+
+  const priceMatch = useMemo(() => {
+    if (priceMode === "flat" || csvRows.length === 0 || priceSeriesSourceRows.length === 0) return null;
+    const input = formToInput(form);
+    return matchPriceSeriesToConsumption({
+      consumptionRows: csvRows,
+      priceRows: priceSeriesSourceRows,
+      fallbackBuyEurPerMwh: input.averageElectricityPriceEurPerMwh,
+      fallbackExportEurPerMwh: input.exportPriceEurPerMwh,
+    });
+  }, [priceMode, csvRows, priceSeriesSourceRows, form]);
+
   const timeseriesResult = useMemo(() => {
     if (!hasRequiredInputs || csvRows.length === 0 || !csvSummary) return null;
     const input = formToInput(form);
@@ -265,8 +313,19 @@ export function IndustrialPvBatteryPage() {
       batteryUsableCapacityPercent: input.batteryUsableCapacityPercent,
       peakLoadKw: input.peakLoadKw,
       intervalMinutes: csvSummary.intervalMinutes,
+      buyPriceEurPerMwh: input.averageElectricityPriceEurPerMwh,
+      exportPriceEurPerMwh: input.exportPriceEurPerMwh,
+      demandChargeEurPerKwMonth: input.demandChargeEurPerKwMonth,
+      priceSeries: priceMatch?.points ?? null,
     });
-  }, [form, hasRequiredInputs, csvRows, csvSummary]);
+  }, [form, hasRequiredInputs, csvRows, csvSummary, priceMatch]);
+
+  const priceModeLabel =
+    priceMode === "csv"
+      ? "Hinnaseeria CSV"
+      : priceMode === "elering"
+        ? "Eleringi börsihind (EE)"
+        : "Keskmine hind";
 
   const csvChartSeries = useMemo(() => {
     if (!csvSummary || csvRows.length === 0) return null;
@@ -330,6 +389,79 @@ export function IndustrialPvBatteryPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePriceCsvFile = async (file: File | undefined) => {
+    if (!file) return;
+    setPriceCsvFileName(file.name);
+    setPriceCsvError(null);
+    setPriceCsvPreview([]);
+    setPriceCsvRows([]);
+    try {
+      const text = await file.text();
+      const parsed = parsePriceCsv(text);
+      if (!parsed.ok) {
+        setPriceCsvError(parsed.error);
+        return;
+      }
+      setPriceCsvPreview(parsed.rows.slice(0, 5));
+      setPriceCsvRows(parsed.rows);
+      setPriceMode("csv");
+    } catch {
+      setPriceCsvError("Hinnaseeria CSV lugemine ebaõnnestus. Proovi uuesti.");
+    }
+  };
+
+  const downloadSamplePriceCsv = () => {
+    const blob = new Blob([SAMPLE_PRICE_CSV], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "naidis-hinnaseeria.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => {
+    if (priceMode !== "elering" || !csvSummary) {
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setEleringLoading(true);
+      setEleringNote(null);
+      try {
+        const start = new Date(csvSummary.periodStartMs).toISOString();
+        const end = new Date(csvSummary.periodEndMs + 60 * 60 * 1000).toISOString();
+        const res = await fetch(
+          `/api/elering/nps?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&area=ee`,
+        );
+        const data = (await res.json()) as MarketPriceSeries & { error?: string };
+        if (!res.ok || data.error) {
+          throw new Error(data.error || `Eleringi päring ebaõnnestus (${res.status})`);
+        }
+        if (cancelled) return;
+        const exportPrice =
+          parseLocaleNumber(form.exportPriceEurPerMwh) ?? INDUSTRIAL_ECONOMICS_DEFAULTS.exportPriceEurPerMwh;
+        const rows = eleringPointsToPriceRows(data.points ?? [], exportPrice);
+        setEleringRows(rows);
+        setEleringNote(
+          rows.length > 0
+            ? `Laadin Eleringi EE NPS (${data.intervalMinutes} min). Müügihinnaks kasutatakse vormi võrku müügi hinda.`
+            : "Eleringist ei tulnud hinna punkte valitud perioodi jaoks.",
+        );
+      } catch (error) {
+        if (cancelled) return;
+        setEleringRows(null);
+        setEleringNote(error instanceof Error ? error.message : "Eleringi hindade laadimine ebaõnnestus.");
+      } finally {
+        if (!cancelled) setEleringLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [priceMode, csvSummary, form.exportPriceEurPerMwh]);
+
   const handleCalculate = () => {
     if (!hasRequiredInputs) {
       setHasCalculated(false);
@@ -376,10 +508,10 @@ export function IndustrialPvBatteryPage() {
   return (
     <div className="grid gap-6">
       <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.6</p>
+        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.8</p>
         <p className="mt-1">
-          CSV tarbimisprofiili peal jookseb lihtsustatud ajapõhine PV + aku simulatsioon. Majandusmudel ja
-          stsenaariumite võrdlus jäävad v0.5 loogikale; tegu ei ole täisoptimeerija ega PDF ekspordiga.
+          Ajapõhine majandusvaade toetab keskmist hinda, hinnaseeria CSV-d ja Eleringi EE NPS andmeid. Aku
+          dispetšerit börsihinna järgi ei optimeerita.
         </p>
       </div>
 
@@ -592,6 +724,161 @@ export function IndustrialPvBatteryPage() {
                 Päevane osakaal {fmt(csvInsight.daytimeSharePercent, 1)}% · tipp/keskmine{" "}
                 {fmt(csvInsight.peakToAverageRatio, 2)}.
               </p>
+            </div>
+          ) : null}
+        </article>
+      ) : null}
+
+      {csvRows.length > 0 ? (
+        <article className="card">
+          <h2 className="section-title">Hinnarežiim ajapõhiseks majanduseks</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Vali, milliste hindadega arvutatakse ajapõhise simulatsiooni rahaline mõju. Aku käitumist see ei
+            muuda.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {(
+              [
+                {
+                  id: "flat" as const,
+                  title: "Keskmine hind",
+                  description: "Kasutab majanduslike eelduste ostu- ja müügihinda (nagu v0.7).",
+                },
+                {
+                  id: "csv" as const,
+                  title: "Hinnaseeria CSV",
+                  description: "Seo tarbimisread oma ostu/müügi hinnaseeriaga.",
+                },
+                {
+                  id: "elering" as const,
+                  title: "Elering EE",
+                  description: "Laadi NPS börsihind CSV perioodi jaoks (müük = vormi müügihind).",
+                },
+              ] as const
+            ).map((mode) => {
+              const active = priceMode === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setPriceMode(mode.id)}
+                  className={`border px-3 py-3 text-left transition-colors ${
+                    active
+                      ? "border-sky-400/50 bg-sky-500/15 text-zinc-50"
+                      : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-sky-400/35"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{mode.description}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {priceMode === "csv" ? (
+            <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4">
+              <p className="text-sm text-zinc-300">
+                Veerud: <span className="font-mono text-zinc-100">timestamp</span>,{" "}
+                <span className="font-mono text-zinc-100">buy_price_eur_mwh</span>,{" "}
+                <span className="font-mono text-zinc-100">export_price_eur_mwh</span>. Sobib koma või
+                semikoolon.
+              </p>
+              <pre className="mt-3 overflow-x-auto border border-zinc-800 bg-zinc-900 p-3 text-xs text-zinc-300">
+                {SAMPLE_PRICE_CSV}
+              </pre>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <label className="btn-ghost w-full cursor-pointer text-center sm:w-auto">
+                  <span>Vali hinnaseeria CSV</span>
+                  <input
+                    ref={priceCsvInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      void handlePriceCsvFile(file);
+                    }}
+                  />
+                </label>
+                <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSamplePriceCsv}>
+                  Laadi näidisfail
+                </button>
+              </div>
+              {priceCsvFileName ? (
+                <p className="mt-3 text-xs text-zinc-400">
+                  Valitud fail: <span className="text-zinc-200">{priceCsvFileName}</span>
+                </p>
+              ) : null}
+              {priceCsvError ? (
+                <p className="mt-3 border border-rose-300/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-100">
+                  {priceCsvError}
+                </p>
+              ) : null}
+              {priceCsvPreview.length > 0 ? (
+                <div className="mt-4 overflow-x-auto border border-zinc-800">
+                  <p className="border-b border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-100">
+                    Eelvaade, esimesed {priceCsvPreview.length} rida
+                  </p>
+                  <table className="min-w-full text-left text-sm text-zinc-300">
+                    <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-500">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">timestamp</th>
+                        <th className="px-3 py-2 font-medium">buy €/MWh</th>
+                        <th className="px-3 py-2 font-medium">export €/MWh</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priceCsvPreview.map((row, index) => (
+                        <tr key={`${row.timestampMs}-${index}`} className="border-t border-zinc-800">
+                          <td className="px-3 py-2 font-mono tabular-nums">{row.timestampRaw}</td>
+                          <td className="px-3 py-2 font-mono tabular-nums">{fmt(row.buyPriceEurPerMwh, 1)}</td>
+                          <td className="px-3 py-2 font-mono tabular-nums">{fmt(row.exportPriceEurPerMwh, 1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {priceMode === "elering" ? (
+            <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+              {eleringLoading ? <p>Laen Eleringi EE börsihinda…</p> : null}
+              {eleringNote ? <p className={eleringRows ? "text-zinc-300" : "text-amber-100"}>{eleringNote}</p> : null}
+              {eleringRows && eleringRows.length > 0 ? (
+                <p className="mt-2 text-xs text-zinc-400">
+                  Laetud {fmt(eleringRows.length, 0)} hinna punkti ·{" "}
+                  {eleringRows[0]!.timestampRaw} → {eleringRows[eleringRows.length - 1]!.timestampRaw}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {priceMatch ? (
+            <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+              <p>
+                Hinnaga seotud tarbimisridu:{" "}
+                <span className="font-mono text-zinc-100">
+                  {priceMatch.matchedFromSeriesCount} / {csvRows.length}
+                </span>
+                {priceMatch.unmatchedCount > 0 ? (
+                  <>
+                    {" "}
+                    · sidumata{" "}
+                    <span className="font-mono text-amber-100">{priceMatch.unmatchedCount}</span>
+                  </>
+                ) : null}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Täpsed {priceMatch.exactCount} · sama tund {priceMatch.sameHourCount} · lähim{" "}
+                {priceMatch.nearestCount} · keskmine varu {priceMatch.fallbackCount}
+              </p>
+              {priceMatch.warning ? (
+                <p className="mt-3 border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs text-amber-50">
+                  {priceMatch.warning}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </article>
@@ -985,7 +1272,11 @@ export function IndustrialPvBatteryPage() {
       ) : null}
 
       {hasCalculated && hasRequiredInputs && timeseriesResult ? (
-        <IndustrialTimeseriesPanel result={timeseriesResult} />
+        <IndustrialTimeseriesPanel
+          result={timeseriesResult}
+          priceModeLabel={priceModeLabel}
+          priceMatch={priceMatch}
+        />
       ) : null}
 
       {csvSummary && csvInsight ? (
@@ -995,7 +1286,7 @@ export function IndustrialPvBatteryPage() {
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 pb-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.6</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.8</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
                 Tööstus: PV + aku raportivaade
               </h2>
@@ -1180,12 +1471,78 @@ export function IndustrialPvBatteryPage() {
           </section>
 
           <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">8. Piirangute märkus</h3>
+            <h3 className="text-sm font-medium text-zinc-100">8. Ajapõhise simulatsiooni majanduslik mõju</h3>
+            {hasCalculated && hasRequiredInputs && timeseriesResult ? (
+              <>
+                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                  <li>Hinnarežiim: {priceModeLabel}</li>
+                  {priceMatch ? (
+                    <>
+                      <li>
+                        Hinnaseeria periood: {priceMatch.pricePeriodStartLabel} →{" "}
+                        {priceMatch.pricePeriodEndLabel} ({fmt(priceMatch.priceRowCount, 0)} rida)
+                      </li>
+                      <li>
+                        Seotud tarbimisridu: {priceMatch.matchedFromSeriesCount} / {csvRows.length}
+                        {priceMatch.unmatchedCount > 0 ? ` · sidumata ${priceMatch.unmatchedCount}` : ""}
+                      </li>
+                    </>
+                  ) : (
+                    <li>Kasutatakse majanduslike eelduste keskmisi ostu- ja müügihindu.</li>
+                  )}
+                  <li>Perioodi kogumõju: {fmt(timeseriesResult.economics.periodImpactEur, 0)} €</li>
+                  <li>
+                    Aastaks skaleeritud: {fmt(timeseriesResult.economics.annualizedImpactEur, 0)} €/a
+                  </li>
+                  <li>
+                    Võrgust ost enne / pärast:{" "}
+                    {fmt(timeseriesResult.economics.gridImportBeforeKwh / 1000, 2)} →{" "}
+                    {fmt(timeseriesResult.economics.gridImportAfterKwh / 1000, 2)} MWh
+                  </li>
+                  <li>
+                    Välditud võrguenergia: {fmt(timeseriesResult.economics.gridImportReductionMwh, 2)} MWh
+                  </li>
+                  <li>
+                    PV omatarbe väärtus: {fmt(timeseriesResult.economics.selfConsumptionValueEur, 0)} €
+                  </li>
+                  <li>Võrku müügi tulu: {fmt(timeseriesResult.economics.exportRevenueEur, 0)} €</li>
+                  {timeseriesResult.batteryPurpose === "peak_shaving" ? (
+                    <li>
+                      Võimsustasu sääst: {fmt(timeseriesResult.economics.demandChargeSavingsEur, 0)} €
+                    </li>
+                  ) : null}
+                  <li>
+                    Aku läbiv energia: {fmt(timeseriesResult.economics.batteryThroughputMwh, 2)} MWh ·
+                    tsüklid {fmt(timeseriesResult.economics.approxBatteryCycles, 1)}
+                  </li>
+                </ul>
+                {priceMatch?.warning ? (
+                  <p className="mt-3 text-xs leading-relaxed text-amber-100/90">{priceMatch.warning}</p>
+                ) : null}
+                {!timeseriesResult.economics.isFullYearEstimate ? (
+                  <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+                    Perioodi tulemused põhinevad üles laaditud andmetel. Aastane mõju on lihtsustatud hinnang ja
+                    sõltub andmestiku pikkusest ning esinduslikkusest.
+                  </p>
+                ) : null}
+                <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+                  Hinnaseeria piirangud: aku dispetšerit börsihinna järgi ei optimeerita; Eleringi režiimis on
+                  müügihind vormi keskmine müügihind; ajatemplite ajavöönd võib põhjustada sidumisvigu.
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-400">
+                Majanduslik kokkuvõte ilmub koos ajapõhise simulatsiooniga.
+              </p>
+            )}
+          </section>
+
+          <section className="mt-5 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">9. Piirangute märkus</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Ajapõhine PV kõver on
-              lihtsustatud (päevakuju + kuutegur), mitte ilmajaama ega PVGIS andmestik. Aku dispetšer on
-              ahnusalgoritm, mitte täisoptimeerija. Lühikese CSV perioodi korral skaleeritakse aastane tarbimine
-              lihtsustatult. PDF eksporti v0.6-s ei ole — salvesta vaade screenshotina.
+              lihtsustatud. v0.8 täpsustab rahalist arvestust hinnaseeriaga, kuid ei ole börsihinna
+              optimeerija ega PDF eksport.
             </p>
           </section>
         </article>

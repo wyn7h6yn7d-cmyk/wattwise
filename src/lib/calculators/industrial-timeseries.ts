@@ -2,12 +2,21 @@ import type { ConsumptionCsvRow } from "../consumption/parse-consumption-csv";
 import { INDUSTRIAL_ASSUMPTIONS, type IndustrialBatteryPurpose } from "./industrial";
 
 /**
- * Tööstusmooduli v0.6 lihtsustatud ajapõhine PV + aku simulatsioon CSV ridade põhjal.
- * Ei ole täisoptimeerija ega börsihinna-põhine dispetšer.
+ * Tööstusmooduli v0.8 ajapõhine PV + aku simulatsioon + majandusvaade.
+ * Toetab keskmisi hindu või sammude kaupa hinnaseeriat (CSV / Elering).
+ * Aku dispetšer jääb v0.6 ahnusloogikale — börsihinna optimeerimist ei ole.
  */
 
 export const HOURS_PER_YEAR = 8760;
 export const TIMESERIES_CHART_MAX_POINTS = 96;
+export const FULL_YEAR_COVERAGE_RATIO = 0.9;
+
+/** Future spot / API price point keyed by timestamp. */
+export type IndustrialTimeseriesPricePoint = {
+  timestampMs: number;
+  buyPriceEurPerMwh: number;
+  exportPriceEurPerMwh: number;
+};
 
 export type IndustrialTimeseriesInput = {
   rows: ConsumptionCsvRow[];
@@ -21,6 +30,17 @@ export type IndustrialTimeseriesInput = {
   /** Tipukoormus peak shaving sihttaseme jaoks (kW); kui puudub, võetakse CSV tipust. */
   peakLoadKw?: number;
   intervalMinutes?: number | null;
+  /** Keskmine ostuhind €/MWh (v0.7 vaikimisi). */
+  buyPriceEurPerMwh: number;
+  /** Keskmine võrku müügihind €/MWh. */
+  exportPriceEurPerMwh: number;
+  /** Võimsustasu €/kW/kuu peak shaving säästu jaoks. */
+  demandChargeEurPerKwMonth: number;
+  /**
+   * Optional per-step prices for future spot integration.
+   * When omitted, flat buy/export prices are applied to every step.
+   */
+  priceSeries?: IndustrialTimeseriesPricePoint[] | null;
 };
 
 export type IndustrialTimeseriesStep = {
@@ -43,6 +63,27 @@ export type IndustrialTimeseriesStep = {
   gridExportKwh: number;
   /** Võrgust võetav võimsus pärast PV/akut (kW). */
   netGridImportKw: number;
+  /** Step buy price (€/MWh) — flat today, spot-ready tomorrow. */
+  buyPriceEurPerMwh: number;
+  /** Step export price (€/MWh). */
+  exportPriceEurPerMwh: number;
+};
+
+export type IndustrialTimeseriesEconomics = {
+  gridImportBeforeKwh: number;
+  gridImportAfterKwh: number;
+  avoidedGridImportKwh: number;
+  selfConsumptionValueEur: number;
+  exportRevenueEur: number;
+  demandChargeSavingsEur: number;
+  periodImpactEur: number;
+  annualizedImpactEur: number;
+  gridImportReductionMwh: number;
+  batteryThroughputMwh: number;
+  approxBatteryCycles: number;
+  isFullYearEstimate: boolean;
+  scaleFactorToYear: number;
+  priceMode: "flat_average" | "step_series";
 };
 
 export type IndustrialTimeseriesResult = {
@@ -59,6 +100,7 @@ export type IndustrialTimeseriesResult = {
   directSelfConsumptionKwh: number;
   /** Aku tühjenemisega kohapeal kasutatud energia (AC). */
   batteryDischargedToLoadKwh: number;
+  batteryChargedFromPvKwh: number;
   gridExportKwh: number;
   gridImportKwh: number;
   selfConsumptionSharePercent: number;
@@ -69,6 +111,8 @@ export type IndustrialTimeseriesResult = {
   peakLoadBeforeKw: number;
   peakLoadAfterKw: number;
   peakShavingTargetKw: number;
+  batteryPurpose: IndustrialBatteryPurpose;
+  economics: IndustrialTimeseriesEconomics;
   assumptions: string[];
 };
 
@@ -163,8 +207,98 @@ function allocatePvProductionKwh(
   return weights.map((w) => (periodPvTargetKwh * w) / weightSum);
 }
 
+function buildPriceLookup(
+  priceSeries: IndustrialTimeseriesPricePoint[] | null | undefined,
+): Map<number, IndustrialTimeseriesPricePoint> | null {
+  if (!priceSeries || priceSeries.length === 0) return null;
+  const map = new Map<number, IndustrialTimeseriesPricePoint>();
+  for (const point of priceSeries) {
+    map.set(point.timestampMs, point);
+  }
+  return map;
+}
+
+export function resolveStepPrices(
+  timestampMs: number,
+  flatBuy: number,
+  flatExport: number,
+  lookup: Map<number, IndustrialTimeseriesPricePoint> | null,
+): { buyPriceEurPerMwh: number; exportPriceEurPerMwh: number } {
+  const point = lookup?.get(timestampMs);
+  if (point) {
+    return {
+      buyPriceEurPerMwh: finiteNonNegative(point.buyPriceEurPerMwh),
+      exportPriceEurPerMwh: finiteNonNegative(point.exportPriceEurPerMwh),
+    };
+  }
+  return {
+    buyPriceEurPerMwh: flatBuy,
+    exportPriceEurPerMwh: flatExport,
+  };
+}
+
+export function computeTimeseriesEconomics(args: {
+  steps: IndustrialTimeseriesStep[];
+  consumptionKwh: number;
+  gridImportKwh: number;
+  batteryChargedFromPvKwh: number;
+  batteryDischargedToLoadKwh: number;
+  coveredHours: number;
+  peakLoadBeforeKw: number;
+  peakLoadAfterKw: number;
+  batteryPurpose: IndustrialBatteryPurpose;
+  demandChargeEurPerKwMonth: number;
+  approxBatteryCycles: number;
+  priceMode: "flat_average" | "step_series";
+}): IndustrialTimeseriesEconomics {
+  const gridImportBeforeKwh = Math.max(args.consumptionKwh, 0);
+  const gridImportAfterKwh = Math.max(args.gridImportKwh, 0);
+  const avoidedGridImportKwh = Math.max(gridImportBeforeKwh - gridImportAfterKwh, 0);
+
+  let selfConsumptionValueEur = 0;
+  let exportRevenueEur = 0;
+  for (const step of args.steps) {
+    const onSitePvKwh = Math.max(step.pvProductionKwh - step.gridExportKwh, 0);
+    selfConsumptionValueEur += (onSitePvKwh / 1000) * step.buyPriceEurPerMwh;
+    exportRevenueEur += (step.gridExportKwh / 1000) * step.exportPriceEurPerMwh;
+  }
+
+  const peakReductionKw = Math.max(args.peakLoadBeforeKw - args.peakLoadAfterKw, 0);
+  const monthsInPeriod = args.coveredHours > 0 ? (args.coveredHours / HOURS_PER_YEAR) * 12 : 0;
+  const demandChargeSavingsEur =
+    args.batteryPurpose === "peak_shaving"
+      ? peakReductionKw * finiteNonNegative(args.demandChargeEurPerKwMonth) * monthsInPeriod
+      : 0;
+
+  const periodImpactEur = selfConsumptionValueEur + exportRevenueEur + demandChargeSavingsEur;
+  const scaleFactorToYear = args.coveredHours > 0 ? HOURS_PER_YEAR / args.coveredHours : 0;
+  const isFullYearEstimate = args.coveredHours >= HOURS_PER_YEAR * FULL_YEAR_COVERAGE_RATIO;
+  const annualizedImpactEur = periodImpactEur * scaleFactorToYear;
+
+  const batteryThroughputMwh =
+    (finiteNonNegative(args.batteryChargedFromPvKwh) + finiteNonNegative(args.batteryDischargedToLoadKwh)) /
+    2000;
+
+  return {
+    gridImportBeforeKwh,
+    gridImportAfterKwh,
+    avoidedGridImportKwh,
+    selfConsumptionValueEur,
+    exportRevenueEur,
+    demandChargeSavingsEur,
+    periodImpactEur,
+    annualizedImpactEur,
+    gridImportReductionMwh: avoidedGridImportKwh / 1000,
+    batteryThroughputMwh,
+    approxBatteryCycles: Math.max(args.approxBatteryCycles, 0),
+    isFullYearEstimate,
+    scaleFactorToYear,
+    priceMode: args.priceMode,
+  };
+}
+
 /**
- * Runs a greedy battery dispatch over CSV rows.
+ * Runs a greedy battery dispatch over CSV rows and attaches period economics.
  */
 export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): IndustrialTimeseriesResult {
   if (!raw.rows || raw.rows.length === 0) {
@@ -181,6 +315,11 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
   const usableCapacityPercent = clamp(finiteNonNegative(raw.batteryUsableCapacityPercent), 0, 100);
   const oneWayEta = Math.sqrt(efficiencyPercent / 100);
   const usableBatteryCapacityKwh = batteryCapacityKwh * (usableCapacityPercent / 100);
+  const flatBuy = finiteNonNegative(raw.buyPriceEurPerMwh);
+  const flatExport = finiteNonNegative(raw.exportPriceEurPerMwh);
+  const demandChargeEurPerKwMonth = finiteNonNegative(raw.demandChargeEurPerKwMonth);
+  const priceLookup = buildPriceLookup(raw.priceSeries);
+  const priceMode: "flat_average" | "step_series" = priceLookup ? "step_series" : "flat_average";
 
   const sorted = [...raw.rows].sort((a, b) => a.timestampMs - b.timestampMs);
   const fallbackHours = resolveFallbackHours(raw.intervalMinutes);
@@ -215,7 +354,6 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
   let peakLoadAfterKw = 0;
   let minSocKwh = usableBatteryCapacityKwh > 0 ? soc : 0;
   let maxSocKwh = soc;
-  let totalChargeIntoSoc = 0;
   let totalDischargeFromSoc = 0;
 
   for (let i = 0; i < sorted.length; i += 1) {
@@ -223,6 +361,7 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
     const dt = Math.max(durations[i]!, 1e-9);
     const consumptionKwh = finiteNonNegative(row.consumptionKwh);
     const pvProductionKwh = Math.max(pvByStep[i]!, 0);
+    const prices = resolveStepPrices(row.timestampMs, flatBuy, flatExport, priceLookup);
 
     const directSelfConsumptionKwh = Math.min(consumptionKwh, pvProductionKwh);
     let surplus = Math.max(pvProductionKwh - directSelfConsumptionKwh, 0);
@@ -240,7 +379,6 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
       batteryChargeKwh = maxChargeAc;
       const intoSoc = batteryChargeKwh * oneWayEta;
       soc += intoSoc;
-      totalChargeIntoSoc += intoSoc;
       surplus -= batteryChargeKwh;
     }
 
@@ -295,19 +433,37 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
       batterySocKwh: soc,
       gridExportKwh,
       netGridImportKw,
+      buyPriceEurPerMwh: prices.buyPriceEurPerMwh,
+      exportPriceEurPerMwh: prices.exportPriceEurPerMwh,
     });
   }
 
   const pvProductionKwh = steps.reduce((s, step) => s + step.pvProductionKwh, 0);
   const directSelfConsumptionKwh = steps.reduce((s, step) => s + step.directSelfConsumptionKwh, 0);
   const batteryDischargedToLoadKwh = steps.reduce((s, step) => s + step.batteryDischargeKwh, 0);
+  const batteryChargedFromPvKwh = steps.reduce((s, step) => s + step.batteryChargeKwh, 0);
   const gridExportKwh = steps.reduce((s, step) => s + step.gridExportKwh, 0);
   const gridImportKwh = steps.reduce((s, step) => s + step.gridImportKwh, 0);
   const selfConsumedFromPvKwh = Math.max(pvProductionKwh - gridExportKwh, 0);
   const selfConsumptionSharePercent =
     pvProductionKwh > 0 ? (selfConsumedFromPvKwh / pvProductionKwh) * 100 : 0;
   const approxBatteryCycles =
-    usableBatteryCapacityKwh > 0 ? totalDischargeFromSoc / usableBatteryCapacityKwh : 0;
+    usableBatteryCapacityKwh > 0 ? Math.max(totalDischargeFromSoc / usableBatteryCapacityKwh, 0) : 0;
+
+  const economics = computeTimeseriesEconomics({
+    steps,
+    consumptionKwh: totalConsumptionKwh,
+    gridImportKwh,
+    batteryChargedFromPvKwh,
+    batteryDischargedToLoadKwh,
+    coveredHours,
+    peakLoadBeforeKw,
+    peakLoadAfterKw,
+    batteryPurpose: purpose,
+    demandChargeEurPerKwMonth,
+    approxBatteryCycles,
+    priceMode,
+  });
 
   const first = sorted[0]!;
   const last = sorted[sorted.length - 1]!;
@@ -325,6 +481,7 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
     consumptionKwh: totalConsumptionKwh,
     directSelfConsumptionKwh,
     batteryDischargedToLoadKwh,
+    batteryChargedFromPvKwh,
     gridExportKwh,
     gridImportKwh,
     selfConsumptionSharePercent,
@@ -335,6 +492,8 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
     peakLoadBeforeKw,
     peakLoadAfterKw,
     peakShavingTargetKw,
+    batteryPurpose: purpose,
+    economics,
     assumptions: [
       "PV jaotatakse lihtsustatud päevakõvera ja kuuteguri järgi; perioodi summa = aastatoodang × (perioodi tunnid / 8760).",
       `Aku kasutatav maht: ${usableBatteryCapacityKwh.toFixed(1)} kWh (DoD ${usableCapacityPercent}%).`,
@@ -342,7 +501,10 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
       purpose === "peak_shaving"
         ? `Peak shaving sihttase ≈ ${peakShavingTargetKw.toFixed(0)} kW (max keskmine koormus ja ${INDUSTRIAL_ASSUMPTIONS.minPeakRemainingShare * 100}% tipust).`
         : "Omatarbe režiimis aku laeb PV ülejäägist ja tühjeneb puudujäägi katteks.",
-      "See on v0.6 lihtsustatud simulatsioon, mitte täisoptimeerija.",
+      priceMode === "flat_average"
+        ? `v0.7 majandusvaade kasutab keskmisi hindu (ost ${flatBuy} €/MWh, müük ${flatExport} €/MWh). Börsihinna optimeerimine tuleb hiljem.`
+        : "Majandusvaade kasutab sammude kaupa antud hinnaseeriat (börsihinna valmisolek).",
+      "See on v0.7 lihtsustatud simulatsioon, mitte täisoptimeerija ega Elering/Nord Pool ühendus.",
     ],
   };
 }
