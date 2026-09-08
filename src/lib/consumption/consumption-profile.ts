@@ -10,7 +10,7 @@ export const DAYTIME_HOUR_START = 8;
 export const DAYTIME_HOUR_END = 20;
 export const HOURS_PER_YEAR = 8760;
 
-export type ConsumptionInterval = "hour" | "15min" | "unknown";
+export type ConsumptionInterval = "hour" | "15min" | "irregular" | "unknown";
 
 export type ConsumptionProfileSummary = {
   rowCount: number;
@@ -46,18 +46,53 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-function classifyInterval(medianMinutes: number | null): {
+function isNear15Minutes(minutes: number): boolean {
+  return minutes >= 12 && minutes <= 18;
+}
+
+function isNear60Minutes(minutes: number): boolean {
+  return minutes >= 50 && minutes <= 70;
+}
+
+/**
+ * Classifies sampling only when every adjacent gap matches the same band.
+ * Mixed gaps (e.g. mostly 1h with multi-hour holes) are irregular — never reported as clean 1h/15min.
+ */
+function classifyInterval(diffsMin: number[]): {
   interval: ConsumptionInterval;
   intervalMinutes: number | null;
 } {
-  if (medianMinutes == null) return { interval: "unknown", intervalMinutes: null };
-  if (medianMinutes >= 12 && medianMinutes <= 18) {
+  if (diffsMin.length === 0) return { interval: "unknown", intervalMinutes: null };
+
+  if (diffsMin.every(isNear15Minutes)) {
     return { interval: "15min", intervalMinutes: 15 };
   }
-  if (medianMinutes >= 50 && medianMinutes <= 70) {
+  if (diffsMin.every(isNear60Minutes)) {
     return { interval: "hour", intervalMinutes: 60 };
   }
-  return { interval: "unknown", intervalMinutes: Math.round(medianMinutes) };
+
+  const medianMinutes = median(diffsMin);
+  return {
+    interval: "irregular",
+    intervalMinutes: medianMinutes != null ? Math.round(medianMinutes) : null,
+  };
+}
+
+/** Duration for a row: fixed step when regular; otherwise gap to the next (or previous) timestamp. */
+function rowDurationHours(
+  sorted: ConsumptionCsvRow[],
+  index: number,
+  fallbackHours: number,
+): number {
+  if (index < sorted.length - 1) {
+    const hours = (sorted[index + 1].timestampMs - sorted[index].timestampMs) / 3600000;
+    if (hours > 0) return hours;
+  }
+  if (index > 0) {
+    const hours = (sorted[index].timestampMs - sorted[index - 1].timestampMs) / 3600000;
+    if (hours > 0) return hours;
+  }
+  return fallbackHours;
 }
 
 function isDaytimeHour(hour: number): boolean {
@@ -76,26 +111,30 @@ export function summarizeConsumptionProfile(rows: ConsumptionCsvRow[]): Consumpt
     if (minutes > 0 && minutes <= 24 * 60) diffsMin.push(minutes);
   }
 
-  const { interval, intervalMinutes } = classifyInterval(median(diffsMin));
-  const intervalHours = (intervalMinutes ?? 60) / 60;
+  const { interval, intervalMinutes } = classifyInterval(diffsMin);
+  const regularStepHours =
+    interval === "hour" || interval === "15min" ? (intervalMinutes as number) / 60 : null;
+  const fallbackHours = (intervalMinutes ?? 60) / 60;
 
   let totalKwh = 0;
   let daytimeKwh = 0;
   let peakLoadKw = 0;
   const dayKeys = new Set<string>();
 
-  for (const row of sorted) {
+  sorted.forEach((row, index) => {
     totalKwh += row.consumptionKwh;
     if (isDaytimeHour(row.hour)) daytimeKwh += row.consumptionKwh;
-    const loadKw = intervalHours > 0 ? row.consumptionKwh / intervalHours : row.consumptionKwh;
+    const hours = regularStepHours ?? rowDurationHours(sorted, index, fallbackHours);
+    const loadKw = hours > 0 ? row.consumptionKwh / hours : row.consumptionKwh;
     if (loadKw > peakLoadKw) peakLoadKw = loadKw;
     dayKeys.add(`${row.year}-${pad2(row.month)}-${pad2(row.day)}`);
-  }
+  });
 
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
   const spanHours = Math.max((last.timestampMs - first.timestampMs) / 3600000, 0);
-  const coveredHours = Math.max(spanHours + intervalHours, intervalHours);
+  const trailingHours = regularStepHours ?? rowDurationHours(sorted, sorted.length - 1, fallbackHours);
+  const coveredHours = Math.max(spanHours + trailingHours, trailingHours);
   const isFullYearEstimate = coveredHours >= HOURS_PER_YEAR * 0.9;
   const estimatedAnnualKwh = totalKwh * (HOURS_PER_YEAR / coveredHours);
   const daytimeSharePercent = totalKwh > 0 ? (daytimeKwh / totalKwh) * 100 : 0;
@@ -135,6 +174,9 @@ export function consumptionProfileToFormFields(summary: ConsumptionProfileSummar
 export function describeConsumptionInterval(summary: ConsumptionProfileSummary): string {
   if (summary.interval === "hour") return "1 tund";
   if (summary.interval === "15min") return "15 minutit";
+  if (summary.interval === "irregular") {
+    return "ebaühtlane ajasamm (mixed) — tipukoormus on hinnanguline";
+  }
   if (summary.intervalMinutes != null) return `${summary.intervalMinutes} minutit`;
   return "tuvastamata";
 }

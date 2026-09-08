@@ -468,6 +468,12 @@ export function IndustrialPvBatteryPage() {
                   <dd className="font-mono tabular-nums text-zinc-100">{fmt(csvSummary.nighttimeSharePercent, 1)}%</dd>
                 </div>
               </dl>
+              {csvSummary.interval === "irregular" ? (
+                <p className="mt-4 border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-relaxed text-amber-50">
+                  CSV ajasamm on ebaühtlane (mixed). Tipukoormus arvutatakse ridadevaheliste lünkade järgi ning aastane
+                  hinnang võib olla ebatäpsem. Eelista ühtlast 1h või 15 min mõõtesammu.
+                </p>
+              ) : null}
               <p className="mt-4 text-xs leading-relaxed text-zinc-400">
                 CSV impordi põhjal arvutatud tulemused on esmased hinnangud. Andmete kvaliteet ja perioodi pikkus
                 mõjutavad tulemuse täpsust. Kui üles laaditud fail ei kata tervet aastat, arvutatakse aastane tarbimine
