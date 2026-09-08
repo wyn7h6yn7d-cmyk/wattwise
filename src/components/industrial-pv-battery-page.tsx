@@ -30,7 +30,9 @@ import { parseLocaleNumber, toNumber } from "@/lib/units";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { ConsumptionProfileChart } from "@/components/industrial/consumption-profile-chart";
 import { IndustrialScenarioComparisonPanel } from "@/components/industrial/industrial-scenario-comparison";
+import { IndustrialTimeseriesPanel } from "@/components/industrial/industrial-timeseries-panel";
 import { calculateIndustrialScenarios } from "@/lib/calculators/industrial-scenarios";
+import { simulateIndustrialTimeseries } from "@/lib/calculators/industrial-timeseries";
 
 type InputMode = "manual" | "csv";
 
@@ -249,6 +251,23 @@ export function IndustrialPvBatteryPage() {
     return calculateIndustrialScenarios(formToInput(form));
   }, [form, hasRequiredInputs]);
 
+  const timeseriesResult = useMemo(() => {
+    if (!hasRequiredInputs || csvRows.length === 0 || !csvSummary) return null;
+    const input = formToInput(form);
+    return simulateIndustrialTimeseries({
+      rows: csvRows,
+      pvPowerKw: input.pvPowerKw,
+      pvSpecificYieldKwhPerKw: input.pvSpecificYieldKwhPerKw,
+      batteryCapacityKwh: input.batteryCapacityKwh,
+      batteryPowerKw: input.batteryPowerKw,
+      batteryPurpose: input.batteryPurpose,
+      batteryEfficiencyPercent: input.batteryEfficiencyPercent,
+      batteryUsableCapacityPercent: input.batteryUsableCapacityPercent,
+      peakLoadKw: input.peakLoadKw,
+      intervalMinutes: csvSummary.intervalMinutes,
+    });
+  }, [form, hasRequiredInputs, csvRows, csvSummary]);
+
   const csvChartSeries = useMemo(() => {
     if (!csvSummary || csvRows.length === 0) return null;
     return buildConsumptionChartSeries(csvRows, csvSummary);
@@ -357,10 +376,10 @@ export function IndustrialPvBatteryPage() {
   return (
     <div className="grid gap-6">
       <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.5</p>
+        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.6</p>
         <p className="mt-1">
-          Majandusmudel eristab PV/aku investeeringuid, omatarbe säästu, võrku müügi tulu ja võimsustasu.
-          Tulemused on lihtsustatud hinnangud, mitte 15-minutiline simulatsioon ega lõplik investeerimisotsus.
+          CSV tarbimisprofiili peal jookseb lihtsustatud ajapõhine PV + aku simulatsioon. Majandusmudel ja
+          stsenaariumite võrdlus jäävad v0.5 loogikale; tegu ei ole täisoptimeerija ega PDF ekspordiga.
         </p>
       </div>
 
@@ -965,6 +984,10 @@ export function IndustrialPvBatteryPage() {
         <IndustrialScenarioComparisonPanel comparison={scenarioComparison} />
       ) : null}
 
+      {hasCalculated && hasRequiredInputs && timeseriesResult ? (
+        <IndustrialTimeseriesPanel result={timeseriesResult} />
+      ) : null}
+
       {csvSummary && csvInsight ? (
         <article
           id="industrial-report"
@@ -972,7 +995,7 @@ export function IndustrialPvBatteryPage() {
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 pb-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.5</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.6</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
                 Tööstus: PV + aku raportivaade
               </h2>
@@ -1124,12 +1147,45 @@ export function IndustrialPvBatteryPage() {
           </section>
 
           <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">7. Piirangute märkus</h3>
+            <h3 className="text-sm font-medium text-zinc-100">7. Ajapõhine simulatsioon</h3>
+            {hasCalculated && hasRequiredInputs && timeseriesResult ? (
+              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                <li>
+                  Periood: {timeseriesResult.periodStartLabel} → {timeseriesResult.periodEndLabel} (
+                  {fmt(timeseriesResult.coveredHours, 0)} h)
+                </li>
+                <li>PV toodang: {fmt(timeseriesResult.pvProductionKwh / 1000, 2)} MWh</li>
+                <li>Otsene omatarve: {fmt(timeseriesResult.directSelfConsumptionKwh / 1000, 2)} MWh</li>
+                <li>
+                  Aku kaudu kasutatud: {fmt(timeseriesResult.batteryDischargedToLoadKwh / 1000, 2)} MWh
+                </li>
+                <li>Võrku müüdud: {fmt(timeseriesResult.gridExportKwh / 1000, 2)} MWh</li>
+                <li>Võrgust ostetud: {fmt(timeseriesResult.gridImportKwh / 1000, 2)} MWh</li>
+                <li>Omatarbe osakaal: {fmt(timeseriesResult.selfConsumptionSharePercent, 0)}%</li>
+                <li>Aku tsüklid (ligikaudne): {fmt(timeseriesResult.approxBatteryCycles, 1)}</li>
+                <li>
+                  Aku SOC min/max: {fmt(timeseriesResult.minSocKwh, 0)} / {fmt(timeseriesResult.maxSocKwh, 0)}{" "}
+                  kWh
+                </li>
+                <li>
+                  Tipukoormus (võrgu import): {fmt(timeseriesResult.peakLoadBeforeKw, 0)} →{" "}
+                  {fmt(timeseriesResult.peakLoadAfterKw, 0)} kW
+                </li>
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-400">
+                Ajapõhine simulatsioon ilmub pärast CSV importi ja „Arvuta tulemus“ vajutamist.
+              </p>
+            )}
+          </section>
+
+          <section className="mt-5 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">8. Piirangute märkus</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Arvutus on lihtsustatud (ei ole
-              15-minutiline PV+aku optimeerija). Lühikese CSV perioodi korral skaleeritakse aastane tarbimine
-              lihtsustatult. Päevane aken on fikseeritud 08:00–20:00. Investeeringud põhinevad ühikhindadel, mitte
-              pakkumisel. PDF eksporti v0.5-s ei ole — salvesta vaade screenshotina.
+              See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Ajapõhine PV kõver on
+              lihtsustatud (päevakuju + kuutegur), mitte ilmajaama ega PVGIS andmestik. Aku dispetšer on
+              ahnusalgoritm, mitte täisoptimeerija. Lühikese CSV perioodi korral skaleeritakse aastane tarbimine
+              lihtsustatult. PDF eksporti v0.6-s ei ole — salvesta vaade screenshotina.
             </p>
           </section>
         </article>
