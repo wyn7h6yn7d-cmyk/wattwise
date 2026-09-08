@@ -141,9 +141,10 @@ export function matchPriceSeriesToConsumption(input: MatchPriceSeriesInput): Mat
   const unmatchedCount = fallbackCount;
   let warning: string | null = null;
   if (prices.length === 0) {
-    warning = "Hinnaseeria on tühi — kasutatakse keskmisi hindu.";
+    warning = "Hinnaseeria on tühi. Kasutati keskmist ostu- ja müügihinda.";
   } else if (unmatchedCount > 0) {
-    warning = `${unmatchedCount} tarbimisrida jäi hinnaseeriast sidumata; nende jaoks kasutatakse keskmist ostu- ja müügihinda.`;
+    warning =
+      "Hinnaseeria ei kata kogu tarbimisprofiili. Puuduvates kohtades kasutati keskmist hinda.";
   }
 
   const first = prices[0];

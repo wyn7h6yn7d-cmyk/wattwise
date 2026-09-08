@@ -88,7 +88,7 @@ describe("consumption CSV v0.2", () => {
     const parsed = parseConsumptionCsv(csv);
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
-    expect(parsed.error).toContain("CSV failist ei leitud aja või tarbimise veergu.");
+    expect(parsed.error).toContain("CSV failist ei leitud aja ega tarbimise veergu.");
   });
 
   it("returns an error for an empty or too short file", () => {

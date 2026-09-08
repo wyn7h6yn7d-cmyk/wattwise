@@ -140,18 +140,18 @@ export function parsePriceCsv(fileContent: string): ParsePriceCsvResult {
   const exportIdx = headers.findIndex((header) => EXPORT_HEADERS.has(header));
 
   if (timestampIdx < 0) {
-    return { ok: false, error: "Hinnaseeria CSV-st ei leitud ajatempli veergu (timestamp)." };
+    return { ok: false, error: "Hinnaseeria CSV-st ei leitud aja veergu. Lisa veerg timestamp." };
   }
   if (buyIdx < 0) {
     return {
       ok: false,
-      error: "Hinnaseeria CSV-st ei leitud ostuhinna veergu (buy_price_eur_mwh).",
+      error: "Hinnaseeria CSV-st ei leitud ostuhinna veergu. Lisa veerg buy_price_eur_mwh.",
     };
   }
   if (exportIdx < 0) {
     return {
       ok: false,
-      error: "Hinnaseeria CSV-st ei leitud müügihinna veergu (export_price_eur_mwh).",
+      error: "Hinnaseeria CSV-st ei leitud müügihinna veergu. Lisa veerg export_price_eur_mwh.",
     };
   }
 

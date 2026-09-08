@@ -41,6 +41,13 @@ import {
 import { matchPriceSeriesToConsumption } from "@/lib/market/match-price-series";
 import { eleringPointsToPriceRows } from "@/lib/market/elering-to-price-rows";
 import type { MarketPriceSeries } from "@/lib/elering";
+import {
+  DEMO_CONSUMPTION_FILENAME,
+  DEMO_PRICES_FILENAME,
+  buildDemoConsumptionCsv,
+  buildDemoPricesCsv,
+  downloadTextFile,
+} from "@/lib/industrial/demo-data";
 
 type InputMode = "manual" | "csv";
 type PriceMode = "flat" | "csv" | "elering";
@@ -324,7 +331,11 @@ export function IndustrialPvBatteryPage() {
     priceMode === "csv"
       ? "Hinnaseeria CSV"
       : priceMode === "elering"
-        ? "Eleringi börsihind (EE)"
+        ? eleringRows && eleringRows.length > 0
+          ? "Eleringi börsihind (EE)"
+          : eleringLoading
+            ? "Elering EE (laadin…)"
+            : "Elering EE — kasutusel keskmine hind"
         : "Keskmine hind";
 
   const csvChartSeries = useMemo(() => {
@@ -366,27 +377,38 @@ export function IndustrialPvBatteryPage() {
       setCsvPreview(parsed.rows.slice(0, 5));
       setCsvRows(parsed.rows);
       setCsvSummary(summary);
-      setForm((prev) => ({
-        ...prev,
-        annualConsumptionMwh: toField(fields.annualConsumptionMwh, 1),
-        daytimeSharePercent: toField(fields.daytimeSharePercent, 1),
-        peakLoadKw: toField(fields.peakLoadKw, 1),
-      }));
+      setForm((prev) => {
+        const next = {
+          ...prev,
+          annualConsumptionMwh: toField(fields.annualConsumptionMwh, 1),
+          daytimeSharePercent: toField(fields.daytimeSharePercent, 1),
+          peakLoadKw: toField(fields.peakLoadKw, 1),
+        };
+        // Demo risk: if PV fields are empty after demo CSV, prefill calm defaults for the defense path.
+        const isDemoFile = file.name.toLowerCase().includes("demo-tarbimine");
+        const pvEmpty = !parseLocaleNumber(prev.pvPowerKw);
+        if (isDemoFile && pvEmpty) {
+          next.companyName = prev.companyName.trim() || "Demo tööstusprofiil";
+          next.pvPowerKw = "800";
+          next.pvSpecificYieldKwhPerKw = "950";
+          next.batteryCapacityKwh = "500";
+          next.batteryPowerKw = "250";
+          next.batteryPurpose = "self_consumption";
+          if (!parseLocaleNumber(prev.averageElectricityPriceEurPerMwh)) {
+            next.averageElectricityPriceEurPerMwh = "110";
+          }
+        }
+        return next;
+      });
       setHasCalculated(false);
       setValidationMessage(null);
     } catch {
-      setCsvError("CSV faili lugemine ebaõnnestus. Proovi uuesti.");
+      setCsvError("Tarbimise CSV faili ei õnnestunud lugeda. Proovi uuesti või laadi demo-tarbimine.csv.");
     }
   };
 
   const downloadSampleCsv = () => {
-    const blob = new Blob([SAMPLE_CONSUMPTION_CSV], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "naidis-toostus-tarbimine.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(DEMO_CONSUMPTION_FILENAME, buildDemoConsumptionCsv());
   };
 
   const handlePriceCsvFile = async (file: File | undefined) => {
@@ -406,18 +428,12 @@ export function IndustrialPvBatteryPage() {
       setPriceCsvRows(parsed.rows);
       setPriceMode("csv");
     } catch {
-      setPriceCsvError("Hinnaseeria CSV lugemine ebaõnnestus. Proovi uuesti.");
+      setPriceCsvError("Hinnaseeria faili ei õnnestunud lugeda. Proovi uuesti või laadi demo-hinnad.csv.");
     }
   };
 
   const downloadSamplePriceCsv = () => {
-    const blob = new Blob([SAMPLE_PRICE_CSV], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "naidis-hinnaseeria.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(DEMO_PRICES_FILENAME, buildDemoPricesCsv());
   };
 
   useEffect(() => {
@@ -451,7 +467,10 @@ export function IndustrialPvBatteryPage() {
       } catch (error) {
         if (cancelled) return;
         setEleringRows(null);
-        setEleringNote(error instanceof Error ? error.message : "Eleringi hindade laadimine ebaõnnestus.");
+        setEleringNote(
+          "Eleringi hinnainfo laadimine ebaõnnestus. Kasutati keskmist hinda või vali hinnaseeria CSV.",
+        );
+        void error;
       } finally {
         if (!cancelled) setEleringLoading(false);
       }
@@ -506,14 +525,38 @@ export function IndustrialPvBatteryPage() {
   );
 
   return (
-    <div className="grid gap-6">
+    <div className="grid max-w-full gap-6 overflow-x-hidden">
       <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.8</p>
+        <p className="font-medium text-zinc-100">Projekt 2 · Tööstusmoodul v1.0</p>
         <p className="mt-1">
-          Ajapõhine majandusvaade toetab keskmist hinda, hinnaseeria CSV-d ja Eleringi EE NPS andmeid. Aku
-          dispetšerit börsihinna järgi ei optimeerita.
+          Kaitsmiseks valmis: demoandmed, selge töövoog ja raportivaade. Arvutus on lihtsustatud hinnang — mitte
+          lõplik investeerimisotsus.
         </p>
       </div>
+
+      <article className="border border-zinc-800 bg-zinc-950/60 px-4 py-4">
+        <h2 className="text-sm font-medium text-zinc-100">Kuidas alustada</h2>
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-zinc-300">
+          <li>Impordi tarbimisprofiil või sisesta andmed käsitsi</li>
+          <li>Määra PV, aku ja majanduslikud eeldused</li>
+          <li>Vali hinnarežiim (keskmine, hinnaseeria CSV või Elering EE)</li>
+          <li>Arvuta tulemus</li>
+          <li>Vaata stsenaariume, ajapõhist simulatsiooni ja raportit</li>
+        </ol>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSampleCsv}>
+            Laadi demo-tarbimine.csv
+          </button>
+          <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSamplePriceCsv}>
+            Laadi demo-hinnad.csv
+          </button>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+          Kiire demo: laadi mõlemad failid → CSV import → hinnaseeria CSV → Arvuta.{" "}
+          <span className="text-zinc-400">demo-tarbimine.csv</span> täidab tühjad PV/aku väljad
+          soovituslike väärtustega.
+        </p>
+      </article>
 
       <div>
         <p className="text-sm text-zinc-400">Vali näidisprofiil või sisesta enda andmed.</p>
@@ -527,8 +570,8 @@ export function IndustrialPvBatteryPage() {
                 onClick={() => applyProfile(profile)}
                 className={`border px-3 py-3 text-left transition-colors ${
                   active
-                    ? "border-emerald-400/50 bg-emerald-500/15 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-teal-400/35"
+                    ? "border-zinc-500 bg-zinc-800/80 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
                 }`}
               >
                 <span className="block text-sm font-semibold text-zinc-100">{profile.title}</span>
@@ -553,11 +596,17 @@ export function IndustrialPvBatteryPage() {
               <button
                 key={mode.id}
                 type="button"
-                onClick={() => setInputMode(mode.id)}
+                onClick={() => {
+                  setInputMode(mode.id);
+                  if (mode.id === "manual") {
+                    clearCsvImport();
+                    setHasCalculated(false);
+                  }
+                }}
                 className={`border px-3 py-3 text-left transition-colors ${
                   active
-                    ? "border-teal-400/50 bg-teal-500/15 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-emerald-400/35"
+                    ? "border-zinc-500 bg-zinc-800/80 text-zinc-50"
+                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
                 }`}
               >
                 <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
@@ -597,7 +646,7 @@ export function IndustrialPvBatteryPage() {
               />
             </label>
             <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSampleCsv}>
-              Laadi näidisfail
+              Laadi demo-tarbimine.csv
             </button>
           </div>
           {csvFileName ? (
@@ -729,7 +778,7 @@ export function IndustrialPvBatteryPage() {
         </article>
       ) : null}
 
-      {csvRows.length > 0 ? (
+      {inputMode === "csv" && csvRows.length > 0 ? (
         <article className="card">
           <h2 className="section-title">Hinnarežiim ajapõhiseks majanduseks</h2>
           <p className="mt-2 text-sm text-zinc-400">
@@ -742,7 +791,7 @@ export function IndustrialPvBatteryPage() {
                 {
                   id: "flat" as const,
                   title: "Keskmine hind",
-                  description: "Kasutab majanduslike eelduste ostu- ja müügihinda (nagu v0.7).",
+                  description: "Kasutab majanduslike eelduste ostu- ja müügihinda.",
                 },
                 {
                   id: "csv" as const,
@@ -775,6 +824,18 @@ export function IndustrialPvBatteryPage() {
             })}
           </div>
 
+          {priceMode === "flat" ? (
+            <p className="mt-4 text-sm text-zinc-400">
+              Keskmise hinna režiimis kasutatakse sisestatud ostu- ja müügihindu.
+            </p>
+          ) : null}
+
+          {priceMode === "csv" && priceCsvRows.length === 0 && !priceCsvError ? (
+            <p className="mt-4 text-sm text-zinc-400">
+              Laadi hinnaseeria CSV või kasuta demo-hinnad.csv, et siduda hinnad tarbimisprofiiliga.
+            </p>
+          ) : null}
+
           {priceMode === "csv" ? (
             <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4">
               <p className="text-sm text-zinc-300">
@@ -801,7 +862,7 @@ export function IndustrialPvBatteryPage() {
                   />
                 </label>
                 <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSamplePriceCsv}>
-                  Laadi näidisfail
+                  Laadi demo-hinnad.csv
                 </button>
               </div>
               {priceCsvFileName ? (
@@ -1277,32 +1338,49 @@ export function IndustrialPvBatteryPage() {
           priceModeLabel={priceModeLabel}
           priceMatch={priceMatch}
         />
+      ) : hasCalculated && hasRequiredInputs ? (
+        <article className="border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-400">
+          {inputMode === "manual" || csvRows.length === 0
+            ? "Ajapõhine simulatsioon ilmub pärast CSV tarbimisprofiili importi ja arvutuse tegemist. Käsitsi režiimis piisab stsenaariumite võrdlusest ja peamistest tulemustest."
+            : "Ajapõhine simulatsioon ilmub pärast arvutust, kui tarbimise CSV on imporditud."}
+        </article>
       ) : null}
 
-      {csvSummary && csvInsight ? (
+      <article className="border border-zinc-800 bg-zinc-950/60 px-4 py-4">
+        <h2 className="text-sm font-medium text-zinc-100">Mudeli eeldused ja piirangud</h2>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-400">
+          <li>PV tootmisprofiil on lihtsustatud (päevakõver + kuutegur).</li>
+          <li>Aku töötab reeglipõhise loogika järgi, mitte börsihinna optimeerijana.</li>
+          <li>Lühike CSV skaleeritakse aastaseks hinnanguks.</li>
+          <li>Börsihind / hinnaseeria mõjutab rahalist arvestust, mitte aku dispetšerit.</li>
+          <li>Tulemused on esmaseks hinnanguks, mitte lõplikuks investeerimisotsuseks.</li>
+        </ul>
+      </article>
+
+      {csvSummary && csvInsight && hasCalculated ? (
         <article
           id="industrial-report"
-          className="border border-zinc-700/80 bg-[var(--panel-bg)] p-5 sm:p-6"
+          className="max-w-full overflow-hidden border border-zinc-700/80 bg-[var(--panel-bg)] p-5 sm:p-6"
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 pb-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.8</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v1.0</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
                 Tööstus: PV + aku raportivaade
               </h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Sobib Projekt 2 aruande screenshotiks. PDF eksporti selles versioonis ei ole.
+                Screenshotiks sobiv kokkuvõte. PDF eksporti selles versioonis ei ole.
               </p>
             </div>
-            <p className="font-mono text-xs text-zinc-500">
+            <p className="max-w-full break-words font-mono text-xs text-zinc-500">
               {csvFileName || "CSV import"} · {csvSummary.periodStartLabel} → {csvSummary.periodEndLabel}
             </p>
           </div>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <section>
-              <h3 className="text-sm font-medium text-zinc-100">1. Sisendandmete kokkuvõte</h3>
-              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+            <section className="min-w-0">
+              <h3 className="text-sm font-medium text-zinc-100">1. Sisendandmed</h3>
+              <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
                 <li>Profiil: {form.companyName.trim() || "Nimetu profiil"}</li>
                 <li>Aastane tarbimine: {form.annualConsumptionMwh || "—"} MWh</li>
                 <li>Päevane osakaal: {form.daytimeSharePercent || "—"}%</li>
@@ -1312,25 +1390,15 @@ export function IndustrialPvBatteryPage() {
                   Aku: {form.batteryCapacityKwh || "—"} kWh / {form.batteryPowerKw || "—"} kW (
                   {form.batteryPurpose === "peak_shaving" ? "peak shaving" : "omatarve"})
                 </li>
+                <li>Ostuhind: {form.averageElectricityPriceEurPerMwh || "—"} €/MWh</li>
+                <li>Müügihind: {form.exportPriceEurPerMwh || "—"} €/MWh</li>
+                <li>PV / aku CAPEX: {form.pvInvestmentEurPerKw || "—"} €/kW · {form.batteryInvestmentEurPerKwh || "—"} €/kWh</li>
               </ul>
             </section>
 
-            <section>
-              <h3 className="text-sm font-medium text-zinc-100">2. Majanduslikud eeldused</h3>
-              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
-                <li>PV investeering: {form.pvInvestmentEurPerKw || "—"} €/kW</li>
-                <li>Aku investeering: {form.batteryInvestmentEurPerKwh || "—"} €/kWh</li>
-                <li>Elektri ostuhind: {form.averageElectricityPriceEurPerMwh || "—"} €/MWh</li>
-                <li>Võrku müügihind: {form.exportPriceEurPerMwh || "—"} €/MWh</li>
-                <li>Võimsustasu: {form.demandChargeEurPerKwMonth || "—"} €/kW/kuu</li>
-                <li>Aku kasutegur: {form.batteryEfficiencyPercent || "—"}%</li>
-                <li>Aku kasutatav maht: {form.batteryUsableCapacityPercent || "—"}%</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-medium text-zinc-100">3. CSV tarbimisprofiil</h3>
-              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+            <section className="min-w-0">
+              <h3 className="text-sm font-medium text-zinc-100">2. Tarbimisprofiil</h3>
+              <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
                 <li>
                   {fmt(csvSummary.rowCount, 0)} rida · {describeConsumptionInterval(csvSummary)}
                 </li>
@@ -1345,204 +1413,174 @@ export function IndustrialPvBatteryPage() {
                   Päev / öö: {fmt(csvSummary.daytimeSharePercent, 1)}% /{" "}
                   {fmt(csvSummary.nighttimeSharePercent, 1)}%
                 </li>
+                <li>
+                  Profiil: {csvInsight.shapeLabel} · PV sobivus: {csvInsight.pvFitLabel}
+                </li>
               </ul>
             </section>
 
-            <section>
-              <h3 className="text-sm font-medium text-zinc-100">4. PV ja aku tulemused</h3>
-              {hasCalculated && hasRequiredInputs ? (
-                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
-                  <li>Aastane kogumõju: {fmt(result.annualSavingsEur, 0)} €/a</li>
-                  <li>Omatarbe sääst: {fmt(result.selfConsumptionSavingsEur, 0)} €</li>
-                  <li>Võrku müügi tulu: {fmt(result.exportRevenueEur, 0)} €</li>
-                  <li>Võimsustasu sääst: {fmt(result.demandChargeSavingsEur, 0)} €</li>
-                  <li>Investeering: {fmt(result.investmentEur, 0)} €</li>
-                  <li>PV toodang: {fmt(result.pvProductionMwh, 1)} MWh</li>
-                  <li>Kohapeal kasutatud PV: {fmt(result.selfConsumedPvMwh, 1)} MWh</li>
-                  <li>Võrku müüdav PV: {fmt(result.exportedPvMwh, 1)} MWh</li>
-                  <li>Omatarbe osakaal: {fmt(result.selfConsumptionSharePercent, 0)}%</li>
-                  <li>
-                    Tipukoormus: {fmt(result.peakLoadBeforeKw, 0)}
+            <section className="min-w-0">
+              <h3 className="text-sm font-medium text-zinc-100">3. Hinnarežiim</h3>
+              <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
+                <li>{priceModeLabel}</li>
+                {priceMatch ? (
+                  <>
+                    <li>
+                      Hinnaseeria: {priceMatch.pricePeriodStartLabel} → {priceMatch.pricePeriodEndLabel}
+                    </li>
+                    <li>
+                      Seotud ridu: {priceMatch.matchedFromSeriesCount} / {csvRows.length}
+                      {priceMatch.unmatchedCount > 0 ? ` · sidumata ${priceMatch.unmatchedCount}` : ""}
+                    </li>
+                  </>
+                ) : (
+                  <li>Kasutatakse vormi keskmisi ostu- ja müügihindu.</li>
+                )}
+              </ul>
+              {priceMatch?.warning ? (
+                <p className="mt-2 text-xs text-zinc-500">{priceMatch.warning}</p>
+              ) : null}
+            </section>
+
+            <section className="min-w-0">
+              <h3 className="text-sm font-medium text-zinc-100">4. PV ja aku tulemus</h3>
+              {hasRequiredInputs ? (
+                <ul className="mt-2 space-y-1.5 break-words font-mono text-sm tabular-nums text-zinc-300">
+                  <li className="font-sans">
+                    Aastane kogumõju: <span className="font-mono">{fmt(result.annualSavingsEur, 0)}</span> €/a
+                  </li>
+                  <li className="font-sans">
+                    PV toodang: <span className="font-mono">{fmt(result.pvProductionMwh, 1)}</span> MWh
+                  </li>
+                  <li className="font-sans">
+                    Kohapeal kasutatud PV:{" "}
+                    <span className="font-mono">{fmt(result.selfConsumedPvMwh, 1)}</span> MWh
+                  </li>
+                  <li className="font-sans">
+                    Võrku müüdav PV: <span className="font-mono">{fmt(result.exportedPvMwh, 1)}</span> MWh
+                  </li>
+                  <li className="font-sans">
+                    Omatarbe osakaal:{" "}
+                    <span className="font-mono">{fmt(result.selfConsumptionSharePercent, 0)}</span>%
+                  </li>
+                  <li className="font-sans">
+                    Tipukoormus:{" "}
+                    <span className="font-mono">{fmt(result.peakLoadBeforeKw, 0)}</span>
                     {form.batteryPurpose === "peak_shaving"
                       ? ` → ${fmt(result.peakLoadAfterKw, 0)} kW`
-                      : " kW (omatarbes tippu ei lõigata)"}
+                      : " kW"}
                   </li>
-                  <li>
+                  <li className="font-sans">
                     Tasuvus:{" "}
-                    {result.paybackYears != null ? `${fmt(result.paybackYears, 1)} a` : "ei arvutatud"}
+                    {result.paybackYears != null ? (
+                      <>
+                        <span className="font-mono">{fmt(result.paybackYears, 1)}</span> a
+                      </>
+                    ) : (
+                      "ei arvutatud"
+                    )}
                   </li>
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-zinc-400">
-                  Täida PV/aku sisendid ja vajuta „Arvuta tulemus“, et raportisse tulemused lisanduksid.
-                </p>
+                <p className="mt-2 text-sm text-zinc-400">Täida kohustuslikud väljad ja arvuta uuesti.</p>
               )}
-            </section>
-
-            <section className="lg:col-span-2">
-              <h3 className="text-sm font-medium text-zinc-100">5. Peamised järeldused</h3>
-              <ul className="mt-2 space-y-2 text-sm text-zinc-300">
-                <li>
-                  <span className="text-zinc-100">{csvInsight.shapeLabel}.</span> {csvInsight.shapeExplanation}
-                </li>
-                <li>
-                  <span className="text-zinc-100">{csvInsight.pvFitLabel}.</span> {csvInsight.pvFitExplanation}
-                </li>
-                <li>
-                  <span className="text-zinc-100">{csvInsight.batteryRoleLabel}.</span>{" "}
-                  {csvInsight.batteryRoleExplanation}
-                </li>
-                {hasCalculated && hasRequiredInputs ? (
-                  <li>
-                    <span className="text-zinc-100">Arvutuse kokkuvõte:</span> {result.summary}
-                  </li>
-                ) : null}
-              </ul>
             </section>
           </div>
 
-          <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">6. Stsenaariumite võrdlus</h3>
-            {hasCalculated && hasRequiredInputs && scenarioComparison ? (
+          <section className="mt-5 min-w-0 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">5. Stsenaariumite võrdlus</h3>
+            {hasRequiredInputs && scenarioComparison ? (
               <>
-                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
+                  <li>Suurim kogumõju: {scenarioComparison.conclusion.bestSavingsLabel}</li>
                   <li>
-                    Suurim aastane kogumõju: {scenarioComparison.conclusion.bestSavingsLabel}
+                    Lühim tasuvus: {scenarioComparison.conclusion.bestPaybackLabel ?? "ei arvutata"}
                   </li>
-                  <li>
-                    Lühim lihtsustatud tasuvus:{" "}
-                    {scenarioComparison.conclusion.bestPaybackLabel ?? "ei arvutata"}
-                  </li>
-                  <li>
-                    Tipukoormust vähendab kõige rohkem: {scenarioComparison.conclusion.bestPeakLabel}
-                  </li>
+                  <li>Tipukoormuse vähendamine: {scenarioComparison.conclusion.bestPeakLabel}</li>
                 </ul>
-                <ul className="mt-3 space-y-1 text-sm text-zinc-400">
-                  {scenarioComparison.scenarios.map((row) => (
-                    <li key={row.id}>
-                      {row.label}: kogumõju {fmt(row.annualSavingsEur, 0)} €/a · investeering{" "}
-                      {fmt(row.investmentEur, 0)} € · tipp pärast {fmt(row.peakLoadAfterKw, 0)} kW · tasuvus{" "}
-                      {row.paybackYears != null ? `${fmt(row.paybackYears, 1)} a` : "ei arvutata"}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+                <p className="mt-2 text-sm leading-relaxed break-words text-zinc-400">
                   {scenarioComparison.conclusion.summary}
                 </p>
               </>
             ) : (
-              <p className="mt-2 text-sm text-zinc-400">
-                Vajuta „Arvuta tulemus“, et stsenaariumite võrdlus raportisse lisanduks.
-              </p>
+              <p className="mt-2 text-sm text-zinc-400">Stsenaariumite võrdlus ilmub pärast arvutust.</p>
             )}
           </section>
 
-          <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">7. Ajapõhine simulatsioon</h3>
-            {hasCalculated && hasRequiredInputs && timeseriesResult ? (
-              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+          <section className="mt-5 min-w-0 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">6. Ajapõhine simulatsioon</h3>
+            {hasRequiredInputs && timeseriesResult ? (
+              <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
                 <li>
-                  Periood: {timeseriesResult.periodStartLabel} → {timeseriesResult.periodEndLabel} (
-                  {fmt(timeseriesResult.coveredHours, 0)} h)
+                  Periood: {timeseriesResult.periodStartLabel} → {timeseriesResult.periodEndLabel}
                 </li>
                 <li>PV toodang: {fmt(timeseriesResult.pvProductionKwh / 1000, 2)} MWh</li>
                 <li>Otsene omatarve: {fmt(timeseriesResult.directSelfConsumptionKwh / 1000, 2)} MWh</li>
                 <li>
-                  Aku kaudu kasutatud: {fmt(timeseriesResult.batteryDischargedToLoadKwh / 1000, 2)} MWh
-                </li>
-                <li>Võrku müüdud: {fmt(timeseriesResult.gridExportKwh / 1000, 2)} MWh</li>
-                <li>Võrgust ostetud: {fmt(timeseriesResult.gridImportKwh / 1000, 2)} MWh</li>
-                <li>Omatarbe osakaal: {fmt(timeseriesResult.selfConsumptionSharePercent, 0)}%</li>
-                <li>Aku tsüklid (ligikaudne): {fmt(timeseriesResult.approxBatteryCycles, 1)}</li>
-                <li>
-                  Aku SOC min/max: {fmt(timeseriesResult.minSocKwh, 0)} / {fmt(timeseriesResult.maxSocKwh, 0)}{" "}
-                  kWh
+                  Aku kaudu: {fmt(timeseriesResult.batteryDischargedToLoadKwh / 1000, 2)} MWh · tsüklid{" "}
+                  {fmt(timeseriesResult.approxBatteryCycles, 1)}
                 </li>
                 <li>
-                  Tipukoormus (võrgu import): {fmt(timeseriesResult.peakLoadBeforeKw, 0)} →{" "}
-                  {fmt(timeseriesResult.peakLoadAfterKw, 0)} kW
+                  Võrk müük / ost: {fmt(timeseriesResult.gridExportKwh / 1000, 2)} /{" "}
+                  {fmt(timeseriesResult.gridImportKwh / 1000, 2)} MWh
                 </li>
               </ul>
             ) : (
               <p className="mt-2 text-sm text-zinc-400">
-                Ajapõhine simulatsioon ilmub pärast CSV importi ja „Arvuta tulemus“ vajutamist.
+                Ajapõhine simulatsioon ilmub pärast CSV tarbimisprofiili importi ja arvutuse tegemist.
               </p>
             )}
           </section>
 
-          <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">8. Ajapõhise simulatsiooni majanduslik mõju</h3>
-            {hasCalculated && hasRequiredInputs && timeseriesResult ? (
-              <>
-                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
-                  <li>Hinnarežiim: {priceModeLabel}</li>
-                  {priceMatch ? (
-                    <>
-                      <li>
-                        Hinnaseeria periood: {priceMatch.pricePeriodStartLabel} →{" "}
-                        {priceMatch.pricePeriodEndLabel} ({fmt(priceMatch.priceRowCount, 0)} rida)
-                      </li>
-                      <li>
-                        Seotud tarbimisridu: {priceMatch.matchedFromSeriesCount} / {csvRows.length}
-                        {priceMatch.unmatchedCount > 0 ? ` · sidumata ${priceMatch.unmatchedCount}` : ""}
-                      </li>
-                    </>
-                  ) : (
-                    <li>Kasutatakse majanduslike eelduste keskmisi ostu- ja müügihindu.</li>
-                  )}
-                  <li>Perioodi kogumõju: {fmt(timeseriesResult.economics.periodImpactEur, 0)} €</li>
+          <section className="mt-5 min-w-0 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">7. Majanduslik mõju</h3>
+            {hasRequiredInputs && timeseriesResult ? (
+              <ul className="mt-2 space-y-1.5 break-words text-sm text-zinc-300">
+                <li>Hinnarežiim: {priceModeLabel}</li>
+                <li>Perioodi kogumõju: {fmt(timeseriesResult.economics.periodImpactEur, 0)} €</li>
+                <li>Aastaks skaleeritud: {fmt(timeseriesResult.economics.annualizedImpactEur, 0)} €/a</li>
+                <li>
+                  Omatarve / müük: {fmt(timeseriesResult.economics.selfConsumptionValueEur, 0)} € /{" "}
+                  {fmt(timeseriesResult.economics.exportRevenueEur, 0)} €
+                </li>
+                {timeseriesResult.batteryPurpose === "peak_shaving" ? (
                   <li>
-                    Aastaks skaleeritud: {fmt(timeseriesResult.economics.annualizedImpactEur, 0)} €/a
+                    Võimsustasu sääst: {fmt(timeseriesResult.economics.demandChargeSavingsEur, 0)} €
                   </li>
-                  <li>
-                    Võrgust ost enne / pärast:{" "}
-                    {fmt(timeseriesResult.economics.gridImportBeforeKwh / 1000, 2)} →{" "}
-                    {fmt(timeseriesResult.economics.gridImportAfterKwh / 1000, 2)} MWh
-                  </li>
-                  <li>
-                    Välditud võrguenergia: {fmt(timeseriesResult.economics.gridImportReductionMwh, 2)} MWh
-                  </li>
-                  <li>
-                    PV omatarbe väärtus: {fmt(timeseriesResult.economics.selfConsumptionValueEur, 0)} €
-                  </li>
-                  <li>Võrku müügi tulu: {fmt(timeseriesResult.economics.exportRevenueEur, 0)} €</li>
-                  {timeseriesResult.batteryPurpose === "peak_shaving" ? (
-                    <li>
-                      Võimsustasu sääst: {fmt(timeseriesResult.economics.demandChargeSavingsEur, 0)} €
-                    </li>
-                  ) : null}
-                  <li>
-                    Aku läbiv energia: {fmt(timeseriesResult.economics.batteryThroughputMwh, 2)} MWh ·
-                    tsüklid {fmt(timeseriesResult.economics.approxBatteryCycles, 1)}
-                  </li>
-                </ul>
-                {priceMatch?.warning ? (
-                  <p className="mt-3 text-xs leading-relaxed text-amber-100/90">{priceMatch.warning}</p>
                 ) : null}
-                {!timeseriesResult.economics.isFullYearEstimate ? (
-                  <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-                    Perioodi tulemused põhinevad üles laaditud andmetel. Aastane mõju on lihtsustatud hinnang ja
-                    sõltub andmestiku pikkusest ning esinduslikkusest.
-                  </p>
-                ) : null}
-                <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-                  Hinnaseeria piirangud: aku dispetšerit börsihinna järgi ei optimeerita; Eleringi režiimis on
-                  müügihind vormi keskmine müügihind; ajatemplite ajavöönd võib põhjustada sidumisvigu.
-                </p>
-              </>
+              </ul>
             ) : (
-              <p className="mt-2 text-sm text-zinc-400">
-                Majanduslik kokkuvõte ilmub koos ajapõhise simulatsiooniga.
-              </p>
+              <p className="mt-2 text-sm text-zinc-400">Majanduslik kokkuvõte ilmub koos ajapõhise simulatsiooniga.</p>
             )}
           </section>
 
-          <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">9. Piirangute märkus</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Ajapõhine PV kõver on
-              lihtsustatud. v0.8 täpsustab rahalist arvestust hinnaseeriaga, kuid ei ole börsihinna
-              optimeerija ega PDF eksport.
+          <section className="mt-5 min-w-0 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">8. Järeldus</h3>
+            <ul className="mt-2 space-y-2 break-words text-sm leading-relaxed text-zinc-300">
+              <li>
+                <span className="text-zinc-100">{csvInsight.shapeLabel}.</span> {csvInsight.shapeExplanation}
+              </li>
+              <li>
+                <span className="text-zinc-100">{csvInsight.pvFitLabel}.</span> {csvInsight.pvFitExplanation}
+              </li>
+              <li>
+                <span className="text-zinc-100">{csvInsight.batteryRoleLabel}.</span>{" "}
+                {csvInsight.batteryRoleExplanation}
+              </li>
+              {hasRequiredInputs ? (
+                <li>
+                  <span className="text-zinc-100">Arvutuse kokkuvõte:</span> {result.summary}
+                </li>
+              ) : null}
+            </ul>
+          </section>
+
+          <section className="mt-5 min-w-0 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">9. Piirangud</h3>
+            <p className="mt-2 text-sm leading-relaxed break-words text-zinc-400">
+              PV tootmisprofiil on lihtsustatud; aku on reeglipõhine; lühike CSV skaleeritakse aastaks;
+              hinnaseeria mõjutab rahalist arvestust, mitte aku optimeerimist. Tulemused on esmane hinnang,
+              mitte investeerimisotsus. PDF eksporti ei ole.
             </p>
           </section>
         </article>

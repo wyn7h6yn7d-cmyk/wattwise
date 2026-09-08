@@ -105,8 +105,8 @@ export function IndustrialScenarioComparisonPanel({
         majanduslike eeldustega.
       </p>
 
-      <div className="mt-4 overflow-x-auto border border-zinc-800">
-        <table className="min-w-full text-left text-sm text-zinc-300">
+      <div className="mt-4 max-w-full overflow-x-auto border border-zinc-800">
+        <table className="min-w-[640px] w-full text-left text-sm text-zinc-300">
           <thead className="bg-zinc-950 text-xs uppercase tracking-wide text-zinc-500">
             <tr>
               <th className="px-3 py-2 font-medium">Stsenaarium</th>

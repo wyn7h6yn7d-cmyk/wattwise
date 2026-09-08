@@ -5,7 +5,7 @@ import { IndustrialPvBatteryPage } from "@/components/industrial-pv-battery-page
 export const metadata: Metadata = {
   title: "Tööstus: PV + aku",
   description:
-    "Hinda tööstusettevõtte PV ja akusalvestuse stsenaariume: omatarve, tipukoormus, aastane sääst ja lihtsustatud tasuvus. CSV import ning raportivaade.",
+    "Tööstusettevõtte PV + aku: CSV tarbimisprofiil, hinnaseeria, stsenaariumite võrdlus, ajapõhine simulatsioon ja raportivaade.",
   alternates: {
     canonical: "/kalkulaatorid/toostus",
   },

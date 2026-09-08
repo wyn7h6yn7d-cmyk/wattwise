@@ -103,7 +103,7 @@ describe("price series CSV and matching v0.8", () => {
     expect(matched.unmatchedCount).toBe(1);
     expect(matched.fallbackCount).toBe(1);
     expect(matched.points[1]!.buyPriceEurPerMwh).toBe(110);
-    expect(matched.warning).toMatch(/jäi hinnaseeriast sidumata/i);
+    expect(matched.warning).toMatch(/ei kata kogu tarbimisprofiili/i);
   });
 
   it("keeps flat average price mode working", () => {

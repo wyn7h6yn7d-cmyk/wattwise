@@ -115,10 +115,22 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
   const timestampIdx = headers.findIndex((header) => TIMESTAMP_HEADERS.has(header));
   const consumptionIdx = headers.findIndex((header) => CONSUMPTION_HEADERS.has(header));
 
-  if (timestampIdx < 0 || consumptionIdx < 0) {
+  if (timestampIdx < 0 && consumptionIdx < 0) {
     return {
       ok: false,
-      error: "CSV failist ei leitud aja või tarbimise veergu.",
+      error: "CSV failist ei leitud aja ega tarbimise veergu. Kasuta veerge timestamp ja consumption_kwh.",
+    };
+  }
+  if (timestampIdx < 0) {
+    return {
+      ok: false,
+      error: "CSV failist ei leitud aja veergu. Lisa veerg timestamp (või aeg / date).",
+    };
+  }
+  if (consumptionIdx < 0) {
+    return {
+      ok: false,
+      error: "CSV failist ei leitud tarbimise veergu. Lisa veerg consumption_kwh (või tarbimine_kwh).",
     };
   }
 

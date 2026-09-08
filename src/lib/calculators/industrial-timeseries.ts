@@ -502,9 +502,9 @@ export function simulateIndustrialTimeseries(raw: IndustrialTimeseriesInput): In
         ? `Peak shaving sihttase ≈ ${peakShavingTargetKw.toFixed(0)} kW (max keskmine koormus ja ${INDUSTRIAL_ASSUMPTIONS.minPeakRemainingShare * 100}% tipust).`
         : "Omatarbe režiimis aku laeb PV ülejäägist ja tühjeneb puudujäägi katteks.",
       priceMode === "flat_average"
-        ? `v0.7 majandusvaade kasutab keskmisi hindu (ost ${flatBuy} €/MWh, müük ${flatExport} €/MWh). Börsihinna optimeerimine tuleb hiljem.`
+        ? `Majandusvaade kasutab keskmisi hindu (ost ${flatBuy} €/MWh, müük ${flatExport} €/MWh). Börsihinna optimeerimist ei ole.`
         : "Majandusvaade kasutab sammude kaupa antud hinnaseeriat (börsihinna valmisolek).",
-      "See on v0.7 lihtsustatud simulatsioon, mitte täisoptimeerija ega Elering/Nord Pool ühendus.",
+      "See on lihtsustatud simulatsioon, mitte täisoptimeerija ega Elering/Nord Pool ühendus.",
     ],
   };
 }

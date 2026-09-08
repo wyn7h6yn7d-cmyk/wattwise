@@ -177,8 +177,8 @@ export function IndustrialTimeseriesPanel({
         aku töötab endiselt ahnusloogika järgi (börsihinna optimeerimist ei ole).
       </p>
       <p className="mt-2 border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-relaxed text-zinc-400">
-        Hinnarežiim: <span className="text-zinc-200">{priceModeLabel}</span>. v0.8 sidub hinnad rahalise
-        arvestusega; aku dispetšerit börsihinna järgi ei optimeerita.
+        Hinnarežiim: <span className="text-zinc-200">{priceModeLabel}</span>. Hinnaseeria sidub hinnad
+        rahalise arvestusega; aku dispetšerit börsihinna järgi ei optimeerita.
       </p>
 
       <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
