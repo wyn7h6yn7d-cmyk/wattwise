@@ -28,6 +28,8 @@ import {
 import { parseLocaleNumber, toNumber } from "@/lib/units";
 import { UsedAssumptionsBlock } from "@/components/used-assumptions-block";
 import { ConsumptionProfileChart } from "@/components/industrial/consumption-profile-chart";
+import { IndustrialScenarioComparisonPanel } from "@/components/industrial/industrial-scenario-comparison";
+import { calculateIndustrialScenarios } from "@/lib/calculators/industrial-scenarios";
 
 type InputMode = "manual" | "csv";
 
@@ -206,6 +208,11 @@ export function IndustrialPvBatteryPage() {
 
   const result: IndustrialResult = useMemo(() => calculateIndustrial(formToInput(form)), [form]);
 
+  const scenarioComparison = useMemo(() => {
+    if (!hasRequiredInputs) return null;
+    return calculateIndustrialScenarios(formToInput(form));
+  }, [form, hasRequiredInputs]);
+
   const csvChartSeries = useMemo(() => {
     if (!csvSummary || csvRows.length === 0) return null;
     return buildConsumptionChartSeries(csvRows, csvSummary);
@@ -314,11 +321,11 @@ export function IndustrialPvBatteryPage() {
   return (
     <div className="grid gap-6">
       <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
-        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.3</p>
+        <p className="font-medium text-zinc-100">Projekt 2 prototüüp v0.4</p>
         <p className="mt-1">
           Tulemused on esmased lihtsustatud hinnangud tarbimisprofiili ja süsteemi suuruse põhjal, mitte
-          lõplik investeerimisotsus ega 15-minutiline simulatsioon. CSV import täidab tarbimise sisendid
-          mõõdetud profiilist, näitab graafikut ja koostab lihtsa veebiraporti.
+          lõplik investeerimisotsus ega 15-minutiline simulatsioon. CSV import, graafik, raportivaade ja
+          stsenaariumite võrdlus aitavad lahendusi kõrvuti hinnata.
         </p>
       </div>
 
@@ -834,6 +841,10 @@ export function IndustrialPvBatteryPage() {
         </article>
       </div>
 
+      {hasCalculated && hasRequiredInputs && scenarioComparison ? (
+        <IndustrialScenarioComparisonPanel comparison={scenarioComparison} />
+      ) : null}
+
       {csvSummary && csvInsight ? (
         <article
           id="industrial-report"
@@ -841,7 +852,7 @@ export function IndustrialPvBatteryPage() {
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 pb-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.3</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Veebiraport · v0.4</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
                 Tööstus: PV + aku raportivaade
               </h2>
@@ -942,12 +953,36 @@ export function IndustrialPvBatteryPage() {
           </div>
 
           <section className="mt-5 border-t border-zinc-800 pt-4">
-            <h3 className="text-sm font-medium text-zinc-100">5. Piirangute märkus</h3>
+            <h3 className="text-sm font-medium text-zinc-100">5. Stsenaariumite võrdlus</h3>
+            {hasCalculated && hasRequiredInputs && scenarioComparison ? (
+              <>
+                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                  {scenarioComparison.scenarios.map((row) => (
+                    <li key={row.id}>
+                      {row.label}: sääst {fmt(row.annualSavingsEur, 0)} €/a · tipp pärast{" "}
+                      {fmt(row.peakLoadAfterKw, 0)} kW · tasuvus{" "}
+                      {row.paybackYears != null ? `${fmt(row.paybackYears, 1)} a` : "ei arvutata"}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+                  {scenarioComparison.conclusion.summary}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-400">
+                Vajuta „Arvuta tulemus“, et stsenaariumite võrdlus raportisse lisanduks.
+              </p>
+            )}
+          </section>
+
+          <section className="mt-5 border-t border-zinc-800 pt-4">
+            <h3 className="text-sm font-medium text-zinc-100">6. Piirangute märkus</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               See on Projekt 2 prototüübi veebiraport, mitte investeerimisotsus. Arvutus on lihtsustatud (ei ole
               15-minutiline PV+aku optimeerija). Lühikese CSV perioodi korral skaleeritakse aastane tarbimine
               lihtsustatult. Päevane aken on fikseeritud 08:00–20:00. Võrku müüdavat energiat rahalises säästus ei
-              väärtustata. PDF eksporti v0.3-s ei ole — salvesta vaade screenshotina.
+              väärtustata. PDF eksporti v0.4-s ei ole — salvesta vaade screenshotina.
             </p>
           </section>
         </article>
