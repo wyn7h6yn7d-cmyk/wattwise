@@ -1,9 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { fetchEleringNpsSeries } from "@/lib/elering";
 import { PriceViewClient } from "@/components/market-price/price-view-client";
 
-export const metadata = {
-  title: "Energiakalkulaator",
+export const metadata: Metadata = {
+  title: "Börsihind",
+  description: "Eesti elektri börsihind, 15 min ja 1h vaated, odavaimad tunnid ning päeva kokkuvõte.",
+  alternates: {
+    canonical: "/borsihind",
+  },
 };
 
 function startOfDayLocal(d: Date) {

@@ -1,4 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: `${SITE_NAME} — börsihind, PV ja tööstusanalüüs`,
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: SITE_URL,
+  },
+};
 
 const tools = [
   {
@@ -42,9 +52,41 @@ const logic = [
   },
 ];
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: "et-EE",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/icon-ek-512.png`,
+        width: 512,
+        height: 512,
+      },
+      email: "kennethalto95@gmail.com",
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-12 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="max-w-3xl">
         <p className="text-sm text-zinc-500">Projekt 2 prototüüp · Energiakalkulaator.ee</p>
         <h1 className="mt-4 text-balance text-[1.85rem] font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">

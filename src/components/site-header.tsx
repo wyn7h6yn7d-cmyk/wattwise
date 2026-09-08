@@ -62,15 +62,24 @@ export function SiteHeader() {
         ]);
 
         if (priceRes.ok) {
-          const priceData = (await priceRes.json()) as { points?: Array<{ ts: number; price_eur_per_kwh: number }> };
-          const points = priceData.points ?? [];
+          const priceData = (await priceRes.json()) as {
+            points?: Array<{ ts: number; price_eur_per_kwh: number }>;
+            intervalMinutes?: 15 | 60;
+          };
+          const points = (priceData.points ?? []).slice().sort((a, b) => a.ts - b.ts);
           if (points.length > 0) {
             const nowTs = Math.floor(Date.now() / 1000);
-            const current = points.reduce((best, p) => {
-              if (!best) return p;
-              return Math.abs(p.ts - nowTs) < Math.abs(best.ts - nowTs) ? p : best;
-            }, points[0]);
-            const sntWithVat = eurPerKwhToSntPerKwh(addVat(current.price_eur_per_kwh));
+            // Use the slot that has already started (same as Börsihind "PRAEGU"),
+            // not the nearest timestamp — near slot end that would jump to the next 15 min.
+            let current: (typeof points)[number] | null = null;
+            for (let i = points.length - 1; i >= 0; i -= 1) {
+              if (points[i].ts <= nowTs) {
+                current = points[i];
+                break;
+              }
+            }
+            const chosen = current ?? points.find((p) => p.ts > nowTs) ?? points[0];
+            const sntWithVat = eurPerKwhToSntPerKwh(addVat(chosen.price_eur_per_kwh));
             if (!cancelled) {
               setLivePriceSnt(sntWithVat);
               setPriceStatus("ready");
