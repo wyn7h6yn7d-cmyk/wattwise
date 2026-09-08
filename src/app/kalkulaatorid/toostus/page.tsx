@@ -3,7 +3,12 @@ import { CalculatorRouteShell } from "@/components/calculator-route-shell";
 import { IndustrialPvBatteryPage } from "@/components/industrial-pv-battery-page";
 
 export const metadata: Metadata = {
-  title: "Tööstus: PV + aku | Energiakalkulaator",
+  title: "Tööstus: PV + aku",
+  description:
+    "Hinda tööstusettevõtte PV ja akusalvestuse mõju omatarbele, tipukoormusele ja energiakulule. CSV tarbimisprofiili import ja raportivaade.",
+  alternates: {
+    canonical: "/kalkulaatorid/toostus",
+  },
 };
 
 export default function ToostusPage() {
