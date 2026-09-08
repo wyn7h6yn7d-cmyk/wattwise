@@ -108,14 +108,32 @@ function formatEt(value: number, digits: number): string {
   }).format(value);
 }
 
+export function describeIndustrialBatteryMode(
+  purpose: IndustrialBatteryPurpose,
+  peakLoadBeforeKw: number,
+  peakLoadAfterKw: number,
+): string {
+  if (purpose === "peak_shaving") {
+    return (
+      `Kuna valitud on peak shaving režiim, kasutatakse akut eelkõige tipukoormuse vähendamiseks. ` +
+      `Antud näites väheneb tipukoormus ${formatEt(peakLoadBeforeKw, 0)} kW-lt ${formatEt(peakLoadAfterKw, 0)} kW-ni.`
+    );
+  }
+  return (
+    "Kuna valitud on omatarbe suurendamise režiim, kasutatakse akut eelkõige PV ülejäägi kohapealseks kasutamiseks. " +
+    "Selles režiimis tipukoormust ei vähendata."
+  );
+}
+
 export function describeIndustrialResult(input: IndustrialInput, result: Omit<IndustrialResult, "summary">): string {
   const name = input.companyName;
-  const purpose =
-    input.batteryPurpose === "peak_shaving" ? "tipukoormuse lõikamisele" : "omatarbe suurendamisele";
   const selfShare = formatEt(result.selfConsumptionSharePercent, 0);
   const savings = formatEt(result.annualSavingsEur, 0);
-  const peakBefore = formatEt(result.peakLoadBeforeKw, 0);
-  const peakAfter = formatEt(result.peakLoadAfterKw, 0);
+  const modeSentence = describeIndustrialBatteryMode(
+    input.batteryPurpose,
+    result.peakLoadBeforeKw,
+    result.peakLoadAfterKw,
+  );
 
   const paybackPart =
     result.paybackYears == null
@@ -124,8 +142,7 @@ export function describeIndustrialResult(input: IndustrialInput, result: Omit<In
 
   return (
     `${name}: PV toodangust kasutatakse kohapeal umbes ${selfShare}%. ` +
-    `Aku on suunatud ${purpose}. ` +
-    `Tipukoormus muutub ${peakBefore} kW-lt ${peakAfter} kW-ni. ` +
+    `${modeSentence} ` +
     `Aastane ligikaudne sääst on ${savings} €. ${paybackPart} ` +
     `Tegu on v0.1 lihtsustatud hinnanguga, mitte lõpliku investeerimisotsusega.`
   );

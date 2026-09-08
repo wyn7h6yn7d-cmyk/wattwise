@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   INDUSTRIAL_SAMPLE_PROFILES,
   calculateIndustrial,
+  describeIndustrialBatteryMode,
   type IndustrialBatteryPurpose,
   type IndustrialInput,
   type IndustrialResult,
@@ -400,8 +401,7 @@ export function IndustrialPvBatteryPage() {
         <article className="card">
           <h2 className="section-title">Tulemused</h2>
           <p className="mb-4 text-sm text-zinc-300">
-            Vaata esmalt, kui palju PV-d jääb kohapeale, kas aku liigutab ülejääki, ja milline on ligikaudne
-            aastane sääst.
+            Kohapeal kasutatud PV on kogusumma. Võrku müüdav PV on jääk pärast otsest omatarvet ja aku mõju.
           </p>
           {!hasCalculated ? (
             <div className="mb-4 border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
@@ -431,18 +431,20 @@ export function IndustrialPvBatteryPage() {
                   </div>
                 </div>
                 <div className="metric-card metric-card-accent-teal">
-                  <p className="metric-label">Kohapeal kasutatud PV</p>
+                  <p className="metric-label">Kohapeal kasutatud PV kokku</p>
                   <div className="metric-main">
                     <strong className="metric-value">{fmt(result.selfConsumedPvMwh, 1)}</strong>
                     <span className="metric-unit">MWh</span>
                   </div>
+                  <p className="metric-help">Otsene omatarve ja aku abil lisandunud omatarve kokku.</p>
                 </div>
                 <div className="metric-card metric-card-accent-teal">
-                  <p className="metric-label">Võrku müüdav PV</p>
+                  <p className="metric-label">Võrku müüdav PV pärast akut</p>
                   <div className="metric-main">
                     <strong className="metric-value">{fmt(result.exportedPvMwh, 1)}</strong>
                     <span className="metric-unit">MWh</span>
                   </div>
+                  <p className="metric-help">Jääk pärast otsest omatarvet ja aku mõju.</p>
                 </div>
                 <div className="metric-card metric-card-accent-emerald">
                   <p className="metric-label">Omatarbe osakaal</p>
@@ -452,21 +454,33 @@ export function IndustrialPvBatteryPage() {
                   </div>
                 </div>
                 <div className="metric-card metric-card-accent-teal">
-                  <p className="metric-label">Aku mõju omatarbele</p>
+                  <p className="metric-label">Aku lisanduv mõju omatarbele</p>
                   <div className="metric-main">
                     <strong className="metric-value">{fmt(result.batterySelfConsumptionImpactMwh, 1)}</strong>
                     <span className="metric-unit">MWh</span>
                   </div>
+                  <p className="metric-help">Ainult see osa, mille aku lisab otsesele omatarbele.</p>
                 </div>
-                <div className="metric-card metric-card-accent-emerald">
-                  <p className="metric-label">Tipukoormus enne / pärast</p>
-                  <div className="metric-main">
-                    <strong className="metric-value">
-                      {fmt(result.peakLoadBeforeKw, 0)} → {fmt(result.peakLoadAfterKw, 0)}
-                    </strong>
-                    <span className="metric-unit">kW</span>
+                {form.batteryPurpose === "peak_shaving" ? (
+                  <div className="metric-card metric-card-accent-emerald">
+                    <p className="metric-label">Tipukoormus enne / pärast</p>
+                    <div className="metric-main">
+                      <strong className="metric-value">
+                        {fmt(result.peakLoadBeforeKw, 0)} → {fmt(result.peakLoadAfterKw, 0)}
+                      </strong>
+                      <span className="metric-unit">kW</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="metric-card metric-card-accent-emerald">
+                    <p className="metric-label">Tipukoormus</p>
+                    <div className="metric-main">
+                      <strong className="metric-value">{fmt(result.peakLoadBeforeKw, 0)}</strong>
+                      <span className="metric-unit">kW</span>
+                    </div>
+                    <p className="metric-help">Omatarbe režiimis tipukoormust ei vähendata.</p>
+                  </div>
+                )}
                 <div className="metric-card metric-card-primary metric-card-accent-emerald sm:col-span-2">
                   <p className="metric-label">Lihtsustatud tasuvus</p>
                   <div className="metric-main">
@@ -482,24 +496,32 @@ export function IndustrialPvBatteryPage() {
               <div className="mt-5 grid gap-4">
                 <div className="border border-zinc-800 bg-zinc-950 p-4">
                   <p className="text-sm font-medium text-zinc-100">PV energia jaotus</p>
-                  <p className="mt-1 text-xs text-zinc-400">Kohapeal kasutatud vs võrku jääv toodang.</p>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Kohapealne kasutus sisaldab nii otsest omatarvet kui ka aku abil lisandunud omatarvet.
+                  </p>
                   <div className="mt-3">
                     <SplitBar
                       leftValue={result.selfConsumedPvMwh}
                       rightValue={result.exportedPvMwh}
-                      leftLabel="Omatarve"
-                      rightLabel="Võrk"
+                      leftLabel="Omatarve kokku"
+                      rightLabel="Võrk pärast akut"
                     />
                   </div>
                 </div>
                 <div className="border border-zinc-800 bg-zinc-950 p-4">
                   <p className="text-sm font-medium text-zinc-100">Tipukoormus</p>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    Peak shaving režiimis võib aku tippu vähendada; omatarbe režiimis tipp ei muutu.
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                    {describeIndustrialBatteryMode(
+                      form.batteryPurpose,
+                      result.peakLoadBeforeKw,
+                      result.peakLoadAfterKw,
+                    )}
                   </p>
-                  <div className="mt-3">
-                    <PeakCompare beforeKw={result.peakLoadBeforeKw} afterKw={result.peakLoadAfterKw} />
-                  </div>
+                  {form.batteryPurpose === "peak_shaving" ? (
+                    <div className="mt-3">
+                      <PeakCompare beforeKw={result.peakLoadBeforeKw} afterKw={result.peakLoadAfterKw} />
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

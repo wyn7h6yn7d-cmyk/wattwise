@@ -133,6 +133,40 @@ describe("industrial v0.1", () => {
     expect(withInvestment.paybackYears).toBeCloseTo(8, 6);
   });
 
+  it("explains that self-consumption mode does not cut peak load", () => {
+    const result = calculateIndustrial(baseInput({ peakLoadKw: 650, batteryPurpose: "self_consumption" }));
+    expect(result.summary).toContain(
+      "Kuna valitud on omatarbe suurendamise režiim, kasutatakse akut eelkõige PV ülejäägi kohapealseks kasutamiseks. Selles režiimis tipukoormust ei vähendata.",
+    );
+    expect(result.summary).not.toMatch(/kW-lt .+ kW-ni/);
+  });
+
+  it("explains peak-shaving mode with before/after peak loads", () => {
+    const result = calculateIndustrial(
+      baseInput({
+        annualConsumptionMwh: 1800,
+        peakLoadKw: 1200,
+        batteryCapacityKwh: 600,
+        batteryPowerKw: 400,
+        batteryPurpose: "peak_shaving",
+      }),
+    );
+    expect(result.summary).toContain(
+      "Kuna valitud on peak shaving režiim, kasutatakse akut eelkõige tipukoormuse vähendamiseks.",
+    );
+    expect(result.summary).toMatch(/Antud näites väheneb tipukoormus .+ kW-lt .+ kW-ni/);
+  });
+
+  it("does not phrase unchanged peak as X kW to X kW for the flat sample", () => {
+    const profile = INDUSTRIAL_SAMPLE_PROFILES.find((item) => item.id === "flat");
+    expect(profile).toBeDefined();
+    const result = calculateIndustrial(profile!.input);
+    expect(result.peakLoadBeforeKw).toBe(1100);
+    expect(result.peakLoadAfterKw).toBe(1100);
+    expect(result.summary).not.toMatch(/1100 kW-lt/);
+    expect(result.summary).toContain("Selles režiimis tipukoormust ei vähendata.");
+  });
+
   it("computes finite results and a summary for all sample profiles", () => {
     for (const profile of INDUSTRIAL_SAMPLE_PROFILES) {
       const result = calculateIndustrial(profile.input);

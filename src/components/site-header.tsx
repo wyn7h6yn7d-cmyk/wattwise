@@ -14,6 +14,7 @@ export function SiteHeader() {
   const [priceStatus, setPriceStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [sunTimes, setSunTimes] = useState<{ rise: string; set: string } | null>(null);
   const [sunStatus, setSunStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [todayLabel, setTodayLabel] = useState("");
 
   const navItems = useMemo(() => {
     return PRIMARY_NAV.map((item) => {
@@ -26,6 +27,15 @@ export function SiteHeader() {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setTodayLabel(
+      new Date().toLocaleDateString("et-EE", {
+        day: "2-digit",
+        month: "2-digit",
+      }),
+    );
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,14 +118,6 @@ export function SiteHeader() {
     };
   }, []);
 
-  const todayLabel = useMemo(
-    () =>
-      new Date().toLocaleDateString("et-EE", {
-        day: "2-digit",
-        month: "2-digit",
-      }),
-    [],
-  );
   const hasPrice = priceStatus === "ready" && Number.isFinite(livePriceSnt);
   const priceValue = hasPrice ? livePriceSnt : null;
   const hasSun = sunStatus === "ready" && !!sunTimes;
@@ -194,7 +196,7 @@ export function SiteHeader() {
       </div>
 
       <div className="site-chrome-axis mx-auto mt-1 flex w-full max-w-7xl items-center justify-center gap-1.5 px-1 py-2 text-[11px] text-zinc-300">
-        <span className="px-1 text-zinc-500">{todayLabel}</span>
+        <span className="min-w-[2.75rem] px-1 font-mono tabular-nums text-zinc-500">{todayLabel}</span>
         {hasAnyLiveData ? (
           <>
             {hasPrice ? (
