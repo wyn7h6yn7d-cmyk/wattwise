@@ -1,0 +1,133 @@
+import type { ConsumptionCsvRow } from "./parse-consumption-csv";
+
+/**
+ * v0.2 tarbimisprofiili kokkuvõte CSV ridadest.
+ * Päevane aeg: 08:00 kuni 20:00 (20:00 ja hilisem on öine).
+ * Aastane tarbimine: kui periood ei kata ~aastat, skaleeritakse 8760 tunni peale.
+ */
+
+export const DAYTIME_HOUR_START = 8;
+export const DAYTIME_HOUR_END = 20;
+export const HOURS_PER_YEAR = 8760;
+
+export type ConsumptionInterval = "hour" | "15min" | "unknown";
+
+export type ConsumptionProfileSummary = {
+  rowCount: number;
+  periodStartMs: number;
+  periodEndMs: number;
+  periodStartLabel: string;
+  periodEndLabel: string;
+  totalConsumptionMwh: number;
+  estimatedAnnualConsumptionMwh: number;
+  averageLoadKw: number;
+  peakLoadKw: number;
+  daytimeSharePercent: number;
+  nighttimeSharePercent: number;
+  averageDailyConsumptionKwh: number;
+  interval: ConsumptionInterval;
+  intervalMinutes: number | null;
+  coveredHours: number;
+  isFullYearEstimate: boolean;
+};
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatNaiveLabel(row: Pick<ConsumptionCsvRow, "year" | "month" | "day" | "hour" | "minute">): string {
+  return `${row.year}-${pad2(row.month)}-${pad2(row.day)} ${pad2(row.hour)}:${pad2(row.minute)}`;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function classifyInterval(medianMinutes: number | null): {
+  interval: ConsumptionInterval;
+  intervalMinutes: number | null;
+} {
+  if (medianMinutes == null) return { interval: "unknown", intervalMinutes: null };
+  if (medianMinutes >= 12 && medianMinutes <= 18) {
+    return { interval: "15min", intervalMinutes: 15 };
+  }
+  if (medianMinutes >= 50 && medianMinutes <= 70) {
+    return { interval: "hour", intervalMinutes: 60 };
+  }
+  return { interval: "unknown", intervalMinutes: Math.round(medianMinutes) };
+}
+
+function isDaytimeHour(hour: number): boolean {
+  return hour >= DAYTIME_HOUR_START && hour < DAYTIME_HOUR_END;
+}
+
+export function summarizeConsumptionProfile(rows: ConsumptionCsvRow[]): ConsumptionProfileSummary {
+  if (rows.length === 0) {
+    throw new Error("Tarbimisprofiili ei saa arvutada tühjast reast.");
+  }
+
+  const sorted = [...rows].sort((a, b) => a.timestampMs - b.timestampMs);
+  const diffsMin: number[] = [];
+  for (let i = 1; i < sorted.length; i += 1) {
+    const minutes = (sorted[i].timestampMs - sorted[i - 1].timestampMs) / 60000;
+    if (minutes > 0 && minutes <= 24 * 60) diffsMin.push(minutes);
+  }
+
+  const { interval, intervalMinutes } = classifyInterval(median(diffsMin));
+  const intervalHours = (intervalMinutes ?? 60) / 60;
+
+  let totalKwh = 0;
+  let daytimeKwh = 0;
+  let peakLoadKw = 0;
+  const dayKeys = new Set<string>();
+
+  for (const row of sorted) {
+    totalKwh += row.consumptionKwh;
+    if (isDaytimeHour(row.hour)) daytimeKwh += row.consumptionKwh;
+    const loadKw = intervalHours > 0 ? row.consumptionKwh / intervalHours : row.consumptionKwh;
+    if (loadKw > peakLoadKw) peakLoadKw = loadKw;
+    dayKeys.add(`${row.year}-${pad2(row.month)}-${pad2(row.day)}`);
+  }
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const spanHours = Math.max((last.timestampMs - first.timestampMs) / 3600000, 0);
+  const coveredHours = Math.max(spanHours + intervalHours, intervalHours);
+  const isFullYearEstimate = coveredHours >= HOURS_PER_YEAR * 0.9;
+  const estimatedAnnualKwh = totalKwh * (HOURS_PER_YEAR / coveredHours);
+  const daytimeSharePercent = totalKwh > 0 ? (daytimeKwh / totalKwh) * 100 : 0;
+
+  return {
+    rowCount: sorted.length,
+    periodStartMs: first.timestampMs,
+    periodEndMs: last.timestampMs,
+    periodStartLabel: formatNaiveLabel(first),
+    periodEndLabel: formatNaiveLabel(last),
+    totalConsumptionMwh: totalKwh / 1000,
+    estimatedAnnualConsumptionMwh: estimatedAnnualKwh / 1000,
+    averageLoadKw: coveredHours > 0 ? totalKwh / coveredHours : 0,
+    peakLoadKw,
+    daytimeSharePercent,
+    nighttimeSharePercent: 100 - daytimeSharePercent,
+    averageDailyConsumptionKwh: dayKeys.size > 0 ? totalKwh / dayKeys.size : totalKwh,
+    interval,
+    intervalMinutes,
+    coveredHours,
+    isFullYearEstimate,
+  };
+}
+
+export function consumptionProfileToFormFields(summary: ConsumptionProfileSummary): {
+  annualConsumptionMwh: number;
+  daytimeSharePercent: number;
+  peakLoadKw: number;
+} {
+  return {
+    annualConsumptionMwh: summary.estimatedAnnualConsumptionMwh,
+    daytimeSharePercent: summary.daytimeSharePercent,
+    peakLoadKw: summary.peakLoadKw,
+  };
+}
