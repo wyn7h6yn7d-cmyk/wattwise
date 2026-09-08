@@ -525,42 +525,41 @@ export function IndustrialPvBatteryPage() {
   );
 
   return (
-    <div className="grid max-w-full gap-6 overflow-x-hidden">
-      <div className="border border-zinc-700/70 bg-[var(--panel-bg)] px-4 py-3 text-sm text-zinc-300">
+    <div className="grid max-w-full gap-8 overflow-x-hidden">
+      <div className="border border-zinc-700/60 bg-zinc-950/70 px-4 py-3 text-[0.95rem] leading-relaxed text-zinc-300 sm:px-5">
         <p className="font-medium text-zinc-100">Projekt 2 · Tööstusmoodul v1.0</p>
-        <p className="mt-1">
+        <p className="mt-1 text-sm text-zinc-400 sm:text-[0.95rem]">
           Kaitsmiseks valmis: demoandmed, selge töövoog ja raportivaade. Arvutus on lihtsustatud hinnang — mitte
           lõplik investeerimisotsus.
         </p>
       </div>
 
-      <article className="border border-zinc-800 bg-zinc-950/60 px-4 py-4">
-        <h2 className="text-sm font-medium text-zinc-100">Kuidas alustada</h2>
-        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-zinc-300">
-          <li>Impordi tarbimisprofiil või sisesta andmed käsitsi</li>
-          <li>Määra PV, aku ja majanduslikud eeldused</li>
-          <li>Vali hinnarežiim (keskmine, hinnaseeria CSV või Elering EE)</li>
-          <li>Arvuta tulemus</li>
-          <li>Vaata stsenaariume, ajapõhist simulatsiooni ja raportit</li>
-        </ol>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSampleCsv}>
-            Laadi demo-tarbimine.csv
-          </button>
-          <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSamplePriceCsv}>
-            Laadi demo-hinnad.csv
-          </button>
+      <article className="border border-zinc-800/90 bg-zinc-950/50 px-4 py-3 sm:px-5 sm:py-3.5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-medium text-zinc-200">Töövoog</h2>
+            <p className="mt-1.5 text-[0.8rem] leading-relaxed text-zinc-500 sm:text-xs">
+              CSV või käsitsi → eeldused → hinnarežiim → arvuta → stsenaariumid, simulatsioon ja raport.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSampleCsv}>
+              Laadi demo-tarbimine.csv
+            </button>
+            <button type="button" className="btn-ghost w-full sm:w-auto" onClick={downloadSamplePriceCsv}>
+              Laadi demo-hinnad.csv
+            </button>
+          </div>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-          Kiire demo: laadi mõlemad failid → CSV import → hinnaseeria CSV → Arvuta.{" "}
-          <span className="text-zinc-400">demo-tarbimine.csv</span> täidab tühjad PV/aku väljad
-          soovituslike väärtustega.
+        <p className="mt-2.5 text-[0.75rem] leading-relaxed text-zinc-600">
+          Kiire demo: mõlemad failid → CSV import → hinnaseeria CSV → Arvuta.{" "}
+          <span className="text-zinc-500">demo-tarbimine.csv</span> täidab tühjad PV/aku väljad.
         </p>
       </article>
 
       <div>
         <p className="text-sm text-zinc-400">Vali näidisprofiil või sisesta enda andmed.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
           {INDUSTRIAL_SAMPLE_PROFILES.map((profile) => {
             const active = activeProfile === profile.id;
             return (
@@ -568,14 +567,16 @@ export function IndustrialPvBatteryPage() {
                 key={profile.id}
                 type="button"
                 onClick={() => applyProfile(profile)}
-                className={`border px-3 py-3 text-left transition-colors ${
+                className={`border px-3 py-2 text-left transition-colors ${
                   active
-                    ? "border-zinc-500 bg-zinc-800/80 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
+                    ? "border-zinc-400/70 bg-zinc-800/70 text-zinc-50"
+                    : "border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:border-zinc-600"
                 }`}
               >
-                <span className="block text-sm font-semibold text-zinc-100">{profile.title}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{profile.description}</span>
+                <span className="block text-sm font-medium text-zinc-100">{profile.title}</span>
+                <span className="mt-0.5 line-clamp-2 block text-[0.7rem] leading-snug text-zinc-500">
+                  {profile.description}
+                </span>
               </button>
             );
           })}
@@ -584,7 +585,7 @@ export function IndustrialPvBatteryPage() {
 
       <div>
         <p className="text-sm text-zinc-400">Vali, kuidas tarbimisandmed sisestad.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
           {(
             [
               { id: "manual" as const, title: "Käsitsi sisestamine", description: "Sisesta aastane tarbimine, päevane osakaal ja tipukoormus ise." },
@@ -603,14 +604,14 @@ export function IndustrialPvBatteryPage() {
                     setHasCalculated(false);
                   }
                 }}
-                className={`border px-3 py-3 text-left transition-colors ${
+                className={`border px-3 py-2.5 text-left transition-colors ${
                   active
-                    ? "border-zinc-500 bg-zinc-800/80 text-zinc-50"
-                    : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-zinc-600"
+                    ? "border-zinc-400/70 bg-zinc-800/70 text-zinc-50"
+                    : "border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:border-zinc-600"
                 }`}
               >
-                <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{mode.description}</span>
+                <span className="block text-sm font-medium text-zinc-100">{mode.title}</span>
+                <span className="mt-0.5 block text-[0.75rem] leading-snug text-zinc-500">{mode.description}</span>
               </button>
             );
           })}
@@ -811,14 +812,14 @@ export function IndustrialPvBatteryPage() {
                   key={mode.id}
                   type="button"
                   onClick={() => setPriceMode(mode.id)}
-                  className={`border px-3 py-3 text-left transition-colors ${
+                  className={`border px-3 py-2.5 text-left transition-colors ${
                     active
-                      ? "border-sky-400/50 bg-sky-500/15 text-zinc-50"
-                      : "border-[var(--panel-border)] bg-[var(--panel-bg)] text-zinc-300 hover:border-sky-400/35"
+                      ? "border-zinc-400/70 bg-zinc-800/70 text-zinc-50"
+                      : "border-zinc-800 bg-zinc-950/50 text-zinc-300 hover:border-zinc-600"
                   }`}
                 >
-                  <span className="block text-sm font-semibold text-zinc-100">{mode.title}</span>
-                  <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{mode.description}</span>
+                  <span className="block text-sm font-medium text-zinc-100">{mode.title}</span>
+                  <span className="mt-0.5 block text-[0.75rem] leading-snug text-zinc-500">{mode.description}</span>
                 </button>
               );
             })}
@@ -945,10 +946,10 @@ export function IndustrialPvBatteryPage() {
         </article>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
         <article className="card">
           <h2 className="section-title">Sisendid</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
             <label className="field-label sm:col-span-2">
               <span className="field-label-text">Ettevõtte või näidisprofiili nimi</span>
               <input
@@ -1068,10 +1069,10 @@ export function IndustrialPvBatteryPage() {
           </div>
           <div className="mt-6 border-t border-zinc-800 pt-4">
             <h3 className="text-sm font-medium text-zinc-100">Majanduslikud eeldused</h3>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-sm leading-relaxed text-zinc-400">
               Stsenaariumite investeeringud ja aastane kogumõju arvutatakse nende ühikhindade põhjal.
             </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <label className="field-label">
                 <span className="field-label-text">PV investeering (€/kW)</span>
                 <input
@@ -1170,8 +1171,17 @@ export function IndustrialPvBatteryPage() {
             Kohapeal kasutatud PV on kogusumma. Võrku müüdav PV on jääk pärast otsest omatarvet ja aku mõju.
           </p>
           {!hasCalculated ? (
-            <div className="mb-4 border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-              <p className="font-medium text-zinc-100">Sisesta andmed või vali näidisprofiil ja vajuta „Arvuta tulemus“.</p>
+            <div className="mb-2 border border-zinc-800/90 bg-zinc-950/80 px-4 py-5 sm:px-5 sm:py-6">
+              <p className="text-base font-medium text-zinc-100">Tulemused ilmuvad pärast arvutust</p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Täida sisendid või vali näidisprofiil ja vajuta „Arvuta tulemus“. Pärast arvutust näed:
+              </p>
+              <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-400">
+                <li>PV tulemus ja aastane kogumõju</li>
+                <li>Stsenaariumite võrdlus</li>
+                <li>Ajapõhine simulatsioon (CSV korral)</li>
+                <li>Raportivaade screenshotiks</li>
+              </ul>
             </div>
           ) : null}
 

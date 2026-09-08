@@ -8,30 +8,30 @@ export function SiteFooter() {
 
   return (
     <footer className="site-footer-chrome relative z-10 mt-8">
-      <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:px-8 lg:py-9">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:gap-6 lg:px-8 lg:py-7">
         <div className="lg:col-span-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-zinc-700/80">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-zinc-800">
               <Image
                 src="/logo.png"
                 alt="Energiakalkulaator"
-                width={44}
-                height={44}
-                sizes="44px"
+                width={40}
+                height={40}
+                sizes="40px"
                 className="h-[92%] w-[92%] object-contain"
               />
             </div>
             <div>
-              <div className="text-sm font-semibold text-zinc-50">Energiakalkulaator</div>
+              <div className="text-sm font-semibold text-zinc-100">Energiakalkulaator</div>
             </div>
           </div>
-          <div className="mt-4 text-sm text-zinc-300">
-            <p className="font-medium text-zinc-100">Ülikooli projekt</p>
-            <p className="mt-1">Kenneth Alto</p>
-            <a className="mt-0.5 inline-flex text-zinc-300 hover:text-zinc-100" href="mailto:kennethalto95@gmail.com">
+          <div className="mt-3 text-sm text-zinc-400">
+            <p className="font-medium text-zinc-300">Ülikooli projekt</p>
+            <p className="mt-1 text-zinc-400">Kenneth Alto</p>
+            <a className="mt-0.5 inline-flex text-zinc-400 hover:text-zinc-200" href="mailto:kennethalto95@gmail.com">
               kennethalto95@gmail.com
             </a>
-            <div className="mt-3 space-y-1 text-xs leading-relaxed text-zinc-400">
+            <div className="mt-2.5 space-y-1 text-xs leading-relaxed text-zinc-500">
               <p>Energiakalkulaator.ee on üliõpilastöö raames arendatud informatiivne analüüsiplatvorm.</p>
               <p>Tulemused on hinnangud, mitte finants- ega tehniline nõuanne.</p>
             </div>
