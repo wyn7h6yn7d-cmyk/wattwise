@@ -107,7 +107,10 @@ export function parseConsumptionCsv(fileContent: string): ParseConsumptionCsvRes
     .filter((item) => item.line.length > 0);
 
   if (nonEmpty.length < 2) {
-    return { ok: false, error: "CSV fail on tühi või liiga lühike." };
+    return {
+      ok: false,
+      error: "Tarbimise CSV on tühi või liiga lühike. Lisa päiserida ja vähemalt üks andmerida.",
+    };
   }
 
   const delimiter = pickDelimiter(nonEmpty[0].line);

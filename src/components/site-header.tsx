@@ -132,7 +132,7 @@ export function SiteHeader() {
   const hasSun = sunStatus === "ready" && !!sunTimes;
   const isLoading = priceStatus === "loading" || sunStatus === "loading";
   const hasAnyLiveData = hasPrice || hasSun;
-  const fallbackLabel = isLoading ? "Live-andmed laevad..." : "Live-andmed hetkel puuduvad";
+  const fallbackLabel = isLoading ? "Live-andmed laadivad..." : "Live-andmed hetkel puuduvad";
 
   return (
     <header className="site-chrome sticky top-0 z-50 overflow-x-clip px-3 py-2 sm:px-5 sm:py-3 lg:px-8">
@@ -158,8 +158,8 @@ export function SiteHeader() {
             <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
               Energiakalkulaator
             </div>
-            <span className="hidden shrink-0 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-zinc-500 min-[430px]:inline">
-              Projekt 2
+            <span className="hidden shrink-0 text-[0.62rem] font-medium tracking-wide text-zinc-500 min-[430px]:inline">
+              Esialgne hinnang
             </span>
           </div>
         </Link>
@@ -168,19 +168,24 @@ export function SiteHeader() {
           className="max-lg:hidden min-w-0 flex-1 items-center justify-center gap-0.5 lg:flex xl:gap-1"
           aria-label="Peamenüü"
         >
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
-                item.active
-                  ? "text-zinc-50 shadow-[inset_0_-1px_0_#34d399]"
-                  : "text-zinc-400 hover:text-zinc-100"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isIndustrial = item.href === "/kalkulaatorid/toostus";
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-2.5 py-1.5 text-sm transition-colors xl:px-3 ${
+                  item.active
+                    ? "text-zinc-50 shadow-[inset_0_-1px_0_#34d399]"
+                    : isIndustrial
+                      ? "font-medium text-zinc-200 hover:text-zinc-50"
+                      : "text-zinc-400 hover:text-zinc-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex shrink-0 items-center justify-end gap-2">
@@ -278,8 +283,8 @@ function MobileMenu({
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                  Projekt 2
+                <span className="inline-flex shrink-0 items-center border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[0.58rem] font-medium tracking-wide text-zinc-400">
+                  Esialgne
                 </span>
               </div>
             </div>

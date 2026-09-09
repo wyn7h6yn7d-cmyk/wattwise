@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 
+/** Avalikud, SEO-s mõistlikud lehed. Peidetud/legacy route’e siia ei lisa. */
 const routes = [
   "/",
   "/borsihind",
@@ -11,9 +12,6 @@ const routes = [
   "/projekt",
   "/kontakt",
   "/kkk",
-  "/hinnad",
-  "/blogi",
-  "/energiaprognoos",
   "/kasutustingimused",
   "/privaatsuspoliitika",
   "/kupsised",

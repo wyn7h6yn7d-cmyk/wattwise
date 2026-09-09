@@ -204,7 +204,7 @@ describe("industrial v0.1", () => {
       expect(Number.isFinite(result.annualSavingsEur)).toBe(true);
       expect(result.selfConsumedPvMwh + result.exportedPvMwh).toBeCloseTo(result.pvProductionMwh, 6);
       expect(result.summary.length).toBeGreaterThan(40);
-      expect(result.summary).toContain("v0.5");
+      expect(result.summary).toContain("lihtsustatud hinnanguga");
     }
   });
 

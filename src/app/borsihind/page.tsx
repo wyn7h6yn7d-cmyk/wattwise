@@ -38,7 +38,7 @@ export default async function BorsihindPage() {
 
   return (
     <div className="relative">
-      <main className="relative mx-auto w-full max-w-7xl px-3 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+      <main className="relative mx-auto w-full max-w-7xl overflow-x-hidden px-3 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
         <header className="site-board p-4 sm:p-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>

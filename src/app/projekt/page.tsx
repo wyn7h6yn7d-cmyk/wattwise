@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/app/(legal)/legal-layout";
 
 export const metadata: Metadata = {
-  title: "Projekt | Energiakalkulaator",
+  title: "Projekt",
 };
 
 export default function ProjectPage() {

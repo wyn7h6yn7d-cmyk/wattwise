@@ -44,6 +44,17 @@ function demoExportPrice(hour: number): number {
 export const DEMO_CONSUMPTION_FILENAME = "demo-tarbimine.csv";
 export const DEMO_PRICES_FILENAME = "demo-hinnad.csv";
 
+/** Recommended PV / battery / price fields for the one-click demo path. */
+export const DEMO_RECOMMENDED_INPUTS = {
+  companyName: "Demo tööstusprofiil",
+  pvPowerKw: "800",
+  pvSpecificYieldKwhPerKw: "950",
+  batteryCapacityKwh: "500",
+  batteryPowerKw: "250",
+  batteryPurpose: "self_consumption" as const,
+  averageElectricityPriceEurPerMwh: "110",
+};
+
 export function buildDemoConsumptionCsv(): string {
   const lines = ["timestamp,consumption_kwh"];
   for (let day = 1; day <= 7; day += 1) {

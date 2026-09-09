@@ -130,7 +130,10 @@ export function parsePriceCsv(fileContent: string): ParsePriceCsvResult {
     .filter((item) => item.line.length > 0);
 
   if (nonEmpty.length < 2) {
-    return { ok: false, error: "Hinnaseeria CSV on tühi või liiga lühike." };
+    return {
+      ok: false,
+      error: "Hinnaseeria CSV on tühi või liiga lühike. Lisa päiserida ja vähemalt üks hinna rida.",
+    };
   }
 
   const delimiter = pickDelimiter(nonEmpty[0]!.line);

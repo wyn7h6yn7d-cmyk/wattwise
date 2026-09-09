@@ -96,7 +96,7 @@ describe("consumption CSV v0.2", () => {
     const short = parseConsumptionCsv("timestamp,consumption_kwh\n");
     expect(short.ok).toBe(false);
     if (short.ok) return;
-    expect(short.error).toContain("CSV fail on tühi või liiga lühike.");
+    expect(short.error).toContain("tühi või liiga lühike");
   });
 
   it("returns an error for negative consumption", () => {

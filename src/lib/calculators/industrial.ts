@@ -228,7 +228,7 @@ export function describeIndustrialResult(input: IndustrialInput, result: Omit<In
     `Aastane kogumõju on ${savings} € (omatarbe sääst, võrku müügi tulu` +
     (result.demandChargeSavingsEur > 0 ? " ja võimsustasu sääst" : "") +
     `). ${paybackPart} ` +
-    `Tegu on v0.5 lihtsustatud hinnanguga, mitte lõpliku investeerimisotsusega.`
+    `Tegu on lihtsustatud hinnanguga, mitte lõpliku investeerimisotsusega.`
   );
 }
 

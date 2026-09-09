@@ -26,14 +26,15 @@ export function SiteFooter() {
             </div>
           </div>
           <div className="mt-3 text-sm text-zinc-400">
-            <p className="font-medium text-zinc-300">Ülikooli projekt</p>
-            <p className="mt-1 text-zinc-400">Kenneth Alto</p>
-            <a className="mt-0.5 inline-flex text-zinc-400 hover:text-zinc-200" href="mailto:kennethalto95@gmail.com">
+            <p className="font-medium text-zinc-300">Ülikooliprojekt · Kenneth Alto</p>
+            <a className="mt-1 inline-flex text-zinc-400 hover:text-zinc-200" href="mailto:kennethalto95@gmail.com">
               kennethalto95@gmail.com
             </a>
             <div className="mt-2.5 space-y-1 text-xs leading-relaxed text-zinc-500">
-              <p>Energiakalkulaator.ee on üliõpilastöö raames arendatud informatiivne analüüsiplatvorm.</p>
-              <p>Tulemused on hinnangud, mitte finants- ega tehniline nõuanne.</p>
+              <p>
+                Informatiivne analüüsiplatvorm: börsihind, PV, tipukoormus ja tööstuslik PV + aku hinnang.
+              </p>
+              <p>Tulemused on hinnangulised ja sõltuvad sisenditest — mitte investeerimisotsus.</p>
             </div>
           </div>
         </div>
@@ -56,7 +57,7 @@ export function SiteFooter() {
           <ul className="mt-3 grid gap-2 text-sm">
             <li>
               <Link className="text-zinc-400 hover:text-zinc-100" href="/projekt">
-                Ülikooli töö
+                Projektist
               </Link>
             </li>
             <li>
@@ -104,7 +105,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-zinc-800/80 py-3 text-center text-xs text-zinc-500">
-        © {year} Energiakalkulaator · Ülikooli projekt
+        © {year} Energiakalkulaator · Ülikooliprojekt ·{" "}
+        <a className="hover:text-zinc-300" href="mailto:kennethalto95@gmail.com">
+          Kontakt
+        </a>
       </div>
     </footer>
   );

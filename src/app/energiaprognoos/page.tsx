@@ -8,7 +8,8 @@ import { HistoricalSolarAnalysisPanel } from "@/components/energy-forecast/histo
 import { ForecastFilters } from "@/components/energy-forecast/forecast-filters";
 
 export const metadata = {
-  title: "Energiakalkulaator",
+  title: "Energiaprognoos",
+  robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
 

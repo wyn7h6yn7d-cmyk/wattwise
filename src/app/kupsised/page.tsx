@@ -3,7 +3,7 @@ import { LegalLayout } from "@/app/(legal)/legal-layout";
 import CookieSettingsCta from "@/components/legal/cookie-settings-cta";
 
 export const metadata: Metadata = {
-  title: "Küpsised | Energiakalkulaator",
+  title: "Küpsised",
 };
 
 export default function CookiesPage() {

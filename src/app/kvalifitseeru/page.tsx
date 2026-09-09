@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { QualifyForm } from "@/app/kvalifitseeru/qualify-form";
+
+export const metadata: Metadata = {
+  title: "Kvalifitseerumine",
+  robots: { index: false, follow: false },
+};
 
 export default function QualifyPage() {
   return (

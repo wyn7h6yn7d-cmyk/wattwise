@@ -58,7 +58,7 @@ export function CookieSettingsModal({
 }: Props) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-zinc-950/70 p-3 sm:items-center sm:p-6">
+    <div className="no-print fixed inset-0 z-[100] flex items-end justify-center bg-zinc-950/70 p-3 sm:items-center sm:p-6">
       <div className="w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-200 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -9,6 +9,7 @@ type ChartCardProps = {
   children: ReactNode;
   className?: string;
   chartClassName?: string;
+  tone?: "dark" | "light";
 };
 
 export function ChartCard({
@@ -18,13 +19,19 @@ export function ChartCard({
   children,
   className = "",
   chartClassName = "",
+  tone = "dark",
 }: ChartCardProps) {
+  const light = tone === "light";
   return (
     <section className={`rounded-xl border border-zinc-800/80 bg-[var(--panel-bg)] p-4 sm:p-6 ${className}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-50 sm:text-base">{title}</h3>
-          {description ? <p className="mt-1 text-xs text-zinc-400 sm:text-sm">{description}</p> : null}
+          <h3 className={`text-sm font-semibold sm:text-base ${light ? "text-zinc-900" : "text-zinc-50"}`}>
+            {title}
+          </h3>
+          {description ? (
+            <p className={`mt-1 text-xs sm:text-sm ${light ? "text-zinc-600" : "text-zinc-400"}`}>{description}</p>
+          ) : null}
         </div>
         {controls ? <div className="flex min-w-0 flex-wrap items-center gap-2">{controls}</div> : null}
       </div>

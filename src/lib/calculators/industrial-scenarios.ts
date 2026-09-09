@@ -203,3 +203,42 @@ export function calculateIndustrialScenarios(rawInput: IndustrialInput): Industr
     },
   };
 }
+
+export type IndustrialScenarioRecommendation = {
+  headline: string;
+  body: string;
+  scenarioId: IndustrialScenarioId;
+  scenarioLabel: string;
+};
+
+/** Lühike soovitus olemasoleva võrdluse põhjal — arvutusloogikat ei muuda. */
+export function recommendIndustrialScenario(
+  comparison: IndustrialScenarioComparison,
+): IndustrialScenarioRecommendation {
+  const best = comparison.scenarios.find((row) => row.id === comparison.bestSavingsId)!;
+  const payback =
+    comparison.bestPaybackId != null
+      ? comparison.scenarios.find((row) => row.id === comparison.bestPaybackId) ?? null
+      : null;
+
+  if (best.id === "base" || best.annualSavingsEur <= 0) {
+    return {
+      headline: "Selle sisendiga ei paista veel selget aastast kogumõju.",
+      body: "Kontrolli tarbimist, elektrihinda ja PV võimsust. Stsenaariumite võrdlus näitab, milline kombinatsioon hakkaks tasuma, kui sisendid muutuvad.",
+      scenarioId: best.id,
+      scenarioLabel: best.label,
+    };
+  }
+
+  const paybackNote =
+    payback && payback.id !== best.id && payback.paybackYears != null
+      ? ` Kui eesmärk on kiirem tasuvus, paistab ${payback.label} lühema lihtsustatud tasuvusajaga (${payback.paybackYears.toFixed(1).replace(".", ",")} a).`
+      : "";
+
+  return {
+    headline: `Antud sisendite põhjal paistab parim ${best.label}.`,
+    body: comparison.conclusion.summary + paybackNote,
+    scenarioId: best.id,
+    scenarioLabel: best.label,
+  };
+}

@@ -8,7 +8,7 @@ export function CalculatorTabs() {
   const pathname = usePathname();
 
   return (
-    <div className="-mx-1 overflow-x-auto px-1 [-webkit-overflow-scrolling:touch]">
+    <div className="-mx-1 overflow-x-auto px-1 no-print [-webkit-overflow-scrolling:touch]">
       <div className="flex min-w-max border-b border-[var(--panel-border)]">
         {PUBLIC_CALCULATOR_TABS.map((tab) => {
           const active = pathname === tab.href;

@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { LegalLayout } from "@/app/(legal)/legal-layout";
+
+export const metadata: Metadata = {
+  title: "Blogi",
+  robots: { index: false, follow: false },
+};
 
 const posts = [
   {

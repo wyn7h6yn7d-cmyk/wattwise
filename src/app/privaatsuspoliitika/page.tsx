@@ -2,7 +2,7 @@ import { LegalLayout } from "@/app/(legal)/legal-layout";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privaatsuspoliitika | Energiakalkulaator",
+  title: "Privaatsuspoliitika",
 };
 
 export default function PrivacyPage() {

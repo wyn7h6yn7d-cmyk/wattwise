@@ -8,8 +8,8 @@ export default function KalkulaatoridHubPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">Tööriistad</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Neli energiaanalüüsi tööriista ülikooli projekti jaoks: börsihind, PV, peak shaving ja
-            tööstusettevõtte PV + aku.
+            Börsihind, PV, peak shaving ja tööstusettevõtte PV + aku — alusta tööstusanalüüsist, kui
+            soovid võrrelda stsenaariume tarbimisprofiili põhjal.
           </p>
         </div>
       </div>

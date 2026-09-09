@@ -17,8 +17,8 @@ export const PUBLIC_CALCULATOR_TABS: NavItem[] = [
 ];
 
 export const HEADER_CTA = {
-  href: "/kalkulaatorid",
-  label: "Tööriistad",
+  href: "/kalkulaatorid/toostus",
+  label: "Tööstusanalüüs",
 } as const;
 
 export const PUBLIC_TOOLS = [
@@ -42,7 +42,7 @@ export const PUBLIC_TOOLS = [
   },
   {
     title: "Tööstus",
-    description: "Tööstusettevõtte päikesejaama ja akusalvestuse analüüs, sh võimsustasu mõju.",
+    description: "PV, aku ja tarbimisprofiil ühes vaates — peamine analüüsitööriist.",
     href: "/kalkulaatorid/toostus",
     icon: "TÖ",
   },

@@ -4,7 +4,7 @@ import {
   calculateIndustrial,
   type IndustrialInput,
 } from "./industrial";
-import { calculateIndustrialScenarios } from "./industrial-scenarios";
+import { calculateIndustrialScenarios, recommendIndustrialScenario } from "./industrial-scenarios";
 
 function baseInput(overrides: Partial<IndustrialInput> = {}): IndustrialInput {
   return {
@@ -145,5 +145,15 @@ describe("industrial scenarios v0.5", () => {
     expect(pvOnly.pvProductionMwh).toBeCloseTo(direct.pvProductionMwh, 6);
     expect(pvOnly.selfConsumedPvMwh).toBeCloseTo(direct.selfConsumedPvMwh, 6);
     expect(pvOnly.annualSavingsEur).toBeCloseTo(direct.annualSavingsEur, 6);
+  });
+});
+
+describe("industrial scenario recommendation", () => {
+  it("names the best savings scenario in the headline", () => {
+    const comparison = calculateIndustrialScenarios(baseInput());
+    const rec = recommendIndustrialScenario(comparison);
+    expect(rec.headline).toContain(rec.scenarioLabel);
+    expect(rec.body.length).toBeGreaterThan(20);
+    expect(rec.scenarioId).toBe(comparison.bestSavingsId);
   });
 });
