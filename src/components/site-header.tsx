@@ -7,6 +7,20 @@ import Image from "next/image";
 import { addVat, eurPerKwhToSntPerKwh, formatSntKwh } from "@/lib/elering";
 import { HEADER_CTA, PRIMARY_NAV } from "@/lib/nav";
 
+function TaltechProjectMark({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 border-l border-zinc-700/80 pl-2 ${className}`}
+      title="TalTech Projekt 2"
+    >
+      <span className="text-[0.68rem] font-medium tracking-tight text-zinc-400">TalTech</span>
+      <span className="inline-flex items-center border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-px text-[0.58rem] font-medium tracking-[0.08em] text-emerald-300/90">
+        Projekt 2
+      </span>
+    </span>
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -158,9 +172,7 @@ export function SiteHeader() {
             <div className="truncate text-[0.9rem] font-medium tracking-tight text-zinc-100 min-[430px]:text-sm sm:text-[1rem]">
               Energiakalkulaator
             </div>
-            <span className="hidden shrink-0 text-[0.62rem] font-medium tracking-wide text-zinc-500 min-[430px]:inline">
-              Esialgne hinnang
-            </span>
+            <TaltechProjectMark className="hidden min-[480px]:inline-flex" />
           </div>
         </Link>
 
@@ -283,9 +295,7 @@ function MobileMenu({
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-sm font-semibold text-zinc-50 max-[390px]:text-xs">Energiakalkulaator</div>
-                <span className="inline-flex shrink-0 items-center border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[0.58rem] font-medium tracking-wide text-zinc-400">
-                  Esialgne
-                </span>
+                <TaltechProjectMark />
               </div>
             </div>
             <button type="button" className="btn-ghost shrink-0" onClick={onClose} aria-label="Sulge menüü">

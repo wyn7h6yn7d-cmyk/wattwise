@@ -270,6 +270,10 @@ export function IndustrialReportPrint({
           <li>Aku juhtimine on reeglipõhine.</li>
           <li>Lühike CSV skaleeritakse aastaks.</li>
           <li>Hinnaseeria mõjutab rahalist arvestust, mitte aku juhtimist.</li>
+          <li>
+            Aastane ostuhind on vormi keskmine €/MWh. Eleringi EE NPS on ajatempli börsihind, mitte
+            perioodi keskmine; käibemaksu ei lisata.
+          </li>
           <li>See ei ole lõplik investeerimisotsus.</li>
         </ul>
       </Section>

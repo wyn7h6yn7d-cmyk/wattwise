@@ -7,6 +7,7 @@ import { IndustrialEnergyFlowChart } from "@/components/industrial/industrial-en
 import { IndustrialKpiSummary } from "@/components/industrial/industrial-kpi-summary";
 import { IndustrialMoneyBreakdown } from "@/components/industrial/industrial-money-breakdown";
 import { IndustrialPeakChart } from "@/components/industrial/industrial-peak-chart";
+import { IndustrialPriceBasis, type IndustrialPriceBasisProps } from "@/components/industrial/industrial-price-basis";
 import {
   IndustrialRecommendationCard,
   type IndustrialInterpretation,
@@ -50,6 +51,7 @@ export function IndustrialResultsDashboard({
   timeseriesResult,
   annualConsumptionMwh,
   priceModeLabel,
+  priceBasis,
   priceMatch,
   csvChartSeries,
   assumptions,
@@ -61,6 +63,7 @@ export function IndustrialResultsDashboard({
   timeseriesResult: IndustrialTimeseriesResult | null;
   annualConsumptionMwh: number;
   priceModeLabel: string;
+  priceBasis: Omit<IndustrialPriceBasisProps, "variant">;
   priceMatch: MatchPriceSeriesResult | null;
   csvChartSeries: ConsumptionChartSeries | null;
   assumptions: {
@@ -81,6 +84,13 @@ export function IndustrialResultsDashboard({
       <IndustrialKpiSummary result={result} />
 
       <IndustrialRecommendationCard interpretation={interpretation} />
+
+      <DashSection
+        title="Hindade alus"
+        description="Millist ostu- ja müügihinda aastane mudel ja ajapõhine majandus tegelikult kasutavad."
+      >
+        <IndustrialPriceBasis variant="result" {...priceBasis} />
+      </DashSection>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn-glow w-full sm:w-auto" onClick={onPrintReport}>
@@ -173,13 +183,18 @@ export function IndustrialResultsDashboard({
         />
         {timeseriesResult ? (
           <p className="mt-3 text-xs text-zinc-500">
-            Hinnarežiim: {priceModeLabel}. Perioodi mõju {fmtEt(timeseriesResult.economics.periodImpactEur, 0)} € ·
-            aastaks skaleeritud {fmtEt(timeseriesResult.economics.annualizedImpactEur, 0)} €/a.
+            Hinnarežiim: {priceModeLabel}. Ajapõhine jaotus kasutab{" "}
+            {timeseriesResult.economics.priceMode === "step_series"
+              ? "ajatempli hindu (börs või CSV), mitte perioodi keskmist"
+              : "vormi keskmist ostu- ja müügihinda igal sammul"}
+            . Perioodi mõju {fmtEt(timeseriesResult.economics.periodImpactEur, 0)} € · aastaks
+            skaleeritud {fmtEt(timeseriesResult.economics.annualizedImpactEur, 0)} €/a. Ülemised KPI-d
+            jäävad vormi keskmise ostuhinna peale.
           </p>
         ) : (
           <p className="mt-3 text-xs text-zinc-500">
-            Ilma CSV-ta kasutatakse aastase mudeli jaotust. Ajapõhine majandus täpsustub pärast tarbimisprofiili
-            importi.
+            Ilma CSV-ta kasutatakse aastase mudeli jaotust vormi keskmise ostu- ja müügihinnaga.
+            Ajapõhine majandus täpsustub pärast tarbimisprofiili importi.
           </p>
         )}
       </DashSection>

@@ -200,8 +200,12 @@ export function IndustrialTimeseriesPanel({
         reegleid (omatarve või tipu lõikamine), mitte börsihinna optimeerimist.
       </p>
       <p className="mt-2 border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-relaxed text-zinc-400">
-        Hinnarežiim: <span className="text-zinc-200">{priceModeLabel}</span>. Valitud hinnad mõjutavad
-        allpool olevat majandusvaadet eurodes, mitte aku käitumist.
+        Hinnarežiim: <span className="text-zinc-200">{priceModeLabel}</span>
+        {result.economics.priceMode === "step_series"
+          ? " — ostuhind on ajatempli väärtus (börs või CSV), mitte perioodi keskmine."
+          : " — iga samm kasutab vormi keskmist ostu- ja müügihinda."}{" "}
+        Valitud hinnad mõjutavad allpool olevat majandusvaadet eurodes, mitte aku käitumist. KPI-d
+        ülal kasutavad endiselt vormi keskmist ostuhinda.
       </p>
 
       <div className="industrial-timeseries-charts">
@@ -261,7 +265,11 @@ export function IndustrialTimeseriesPanel({
         {priceMatch ? (
           <p className="mt-2 text-xs text-zinc-400">
             Hinnaga seotud ridu: {priceMatch.matchedFromSeriesCount} / {result.rowCount}
-            {priceMatch.unmatchedCount > 0 ? ` · sidumata ${priceMatch.unmatchedCount}` : ""}.
+            {priceMatch.unmatchedCount > 0
+              ? ` · sidumata ${priceMatch.unmatchedCount} (vormi keskmine)`
+              : ""}
+            . Sidumine: täpne {priceMatch.exactCount}, sama tund {priceMatch.sameHourCount}, lähim ±2 h{" "}
+            {priceMatch.nearestCount}, vormi keskmine {priceMatch.fallbackCount}.
           </p>
         ) : null}
         {priceMatch?.warning ? (

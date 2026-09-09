@@ -33,6 +33,7 @@ import {
   IndustrialChartsEmptyState,
   IndustrialResultCharts,
 } from "@/components/industrial/industrial-result-charts";
+import { IndustrialPriceBasis } from "@/components/industrial/industrial-price-basis";
 import { IndustrialResultsDashboard } from "@/components/industrial/industrial-results-dashboard";
 import { calculateIndustrialScenarios } from "@/lib/calculators/industrial-scenarios";
 import { simulateIndustrialTimeseries } from "@/lib/calculators/industrial-timeseries";
@@ -299,6 +300,35 @@ export function IndustrialPvBatteryPage() {
             : "Elering EE — kasutusel keskmine hind"
         : "Keskmine hind";
 
+  const seriesBuyMeanEurPerMwh = useMemo(() => {
+    if (priceSeriesSourceRows.length === 0) return null;
+    const sum = priceSeriesSourceRows.reduce((total, row) => total + row.buyPriceEurPerMwh, 0);
+    return sum / priceSeriesSourceRows.length;
+  }, [priceSeriesSourceRows]);
+
+  const priceBasisProps = useMemo(
+    () => ({
+      priceMode,
+      hasCsvProfile: csvRows.length > 0,
+      formBuyEurPerMwh: parseLocaleNumber(form.averageElectricityPriceEurPerMwh),
+      formExportEurPerMwh: parseLocaleNumber(form.exportPriceEurPerMwh),
+      seriesBuyMeanEurPerMwh,
+      seriesPointCount: priceSeriesSourceRows.length,
+      eleringReady: Boolean(eleringRows && eleringRows.length > 0),
+      priceMatch,
+    }),
+    [
+      priceMode,
+      csvRows.length,
+      form.averageElectricityPriceEurPerMwh,
+      form.exportPriceEurPerMwh,
+      seriesBuyMeanEurPerMwh,
+      priceSeriesSourceRows.length,
+      eleringRows,
+      priceMatch,
+    ],
+  );
+
   const csvChartSeries = useMemo(() => {
     if (!csvSummary || csvRows.length === 0) return null;
     return buildConsumptionChartSeries(csvRows, csvSummary);
@@ -533,16 +563,24 @@ export function IndustrialPvBatteryPage() {
         toNumber(form.peakLoadKw) > 0 ? `Tipukoormus: ${form.peakLoadKw} kW` : "",
         toNumber(form.pvPowerKw) > 0 ? `PV: ${form.pvPowerKw} kW` : "",
         toNumber(form.batteryCapacityKwh) > 0 ? `Aku: ${form.batteryCapacityKwh} kWh / ${form.batteryPowerKw} kW` : "",
+        priceMode === "csv" && priceCsvRows.length > 0
+          ? `Hinnaseeria CSV: ${priceCsvRows.length} punkti (ajatempli ost/müük, mitte keskmine).`
+          : "",
       ].filter(Boolean),
       defaultAssumptions: result.assumptions,
-      apiValues: [] as string[],
+      apiValues: [
+        priceMode === "elering" && eleringRows && eleringRows.length > 0
+          ? `Elering EE NPS: ${eleringRows.length} punkti. Ost = börsihind ajatemplil (€/MWh, KM-ta). Müük = vormi ${form.exportPriceEurPerMwh || "—"} €/MWh.`
+          : "",
+      ].filter(Boolean),
       mostInfluentialInputs: [
-        "Elektri ostuhind, võrku müügihind ja võimsustasu määravad aastase kogumõju osad.",
+        "Aastane mudel kasutab vormi keskmist ostu- ja müügihinda; Elering ei asenda KPI-sid.",
+        "CSV korral mõjutab valitud hinnarežiim ainult ajapõhist euroarvestust, mitte aku käitumist.",
         "PV ja aku ühikinvesteeringud määravad stsenaariumite investeeringu ja tasuvuse.",
         "Päevase tarbimise osakaal määrab, kui palju PV-d saab ilma akuta kohapeal kasutada.",
       ],
     }),
-    [form, result.assumptions, csvSummary, csvFileName],
+    [form, result.assumptions, csvSummary, csvFileName, priceMode, eleringRows, priceCsvRows.length],
   );
 
   const reportInputRows = useMemo(
@@ -567,13 +605,32 @@ export function IndustrialPvBatteryPage() {
     () => [
       { label: "PV investeering", value: `${form.pvInvestmentEurPerKw || "—"} €/kW` },
       { label: "Aku investeering", value: `${form.batteryInvestmentEurPerKwh || "—"} €/kWh` },
-      { label: "Elektri ostuhind", value: `${form.averageElectricityPriceEurPerMwh || "—"} €/MWh` },
-      { label: "Võrku müügi hind", value: `${form.exportPriceEurPerMwh || "—"} €/MWh` },
+      {
+        label: "Elektri ostuhind (aastane mudel)",
+        value: `${form.averageElectricityPriceEurPerMwh || "—"} €/MWh · kasutaja keskmine, mitte börsi keskmine`,
+      },
+      {
+        label: "Võrku müügi hind",
+        value: `${form.exportPriceEurPerMwh || "—"} €/MWh · Elering NPS müügihinda ei anna`,
+      },
+      {
+        label: "Ajapõhine hinnarežiim",
+        value:
+          csvRows.length === 0
+            ? "Puudub (ilma tarbimise CSV-ta)"
+            : priceMode === "elering"
+              ? eleringRows && eleringRows.length > 0
+                ? "Elering EE NPS ajatempli hind (ei ole perioodi keskmine); sidumata read = vormi keskmine"
+                : "Elering valitud, seeria puudub — vormi keskmised"
+              : priceMode === "csv"
+                ? "Hinnaseeria CSV ajatempli järgi; sidumata read = vormi keskmine"
+                : "Vormi keskmine ostu- ja müügihind igal sammul",
+      },
       { label: "Võimsustasu", value: `${form.demandChargeEurPerKwMonth || "—"} €/kW/kuu` },
       { label: "Aku kasutegur", value: `${form.batteryEfficiencyPercent || "—"}%` },
       { label: "Aku kasutatav maht", value: `${form.batteryUsableCapacityPercent || "—"}%` },
     ],
-    [form],
+    [form, csvRows.length, priceMode, eleringRows],
   );
 
   return (
@@ -845,8 +902,9 @@ export function IndustrialPvBatteryPage() {
         <article className="card">
           <h2 className="section-title">Hinnarežiim ajapõhiseks majanduseks</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Vali, milliste hindadega arvutatakse ajapõhise simulatsiooni rahaline mõju. Hinnad ei muuda aku
-            käitumist — need mõjutavad ainult eurodes väljendatud tulemust.
+            Vali, milliste hindadega arvutatakse CSV simulatsiooni rahaline mõju. See ei asenda ülal
+            olevat aastast mudelit: KPI-d, stsenaariumid ja tasuvusaeg kasutavad endiselt vormi keskmist
+            ostu- ja müügihinda. Hinnad ei muuda aku käitumist.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {(
@@ -854,17 +912,17 @@ export function IndustrialPvBatteryPage() {
                 {
                   id: "flat" as const,
                   title: "Keskmine hind",
-                  description: "Kasutab allpool sisestatud ostu- ja müügihinda.",
+                  description: "Iga samm = vormi ostu- ja müügihind. See on sinu keskmine, mitte börsi keskmine.",
                 },
                 {
                   id: "csv" as const,
                   title: "Hinnaseeria CSV",
-                  description: "Oma tunnihinnad: seo tarbimisread ostu- ja müügihindadega.",
+                  description: "Ost ja müük failist ajatempli järgi, mitte perioodi keskmine.",
                 },
                 {
                   id: "elering" as const,
                   title: "Elering EE",
-                  description: "Laadi Eesti NPS börsihind CSV perioodi jaoks. Müük = vormi müügihind.",
+                  description: "Ost = EE NPS sellel tunnil/15 min. Ei ole keskmine. Müük = vormi müügihind.",
                 },
               ] as const
             ).map((mode) => {
@@ -889,7 +947,8 @@ export function IndustrialPvBatteryPage() {
 
           {priceMode === "flat" ? (
             <p className="mt-4 text-sm text-zinc-400">
-              Keskmise hinna režiimis kasutatakse sisestatud ostu- ja müügihindu.
+              Keskmise hinna režiimis saab iga tarbimissamm sama vormi ostu- ja müügihinna. Aastane mudel
+              kasutab samu väärtusi. See ei ole Eleringist arvutatud keskmine.
             </p>
           ) : null}
 
@@ -905,7 +964,8 @@ export function IndustrialPvBatteryPage() {
                 Veerud: <span className="font-mono text-zinc-100">timestamp</span>,{" "}
                 <span className="font-mono text-zinc-100">buy_price_eur_mwh</span>,{" "}
                 <span className="font-mono text-zinc-100">export_price_eur_mwh</span>. Sobib koma või
-                semikoolon.
+                semikoolon. Iga tarbimissamm saab faili hinna ajatempli järgi (täpne → sama tund → lähim
+                ±2 h → vormi keskmine) — see ei ole perioodi keskmine.
               </p>
               <pre className="mt-3 overflow-x-auto border border-zinc-800 bg-zinc-900 p-3 text-xs text-zinc-300">
                 {SAMPLE_PRICE_CSV}
@@ -968,9 +1028,14 @@ export function IndustrialPvBatteryPage() {
 
           {priceMode === "elering" ? (
             <div className="mt-4 border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-              {eleringLoading ? <p>Laen Eleringi EE börsihinda…</p> : null}
+              <p className="text-xs leading-relaxed text-zinc-400">
+                Eleringi API annab Eesti NPS hinna €/MWh. Tööstusmoodul kasutab seda ostuhinnana samal
+                ajatemplil (käibemaksuta). See ei ole CSV perioodi keskmine. Võrku müük jääb vormi
+                müügihinnaks. Kui laadimine ebaõnnestub või rida ei seo, kasutatakse vormi keskmisi.
+              </p>
+              {eleringLoading ? <p className="mt-3">Laen Eleringi EE börsihinda…</p> : null}
               {eleringNote ? (
-                <p className={eleringRows && eleringRows.length > 0 ? "text-zinc-300" : "text-amber-100"}>
+                <p className={`mt-3 ${eleringRows && eleringRows.length > 0 ? "text-zinc-300" : "text-amber-100"}`}>
                   {eleringNote}
                 </p>
               ) : null}
@@ -978,6 +1043,13 @@ export function IndustrialPvBatteryPage() {
                 <p className="mt-2 text-xs text-zinc-400">
                   Laetud {fmt(eleringRows.length, 0)} hinna punkti ·{" "}
                   {eleringRows[0]!.timestampRaw} → {eleringRows[eleringRows.length - 1]!.timestampRaw}
+                  {seriesBuyMeanEurPerMwh != null ? (
+                    <>
+                      {" "}
+                      · punktide aritmeetiline keskmine ostuhind {fmt(seriesBuyMeanEurPerMwh, 1)} €/MWh
+                      (ainult võrdluseks)
+                    </>
+                  ) : null}
                 </p>
               ) : null}
             </div>
@@ -1000,7 +1072,7 @@ export function IndustrialPvBatteryPage() {
               </p>
               <p className="mt-1 text-xs text-zinc-500">
                 Sidumine ajatempli järgi: täpne {priceMatch.exactCount}, sama tund{" "}
-                {priceMatch.sameHourCount}, lähim {priceMatch.nearestCount}, keskmine varu{" "}
+                {priceMatch.sameHourCount}, lähim ±2 h {priceMatch.nearestCount}, vormi keskmine{" "}
                 {priceMatch.fallbackCount}.
               </p>
               {priceMatch.warning ? (
@@ -1138,6 +1210,7 @@ export function IndustrialPvBatteryPage() {
             <h3 className="text-sm font-medium text-zinc-100">Majanduslikud eeldused</h3>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
               Stsenaariumite investeeringud ja aastane kogumõju arvutatakse nende ühikhindade põhjal.
+              Ostuhind on vormi keskmine €/MWh — mitte automaatne börsi keskmine.
             </p>
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <label className="field-label">
@@ -1169,7 +1242,10 @@ export function IndustrialPvBatteryPage() {
                   onChange={(e) => setField("averageElectricityPriceEurPerMwh", e.target.value)}
                   placeholder="nt 110"
                 />
-                <span className="field-hint">Kohapeal kasutatud PV väärtus.</span>
+                <span className="field-hint">
+                  Aastase mudeli ostuhind: sinu keskmine €/MWh. Vaikeväärtus 110 on näidis, mitte
+                  Eleringi keskmine. Kohapeal kasutatud PV väärtustatakse selle hinnaga.
+                </span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Võrku müüdava elektri hind (€/MWh)</span>
@@ -1180,6 +1256,10 @@ export function IndustrialPvBatteryPage() {
                   onChange={(e) => setField("exportPriceEurPerMwh", e.target.value)}
                   placeholder="nt 45"
                 />
+                <span className="field-hint">
+                  Võrku müüdud PV tulu. Eleringi NPS müügihinda ei anna — börsirežiimis jääb see väli
+                  müügihinnaks.
+                </span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Võimsustasu (€/kW/kuu)</span>
@@ -1190,7 +1270,7 @@ export function IndustrialPvBatteryPage() {
                   onChange={(e) => setField("demandChargeEurPerKwMonth", e.target.value)}
                   placeholder="nt 6,5"
                 />
-                <span className="field-hint">Kasutatakse peak shaving režiimis.</span>
+                <span className="field-hint">Vormi väärtus; kasutatakse ainult peak shaving režiimis.</span>
               </label>
               <label className="field-label">
                 <span className="field-label-text">Aku kasutegur (%)</span>
@@ -1215,6 +1295,9 @@ export function IndustrialPvBatteryPage() {
                   Kasutatav osa tsükli kohta = kasutegur × kasutatav maht (nt 90% × 80% = 72%).
                 </span>
               </label>
+            </div>
+            <div className="mt-5">
+              <IndustrialPriceBasis variant="form" {...priceBasisProps} />
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -1438,6 +1521,7 @@ export function IndustrialPvBatteryPage() {
           timeseriesResult={timeseriesResult}
           annualConsumptionMwh={toNumber(form.annualConsumptionMwh)}
           priceModeLabel={priceModeLabel}
+          priceBasis={priceBasisProps}
           priceMatch={priceMatch}
           csvChartSeries={csvChartSeries}
           assumptions={assumptionsInfo}
@@ -1450,6 +1534,10 @@ export function IndustrialPvBatteryPage() {
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-400">
           <li>Tulemused on hinnangulised; see ei ole lõplik investeerimisotsus.</li>
           <li>Sisendandmete kvaliteet (tarbimine, hinnad, investeeringud) mõjutab tulemust.</li>
+          <li>
+            Aastane ostuhind on vormi keskmine €/MWh. Eleringi EE NPS on ajatempli börsihind, mitte
+            perioodi keskmine; käibemaksu ei lisata. Müük jääb vormi müügihinnaks.
+          </li>
           <li>Börsihinnad ja investeeringuhinnad võivad aja jooksul muutuda.</li>
           <li>PV tootmisprofiil on lihtsustatud; aku töötab reeglite, mitte börsioptimeerija järgi.</li>
           <li>Lühike CSV skaleeritakse aastaseks hinnanguks; hinnaseeria mõjutab euroarvestust, mitte aku käitumist.</li>
