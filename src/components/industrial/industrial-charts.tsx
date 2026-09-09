@@ -236,3 +236,4 @@ export function BatterySocChart({ result }: { result: IndustrialTimeseriesResult
       </svg>
     </ChartCard>
   );
+}
