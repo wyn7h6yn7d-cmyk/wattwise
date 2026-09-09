@@ -315,7 +315,7 @@ export function IndustrialPvBatteryPage() {
     setForm(profileToForm(profile));
     setActiveProfile(profile.id);
     setValidationMessage(null);
-    setHasCalculated(true);
+    setHasCalculated(false);
   };
 
   const handleCsvFile = async (file: File | undefined) => {
@@ -1013,7 +1013,7 @@ export function IndustrialPvBatteryPage() {
         </article>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+      <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
         <article className="card">
           <h2 className="section-title">Sisendid</h2>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
@@ -1232,29 +1232,139 @@ export function IndustrialPvBatteryPage() {
           ) : null}
         </article>
 
-        <article className="card">
+        <article className="card industrial-results-side">
           <h2 className="section-title">Tulemused</h2>
-          {!hasCalculated ? (
-            <div className="mb-2 border border-zinc-800/90 bg-zinc-950/80 px-4 py-5 sm:px-5 sm:py-6">
-              <p className="text-base font-medium text-zinc-100">Tulemused ilmuvad pärast arvutust</p>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Täida sisendid, vali näidisprofiil või vajuta „Proovi demoandmetega“.
+          {!hasCalculated && csvSummary ? (
+            <>
+              <div className="industrial-ready-cta">
+                <p className="industrial-ready-cta-title">CSV profiil on loetud</p>
+                <p className="industrial-ready-cta-text">
+                  Tarbimisprofiil on sisenditesse kantud. Kontrolli PV, aku ja majanduslikud eeldused ning
+                  vajuta „Arvuta tulemus“.
+                </p>
+                <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
+                  Arvuta tulemus
+                </button>
+              </div>
+              <div className="industrial-placeholder-kpis" aria-hidden="true">
+                <div className="industrial-placeholder-kpi">
+                  <span>PV toodang</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Omatarbe osakaal</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Tipukoormuse mõju</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Aastane kogumõju</span>
+                  <strong>—</strong>
+                </div>
+              </div>
+            </>
+          ) : !hasCalculated && hasRequiredInputs ? (
+            <>
+              <div className="industrial-ready-cta">
+                <p className="industrial-ready-cta-title">Valmis arvutamiseks</p>
+                <p className="industrial-ready-cta-text">
+                  Sisendid on täidetud. Vajuta „Arvuta tulemus“, et näha PV toodangut, omatarvet, stsenaariume
+                  ja majanduslikku mõju.
+                </p>
+                <button type="button" className="btn-glow w-full sm:w-auto" onClick={handleCalculate}>
+                  Arvuta tulemus
+                </button>
+              </div>
+              <div className="industrial-placeholder-kpis" aria-hidden="true">
+                <div className="industrial-placeholder-kpi">
+                  <span>PV toodang</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Omatarbe osakaal</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Tipukoormuse mõju</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Aastane kogumõju</span>
+                  <strong>—</strong>
+                </div>
+              </div>
+            </>
+          ) : !hasCalculated ? (
+            <>
+              <div className="industrial-results-empty">
+                <p className="industrial-results-empty-title">Tulemused ilmuvad pärast arvutust</p>
+                <p className="industrial-results-empty-text">
+                  Täida vajalikud väljad või kasuta demoandmeid. Pärast arvutust kuvatakse siin PV toodang,
+                  omatarve, tipukoormuse mõju, stsenaariumite võrdlus ja raport.
+                </p>
+              </div>
+              <div className="industrial-placeholder-kpis" aria-hidden="true">
+                <div className="industrial-placeholder-kpi">
+                  <span>PV toodang</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Omatarbe osakaal</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Tipukoormuse mõju</span>
+                  <strong>—</strong>
+                </div>
+                <div className="industrial-placeholder-kpi">
+                  <span>Aastane kogumõju</span>
+                  <strong>—</strong>
+                </div>
+              </div>
+            </>
+          ) : hasRequiredInputs ? (
+            <>
+              <p className="industrial-results-empty-text">
+                Põhinäitajad on allpool. Üksikasjad, graafikud ja stsenaariumid järgnevad pärast kokkuvõtet.
               </p>
-              <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-400">
-                <li>aastane kogumõju, omatarve, tipukoormus ja tasuvusaeg</li>
-                <li>energiavoogude ja stsenaariumite graafikud</li>
-                <li>ajapõhine simulatsioon (CSV korral)</li>
-              </ul>
-            </div>
-          ) : null}
-
-          {hasCalculated && hasRequiredInputs ? (
-            <p className="text-sm leading-relaxed text-zinc-500">
-              Põhinäitajad on allpool. Üksikasjad, graafikud ja stsenaariumid järgnevad pärast kokkuvõtet.
-            </p>
-          ) : hasCalculated ? (
-            <p className="text-sm text-zinc-400">Sisesta vajalikud andmed, et näha tulemusi.</p>
-          ) : null}
+              <div className="industrial-placeholder-kpis">
+                <div className="industrial-placeholder-kpi industrial-placeholder-kpi-live">
+                  <span>Aastane kogumõju</span>
+                  <strong>
+                    {fmt(result.annualSavingsEur, 0)} <em>€/a</em>
+                  </strong>
+                </div>
+                <div className="industrial-placeholder-kpi industrial-placeholder-kpi-live">
+                  <span>Omatarbe osakaal</span>
+                  <strong>
+                    {fmt(result.selfConsumptionSharePercent, 0)} <em>%</em>
+                  </strong>
+                </div>
+                <div className="industrial-placeholder-kpi industrial-placeholder-kpi-live">
+                  <span>Tipukoormus</span>
+                  <strong>
+                    {fmt(result.peakLoadBeforeKw, 0)} → {fmt(result.peakLoadAfterKw, 0)} <em>kW</em>
+                  </strong>
+                </div>
+                <div className="industrial-placeholder-kpi industrial-placeholder-kpi-live">
+                  <span>Tasuvusaeg</span>
+                  <strong>
+                    {result.paybackYears != null ? (
+                      <>
+                        {fmt(result.paybackYears, 1)} <em>a</em>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </strong>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="industrial-results-empty-text">Sisesta vajalikud andmed, et näha tulemusi.</p>
+          )}
         </article>
       </div>
 
